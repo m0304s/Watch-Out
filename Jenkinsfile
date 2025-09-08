@@ -79,56 +79,51 @@ pipeline{
         //     }
         // }
 
-        stage('Run PR-Agent Review') {
+       stage('Run PR-Agent Review') {
   when { expression { env.MR_STATE == 'opened' } }
   steps {
     script {
       echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
       withCredentials([
-        string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
+        string(credentialsId: 'gitlab-token',  variable: 'GITLAB_TOKEN'),
         string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
       ]) {
-        sh '''
+
+        // bash로 실행 + 상세 로그 + 실패 지점 노출
+        int rc = sh(returnStatus: true, script: """#!/usr/bin/env bash
           set -euxo pipefail
 
-          echo "==> Docker version check"
+          echo "==> Docker version"
           docker version
 
-          echo "==> Whoami & groups (docker 권한 점검)"
-          id || true
-          groups || true
-          # 리눅스 기준: jenkins 유저가 docker 그룹에 있어야 함 (없으면 permission denied)
-          # sudo usermod -aG docker jenkins && sudo systemctl restart docker && 재로그인 필요
-
-          echo "==> Pull PR-Agent image"
+          echo "==> Pull pr-agent image"
           docker pull codiumai/pr-agent:latest
 
-          echo "==> Run PR-Agent review"
-          set +e
-          docker run --rm \
-            -e config__git_provider="gitlab" \
-            -e gitlab__url="${GITLAB_URL}" \
-            -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
-            -e GOOGLE_API_KEY="${GEMINI_KEY}" \
-            -e config__model_provider="google" \
-            -e config__model="gemini-1.5-pro" \
-            codiumai/pr-agent:latest \
-            --pr_url "${MR_URL}" review
-          EXIT_CODE=$?
-          set -e
+          echo "==> Run PR-Agent review (logs to pr-agent.log)"
+          # 표준출력/표준에러 모두 저장하고, 화면에도 찍기
+          docker run --rm \\
+            -e config__git_provider="gitlab" \\
+            -e gitlab__url="${GITLAB_URL}" \\
+            -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \\
+            -e GOOGLE_API_KEY="${GEMINI_KEY}" \\
+            -e config__model_provider="google" \\
+            -e config__model="gemini-1.5-pro" \\
+            codiumai/pr-agent:latest \\
+            --pr_url "${MR_URL}" review \\
+            2>&1 | tee pr-agent.log
+        """)
 
-          echo "==> PR-Agent exit code: ${EXIT_CODE}"
-          if [ "${EXIT_CODE}" -ne 0 ]; then
-            echo "❌ PR-Agent failed. Check logs above."
-            exit ${EXIT_CODE}
-          fi
-        '''
+        // 종료코드/로그 처리
+        echo "==> PR-Agent exit code: ${rc}"
+        archiveArtifacts artifacts: 'pr-agent.log', onlyIfSuccessful: false, fingerprint: true
+
+        if (rc != 0) {
+          error "❌ PR-Agent failed. See console and pr-agent.log artifact."
+        }
       }
     }
   }
 }
-
-
         stage('Check for Changes') {
             when { expression { env.MR_STATE == 'merged' } }
             steps {
