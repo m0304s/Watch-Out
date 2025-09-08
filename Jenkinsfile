@@ -85,36 +85,38 @@ pipeline{
     script {
       echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
       withCredentials([
-        string(credentialsId: 'gitlab-token',  variable: 'GITLAB_TOKEN'),
+        string(credentialsId: 'gitlab-token',   variable: 'GITLAB_TOKEN'),
         string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
       ]) {
-
-        // bash로 실행 + 상세 로그 + 실패 지점 노출
-        int rc = sh(returnStatus: true, script: """#!/usr/bin/env bash
+        // ① 무엇이 실행됐는지 명확히 남기고, 실패해도 로그가 끊기지 않게 run
+        int rc = sh(returnStatus: true, script: '''#!/usr/bin/env bash
           set -euxo pipefail
+
+          echo "==> whoami & groups"
+          id || true
+          groups || true
 
           echo "==> Docker version"
           docker version
 
-          echo "==> Pull pr-agent image"
+          echo "==> Pull codiumai/pr-agent:latest"
           docker pull codiumai/pr-agent:latest
 
-          echo "==> Run PR-Agent review (logs to pr-agent.log)"
-          # 표준출력/표준에러 모두 저장하고, 화면에도 찍기
-          docker run --rm \\
-            -e config__git_provider="gitlab" \\
-            -e gitlab__url="${GITLAB_URL}" \\
-            -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \\
-            -e GOOGLE_API_KEY="${GEMINI_KEY}" \\
-            -e config__model_provider="google" \\
-            -e config__model="gemini-1.5-pro" \\
-            codiumai/pr-agent:latest \\
-            --pr_url "${MR_URL}" review \\
+          echo "==> Run PR-Agent (tee -> pr-agent.log)"
+          docker run --rm \
+            -e config__git_provider="gitlab" \
+            -e gitlab__url="${GITLAB_URL}" \
+            -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
+            -e GOOGLE_API_KEY="${GEMINI_KEY}" \
+            -e config__model_provider="google" \
+            -e config__model="gemini-1.5-pro" \
+            codiumai/pr-agent:latest \
+            --pr_url "${MR_URL}" review \
             2>&1 | tee pr-agent.log
-        """)
+        ''')
 
-        // 종료코드/로그 처리
         echo "==> PR-Agent exit code: ${rc}"
+        // ② 실패하든 성공하든 로그 파일을 남김
         archiveArtifacts artifacts: 'pr-agent.log', onlyIfSuccessful: false, fingerprint: true
 
         if (rc != 0) {
@@ -124,6 +126,7 @@ pipeline{
     }
   }
 }
+
         stage('Check for Changes') {
             when { expression { env.MR_STATE == 'merged' } }
             steps {
