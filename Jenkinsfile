@@ -48,7 +48,6 @@ pipeline{
                 } else {
                     echo "ℹ️ MR status updated to: ${env.MR_STATE}"
                 }
-                
             }
         }
 
