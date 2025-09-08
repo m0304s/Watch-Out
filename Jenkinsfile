@@ -36,6 +36,18 @@ pipeline{
                     echo "MR State       : ${env.MR_STATE}"
                     echo "Triggered by   : ${env.USER_NAME}"
                     echo "----------------------------------"
+                    
+                    if (env.MR_STATE == 'opened') {
+                        echo "➡️ A new Merge Request has been opened."
+                    } else if (env.MR_STATE == 'merged') {
+                        echo "✅ The Merge Request has been merged."
+                    } else if (env.MR_STATE == 'closed') {
+                        echo "❌ The Merge Request has been closed without merging."
+                    } else if (env.MR_STATE == null) {
+                        echo "⚠️ This build was likely triggered manually, not by a webhook."
+                    } else {
+                        echo "ℹ️ MR status updated to: ${env.MR_STATE}"
+                    }
                 }
                 if (env.MR_STATE == 'opened') {
                     echo "➡️ A new Merge Request has been opened."
