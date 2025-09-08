@@ -119,7 +119,7 @@ pipeline{
 
         stage('Deploy Backend') {
             when {
-                allof {
+                allOf {
                     expression { env.DO_BACKEND_BUILD == 'true' }
                     expression { env.MR_STATE == 'merged' }
                 }
@@ -139,7 +139,7 @@ pipeline{
 
         stage('Deploy Frontend') {
             when {
-                allof {
+                allOf {
                     expression { env.DO_FRONTEND_BUILD == 'true' }
                     expression { env.MR_STATE == 'merged' }
                 }
