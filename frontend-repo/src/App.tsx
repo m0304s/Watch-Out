@@ -33,6 +33,8 @@ function App() {
 
         PR-Agent 정상 동작 하니??
         이 코드에선 어떤 것들이 바뀌었니?
+
+        https://j13e102.p.ssafy.io 도메인이야
       </p>
     </>
   )
