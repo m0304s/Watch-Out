@@ -48,7 +48,7 @@ pipeline{
                 } else {
                     echo "ℹ️ MR status updated to: ${env.MR_STATE}"
                 }
-                
+
             }
         }
 
@@ -60,7 +60,7 @@ pipeline{
 
                     // MR의 소스 브랜치와 타겟 브랜치 간의 변경 파일 목록을 가져옴
                     def changedFiles = sh(
-                        script: "git diff --name-only origin/${env.gitlabTargetBranch}...origin/${env.gitlabSourceBranch}",
+                        script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}",
                         returnStdout: true
                     ).trim()
 
