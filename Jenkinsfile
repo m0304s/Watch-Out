@@ -16,9 +16,8 @@ pipeline{
         FE_IMAGE_NAME      = "watchout/frontend-app"
         FE_TEST_CONTAINER  = "watchout-fe-test"
         FE_PROD_CONTAINER  = "watchout-fe-prod"
-
-        FE_TEST_PORT       = "8080"
-        FE_TEST_SSL_PORT   = "8443"
+        FE_TEST_PORT       = "8085"
+        FE_TEST_SSL_PORT   = "8445"
         FE_PROD_PORT       = "80"
         FE_PROD_SSL_PORT   = "443"
 
@@ -26,7 +25,7 @@ pipeline{
         TEST_NETWORK       = "test-network"
         PROD_NETWORK       = "prod-network"
     }
-
+    
     stages {
         stage('Process Webhook Data') {
             steps {
@@ -61,42 +60,104 @@ pipeline{
                     env.DO_BACKEND_BUILD = false
                     env.DO_FRONTEND_BUILD = false
 
-                    // MR의 소스 브랜치와 타겟 브랜치 간의 변경 파일 목록을 가져옴
-                    def changedFiles = sh(
-                        script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}",
-                        returnStdout: true
-                    ).trim()
+                    if (env.MR_STATE != null) {
+                        def changedFiles = sh(
+                            script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}",
+                            returnStdout: true
+                        ).trim()
 
-                    echo "Changed files:\n${changedFiles}"
+                        echo "Changed files in MR:\n${changedFiles}"
 
-                    if (changedFiles.contains('backend-repo/')) {
-                        echo "✅ Changes detected in backend-repo."
-                        env.DO_BACKEND_BUILD = true
+                        if (changedFiles.contains('backend-repo/')) {
+                            echo "✅ Changes detected in backend-repo."
+                            env.DO_BACKEND_BUILD = true
+                        }
+                        if (changedFiles.contains('frontend-repo/')) {
+                            echo "✅ Changes detected in frontend-repo."
+                            env.DO_FRONTEND_BUILD = true
+                        }
+                    } else {
+                        echo "⏩ Skipping change detection for manual build."
                     }
-                    if (changedFiles.contains('frontend-repo/')) {
-                        echo "✅ Changes detected in frontend-repo."
-                        env.DO_FRONTEND_BUILD = true
+                }
+            }
+        }
+
+        // stage('Run PR-Agent Review') {
+        //     when { expression { env.MR_STATE == 'opened' } }
+        //     steps {
+        //         script {
+        //             echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
+        //             withCredentials([
+        //                 string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
+        //                 string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
+        //             ]) {
+        //                 sh """
+        //                     docker run --rm \\
+        //                         -e GIT_PROVIDER="gitlab" \\
+        //                         -e GITLAB_URL="${env.GITLAB_URL}" \\
+        //                         -e GITLAB_TOKEN="${GITLAB_TOKEN}" \\
+        //                         -e GOOGLE_API_KEY="${GEMINI_KEY}" \\
+        //                         -e MODEL="gemini/gemini-2.5-pro" \\
+        //                         -e PR_URL="${env.MR_URL}" \\
+        //                         pr-agent/pr-agent:latest \\
+        //                         review --pr_reviewer.extra_instructions="Answer in Korean"
+        //                 """
+        //             }
+        //         }
+        //     }
+        // }
+
+        stage('Prepare Networks') {
+            steps {
+                sh """
+                    docker network create ${TEST_NETWORK} || true
+                    docker network create ${PROD_NETWORK} || true
+                """
+            }
+        }
+
+        stage('Deploy Backend') {
+            when {
+                allof {
+                    expression { env.DO_BACKEND_BUILD == 'true' }
+                    expression { env.MR_STATE == 'merged' }
+                }
+            }
+            steps {
+                dir('backend-repo') {
+                    script {
+                        if (env.TARGET_BRANCH == 'develop') {
+                            // 백엔드 테스트 배포 로직
+                        } else if (env.TARGET_BRANCH == 'master') {
+                            // 백엔드 실제 서버 배포 로직
+                        }
                     }
                 }
             }
         }
 
         stage('Deploy Frontend') {
-            // frontend-repo 폴더에 변경이 있을 때만 이 스테이지를 실행
-            when { expression { env.DO_FRONTEND_BUILD == 'true' } }
+            when {
+                allof {
+                    expression { env.DO_FRONTEND_BUILD == 'true' }
+                    expression { env.MR_STATE == 'merged' }
+                }
+            }
             steps {
                 dir('frontend-repo') {
                     script {
-                        // Target Branch가 develop일 경우 (테스트 환경 배포)
+                        def apiBaseUrl = ""
                         if (env.TARGET_BRANCH == 'develop') {
+                            apiBaseUrl = env.VITE_API_BASE_URL_TEST
                             def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
-                            echo "✅ Target is 'develop'. Deploying to TEST environment..."
-                            echo "🐳 Building TEST image: ${tag}"
+                            echo "✅ Target is 'develop'. Deploying Frontend to TEST environment..."
+                            echo "🐳 Building TEST image with API URL: ${apiBaseUrl}"
 
                             sh """
                                 docker build \\
                                     --build-arg ENV=test \\
-                                    --build-arg VITE_API_BASE_URL="${env.VITE_API_BASE_URL}" \\
+                                    --build-arg VITE_API_BASE_URL="${apiBaseUrl}" \\
                                     -t ${tag} .
                             """
 
@@ -112,17 +173,16 @@ pipeline{
                                     -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
                                     ${tag}
                             """
-                        }
-                        // Target Branch가 master일 경우 (운영 환경 배포)
-                        else if (env.TARGET_BRANCH == 'master') {
+                        } else if (env.TARGET_BRANCH == 'master') {
+                            apiBaseUrl = env.VITE_API_BASE_URL_PROD
                             def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
-                            echo "✅ Target is 'master'. Deploying to PRODUCTION environment..."
-                            echo "🐳 Building PROD image: ${tag}"
+                            echo "✅ Target is 'master'. Deploying Frontend to PRODUCTION environment..."
+                            echo "🐳 Building PROD image with API URL: ${apiBaseUrl}"
 
                             sh """
                                 docker build \\
                                     --build-arg ENV=prod \\
-                                    --build-arg VITE_API_BASE_URL="${env.VITE_API_BASE_URL}" \\
+                                    --build-arg VITE_API_BASE_URL="${apiBaseUrl}" \\
                                     -t ${tag} .
                             """
                             
@@ -138,13 +198,18 @@ pipeline{
                                     -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
                                     ${tag}
                             """
-                        }
-                        else {
-                            echo "⏩ Skipping deployment. Target branch is neither 'develop' nor 'master'."
+                        } else {
+                            echo "⏩ Skipping frontend deployment. Target branch is neither 'develop' nor 'master'."
                         }
                     }
                 }
             }
+        }
+    }
+    
+    post {
+        always {
+            echo "📦 Pipeline finished with status: ${currentBuild.currentResult}"
         }
     }
 }
