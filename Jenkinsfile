@@ -54,7 +54,83 @@ pipeline{
             }
         }
 
+        // stage('Run PR-Agent Review') {
+        //     when { expression { env.MR_STATE == 'opened' } }
+        //     steps {
+        //         script {
+        //             echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
+        //             withCredentials([
+        //                 string(credentialsId: 'GITLAB_ACCESS_TOKEN', variable: 'GITLAB_TOKEN'),
+        //                 string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
+        //             ]) {
+        //                 sh """
+        //                     docker run --rm \\
+        //                         -e config__git_provider="gitlab" \
+        //                         -e gitlab__url="${env.GITLAB_URL}" \
+        //                         -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
+        //                         -e GOOGLE_API_KEY="${GEMINI_KEY}" \
+        //                         -e config__model_provider="google" \
+        //                         -e config__model="gemini-2.5-pro" \
+        //                         codiumai/pr-agent:latest \
+        //                         --pr_url "${env.MR_URL}" review
+        //                 """
+        //             }
+        //         }
+        //     }
+        // }
+
+       stage('Run PR-Agent Review') {
+  when { expression { env.MR_STATE == 'opened' } }
+  steps {
+    script {
+      echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
+      withCredentials([
+        string(credentialsId: 'gitlab-token',   variable: 'GITLAB_TOKEN'),
+        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
+      ]) {
+        // ① 무엇이 실행됐는지 명확히 남기고, 실패해도 로그가 끊기지 않게 run
+        int rc = sh(returnStatus: true, script: '''#!/usr/bin/env bash
+          set -euxo pipefail
+
+          echo "==> whoami & groups"
+          id || true
+          groups || true
+
+          echo "==> Docker version"
+          docker version
+
+          echo "==> Pull codiumai/pr-agent:latest"
+          docker pull codiumai/pr-agent:latest
+
+          echo "==> Run PR-Agent (tee -> pr-agent.log)"
+          docker run --rm \
+            -e config__git_provider="gitlab" \
+            -e gitlab__url="${GITLAB_URL}" \
+            -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
+            -e GOOGLE_API_KEY="${GEMINI_KEY}" \
+            -e config__model_provider="google" \
+            -e config__model="gemini-1.5-pro" \
+            codiumai/pr-agent:latest \
+            --pr_url "${MR_URL}" review \
+            2>&1 | tee pr-agent.log
+        ''')
+
+        echo "==> PR-Agent exit code: ${rc}"
+        // ② 실패하든 성공하든 로그 파일을 남김
+        archiveArtifacts artifacts: 'pr-agent.log', onlyIfSuccessful: false, fingerprint: true
+
+        if (rc != 0) {
+          error "❌ PR-Agent failed. See console and pr-agent.log artifact."
+        }
+      }
+    }
+  }
+}
+
+
+
         stage('Check for Changes') {
+            when { expression { env.MR_STATE == 'merged' } }
             steps {
                 script {
                     env.DO_BACKEND_BUILD = false
@@ -83,32 +159,8 @@ pipeline{
             }
         }
 
-        stage('Run PR-Agent Review') {
-            when { expression { env.MR_STATE == 'opened' } }
-            steps {
-                script {
-                    echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
-                    withCredentials([
-                        string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
-                        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
-                    ]) {
-                        sh """
-                            docker run --rm \\
-                                -e GIT_PROVIDER="gitlab" \\
-                                -e GITLAB_URL="${env.GITLAB_URL}" \\
-                                -e GITLAB_TOKEN="${GITLAB_TOKEN}" \\
-                                -e GOOGLE_API_KEY="${GEMINI_KEY}" \\
-                                -e MODEL="gemini/gemini-1.5-pro-latest" \\
-                                -e PR_URL="${env.MR_URL}" \\
-                                pr-agent/pr-agent:latest \\
-                                review --pr_reviewer.extra_instructions="Answer in Korean"
-                        """
-                    }
-                }
-            }
-        }
-
         stage('Prepare Networks') {
+            when { expression { env.MR_STATE == 'merged' } }
             steps {
                 sh """
                     docker network create ${TEST_NETWORK} || true
