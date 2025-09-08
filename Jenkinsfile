@@ -54,7 +54,33 @@ pipeline{
             }
         }
 
+        stage('Run PR-Agent Review') {
+            when { expression { env.MR_STATE == 'opened' } }
+            steps {
+                script {
+                    echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
+                    withCredentials([
+                        string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
+                        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
+                    ]) {
+                        sh """
+                            docker run --rm \\
+                                -e GIT_PROVIDER="gitlab" \\
+                                -e GITLAB_URL="${env.GITLAB_URL}" \\
+                                -e GITLAB_TOKEN="${GITLAB_TOKEN}" \\
+                                -e GOOGLE_API_KEY="${GEMINI_KEY}" \\
+                                -e MODEL="gemini/gemini-2.5-pro" \\
+                                -e PR_URL="${env.MR_URL}" \\
+                                pr-agent/pr-agent:latest \\
+                                review --pr_reviewer.extra_instructions="Answer in Korean"
+                        """
+                    }
+                }
+            }
+        }
+
         stage('Check for Changes') {
+            when { expression { env.MR_STATE == 'merged' } }
             steps {
                 script {
                     env.DO_BACKEND_BUILD = false
@@ -83,32 +109,8 @@ pipeline{
             }
         }
 
-        stage('Run PR-Agent Review') {
-            when { expression { env.MR_STATE == 'opened' } }
-            steps {
-                script {
-                    echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
-                    withCredentials([
-                        string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
-                        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
-                    ]) {
-                        sh """
-                            docker run --rm \\
-                                -e GIT_PROVIDER="gitlab" \\
-                                -e GITLAB_URL="${env.GITLAB_URL}" \\
-                                -e GITLAB_TOKEN="${GITLAB_TOKEN}" \\
-                                -e GOOGLE_API_KEY="${GEMINI_KEY}" \\
-                                -e MODEL="gemini/gemini-1.5-pro-latest" \\
-                                -e PR_URL="${env.MR_URL}" \\
-                                pr-agent/pr-agent:latest \\
-                                review --pr_reviewer.extra_instructions="Answer in Korean"
-                        """
-                    }
-                }
-            }
-        }
-
         stage('Prepare Networks') {
+            when { expression { env.MR_STATE == 'merged' } }
             steps {
                 sh """
                     docker network create ${TEST_NETWORK} || true
