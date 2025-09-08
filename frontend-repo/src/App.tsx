@@ -28,6 +28,11 @@ function App() {
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more-cicd-test
       </p>
+      <p className="test-the-pr-agent">
+        PR Agent 테스트용 코드입니다.
+        잘못된 부분이 있으면 알려주세요.
+        싫어요
+      </p>
     </>
   )
 }
