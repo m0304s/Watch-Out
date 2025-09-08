@@ -29,16 +29,7 @@ function App() {
         Click on the Vite and React logos to learn more-cicd-test
       </p>
       <p className="test-the-pr-agent">
-        PR Agent 테스트용 코드입니다.
-        잘못된 부분이 있으면 알려주세요.
-        싫어요...
-
-        아아아아아아ㅏㅇ 왜 안되는거야
-        어 진짜 되나?이제???뭔가 희망이 보이는데
-        아 이제 되니??
-        API 키 400..?
-
-        제미나이 키 수정
+        테이블 17개??
       </p>
     </>
   )
