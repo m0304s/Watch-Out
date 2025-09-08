@@ -60,19 +60,19 @@ pipeline{
                 script {
                     echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
                     withCredentials([
-                        string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
+                        string(credentialsId: 'GITLAB_ACCESS_TOKEN', variable: 'GITLAB_TOKEN'),
                         string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
                     ]) {
                         sh """
                             docker run --rm \\
-                                -e GIT_PROVIDER="gitlab" \\
-                                -e GITLAB_URL="${env.GITLAB_URL}" \\
-                                -e GITLAB_TOKEN="${GITLAB_TOKEN}" \\
-                                -e GOOGLE_API_KEY="${GEMINI_KEY}" \\
-                                -e MODEL="gemini/gemini-2.5-pro" \\
-                                -e PR_URL="${env.MR_URL}" \\
-                                pr-agent/pr-agent:latest \\
-                                review --pr_reviewer.extra_instructions="Answer in Korean"
+                                -e config__git_provider="gitlab" \
+                                -e gitlab__url="${env.GITLAB_URL}" \
+                                -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
+                                -e GOOGLE_API_KEY="${GEMINI_KEY}" \
+                                -e config__model_provider="google" \
+                                -e config__model="gemini-2.5-pro" \
+                                codiumai/pr-agent:latest \
+                                --pr_url "${env.MR_URL}" review
                         """
                     }
                 }
