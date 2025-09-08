@@ -14,7 +14,7 @@ pipeline {
         TEST_NETWORK       = "test-network"
         PROD_NETWORK       = "prod-network"
 
-        TEST_PORT          = "8444" // 테스트용 HTTP 포트
+        TEST_PORT          = "8080" // 테스트용 HTTP 포트
         TEST_SSL_PORT      = "8443" // 테스트용 HTTPS 포트
         PROD_PORT          = "80"   // 운영용 HTTP 포트
         PROD_SSL_PORT      = "443"  // 운영용 HTTPS 포트
@@ -24,6 +24,21 @@ pipeline {
     }
 
     stages {
+        stage('Process Webhook Data') {
+            steps {
+                script {
+                    echo "✅ Webhook triggered successfully!"
+                    echo "----------------------------------"
+                    echo "MR URL         : ${env.MR_URL}"
+                    echo "Source Branch  : ${env.SOURCE_BRANCH}"
+                    echo "Target Branch  : ${env.TARGET_BRANCH}"
+                    echo "MR State       : ${env.MR_STATE}"
+                    echo "Triggered by   : ${env.USER_NAME}"
+                    echo "----------------------------------"
+                }
+            }
+        }
+
         stage('Determine Branch') {
             steps {
                 script {
