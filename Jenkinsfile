@@ -144,61 +144,68 @@ pipeline{
                 }
             }
             steps {
-                dir('frontend-repo') {
-                    script {
-                        def apiBaseUrl = ""
-                        if (env.TARGET_BRANCH == 'develop') {
-                            apiBaseUrl = env.VITE_API_BASE_URL_TEST
-                            def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
-                            echo "✅ Target is 'develop'. Deploying Frontend to TEST environment..."
-                            echo "🐳 Building TEST image with API URL: ${apiBaseUrl}"
+                // --- 👇 withCredentials 블록으로 API 주소를 불러오도록 수정 ---
+                withCredentials([
+                    string(credentialsId: 'VITE_API_BASE_URL_TEST', variable: 'API_URL_TEST'),
+                    string(credentialsId: 'VITE_API_BASE_URL_PROD', variable: 'API_URL_PROD')
+                ]) {
+                    dir('frontend-repo') {
+                        script {
+                            def apiBaseUrl = ""
+                            if (env.TARGET_BRANCH == 'develop') {
+                                // Credentials에서 불러온 API_URL_TEST 변수를 사용
+                                apiBaseUrl = API_URL_TEST
+                                def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
+                                echo "✅ Target is 'develop'. Deploying Frontend to TEST environment..."
+                                echo "🐳 Building TEST image with API URL: ${apiBaseUrl}"
 
-                            sh """
-                                docker build \\
-                                    --build-arg ENV=test \\
-                                    --build-arg VITE_API_BASE_URL="${apiBaseUrl}" \\
-                                    -t ${tag} .
-                            """
+                                sh """
+                                    docker build \\
+                                        --build-arg ENV=test \\
+                                        --build-arg VITE_API_BASE_URL="${apiBaseUrl}" \\
+                                        -t ${tag} .
+                                """
 
-                            echo "🚀 Running TEST container: ${FE_TEST_CONTAINER}"
-                            sh """
-                                docker rm -f ${FE_TEST_CONTAINER} || true
-                                docker run -d \\
-                                    --name ${FE_TEST_CONTAINER} \\
-                                    --network ${TEST_NETWORK} \\
-                                    -p ${FE_TEST_PORT}:80 \\
-                                    -p ${FE_TEST_SSL_PORT}:443 \\
-                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
-                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
-                                    ${tag}
-                            """
-                        } else if (env.TARGET_BRANCH == 'master') {
-                            apiBaseUrl = env.VITE_API_BASE_URL_PROD
-                            def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
-                            echo "✅ Target is 'master'. Deploying Frontend to PRODUCTION environment..."
-                            echo "🐳 Building PROD image with API URL: ${apiBaseUrl}"
+                                echo "🚀 Running TEST container: ${FE_TEST_CONTAINER}"
+                                sh """
+                                    docker rm -f ${FE_TEST_CONTAINER} || true
+                                    docker run -d \\
+                                        --name ${FE_TEST_CONTAINER} \\
+                                        --network ${TEST_NETWORK} \\
+                                        -p ${FE_TEST_PORT}:80 \\
+                                        -p ${FE_TEST_SSL_PORT}:443 \\
+                                        -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
+                                        -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
+                                        ${tag}
+                                """
+                            } else if (env.TARGET_BRANCH == 'master') {
+                                apiBaseUrl = API_URL_PROD
+                                def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
+                                echo "✅ Target is 'master'. Deploying Frontend to PRODUCTION environment..."
+                                echo "🐳 Building PROD image with API URL: ${apiBaseUrl}"
 
-                            sh """
-                                docker build \\
-                                    --build-arg ENV=prod \\
-                                    --build-arg VITE_API_BASE_URL="${apiBaseUrl}" \\
-                                    -t ${tag} .
-                            """
-                            
-                            echo "🚀 Running PROD container: ${FE_PROD_CONTAINER}"
-                            sh """
-                                docker rm -f ${FE_PROD_CONTAINER} || true
-                                docker run -d \\
-                                    --name ${FE_PROD_CONTAINER} \\
-                                    --network ${PROD_NETWORK} \\
-                                    -p ${FE_PROD_PORT}:80 \\
-                                    -p ${FE_PROD_SSL_PORT}:443 \\
-                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
-                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
-                                    ${tag}
-                            """
-                        } else {
-                            echo "⏩ Skipping frontend deployment. Target branch is neither 'develop' nor 'master'."
+                                sh """
+                                    docker build \\
+                                        --build-arg ENV=prod \\
+                                        --build-arg VITE_API_BASE_URL="${apiBaseUrl}" \\
+                                        -t ${tag} .
+                                """
+                                
+                                echo "🚀 Running PROD container: ${FE_PROD_CONTAINER}"
+                                sh """
+                                    docker rm -f ${FE_PROD_CONTAINER} || true
+                                    docker run -d \\
+                                        --name ${FE_PROD_CONTAINER} \\
+                                        --network ${PROD_NETWORK} \\
+                                        -p ${FE_PROD_PORT}:80 \\
+                                        -p ${FE_PROD_SSL_PORT}:443 \\
+                                        -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
+                                        -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
+                                        ${tag}
+                                """
+                            } else {
+                                echo "⏩ Skipping frontend deployment. Target branch is neither 'develop' nor 'master'."
+                            }
                         }
                     }
                 }
