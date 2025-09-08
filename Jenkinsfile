@@ -16,6 +16,9 @@ pipeline{
         FE_IMAGE_NAME      = "watchout/frontend-app"
         FE_TEST_CONTAINER  = "watchout-fe-test"
         FE_PROD_CONTAINER  = "watchout-fe-prod"
+
+        FE_TEST_PORT       = "8080"
+        FE_TEST_SSL_PORT   = "8443"
         FE_PROD_PORT       = "80"
         FE_PROD_SSL_PORT   = "443"
 
@@ -23,9 +26,8 @@ pipeline{
         TEST_NETWORK       = "test-network"
         PROD_NETWORK       = "prod-network"
     }
-    
-    stages {
 
+    stages {
         stage('Process Webhook Data') {
             steps {
                 script {
@@ -74,6 +76,72 @@ pipeline{
                     if (changedFiles.contains('frontend-repo/')) {
                         echo "✅ Changes detected in frontend-repo."
                         env.DO_FRONTEND_BUILD = true
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Frontend') {
+            // frontend-repo 폴더에 변경이 있을 때만 이 스테이지를 실행
+            when { expression { env.DO_FRONTEND_BUILD == 'true' } }
+            steps {
+                dir('frontend-repo') {
+                    script {
+                        // Target Branch가 develop일 경우 (테스트 환경 배포)
+                        if (env.TARGET_BRANCH == 'develop') {
+                            def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
+                            echo "✅ Target is 'develop'. Deploying to TEST environment..."
+                            echo "🐳 Building TEST image: ${tag}"
+
+                            sh """
+                                docker build \\
+                                    --build-arg ENV=test \\
+                                    --build-arg VITE_API_BASE_URL="${env.VITE_API_BASE_URL}" \\
+                                    -t ${tag} .
+                            """
+
+                            echo "🚀 Running TEST container: ${FE_TEST_CONTAINER}"
+                            sh """
+                                docker rm -f ${FE_TEST_CONTAINER} || true
+                                docker run -d \\
+                                    --name ${FE_TEST_CONTAINER} \\
+                                    --network ${TEST_NETWORK} \\
+                                    -p ${FE_TEST_PORT}:80 \\
+                                    -p ${FE_TEST_SSL_PORT}:443 \\
+                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
+                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
+                                    ${tag}
+                            """
+                        }
+                        // Target Branch가 master일 경우 (운영 환경 배포)
+                        else if (env.TARGET_BRANCH == 'master') {
+                            def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
+                            echo "✅ Target is 'master'. Deploying to PRODUCTION environment..."
+                            echo "🐳 Building PROD image: ${tag}"
+
+                            sh """
+                                docker build \\
+                                    --build-arg ENV=prod \\
+                                    --build-arg VITE_API_BASE_URL="${env.VITE_API_BASE_URL}" \\
+                                    -t ${tag} .
+                            """
+                            
+                            echo "🚀 Running PROD container: ${FE_PROD_CONTAINER}"
+                            sh """
+                                docker rm -f ${FE_PROD_CONTAINER} || true
+                                docker run -d \\
+                                    --name ${FE_PROD_CONTAINER} \\
+                                    --network ${PROD_NETWORK} \\
+                                    -p ${FE_PROD_PORT}:80 \\
+                                    -p ${FE_PROD_SSL_PORT}:443 \\
+                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
+                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
+                                    ${tag}
+                            """
+                        }
+                        else {
+                            echo "⏩ Skipping deployment. Target branch is neither 'develop' nor 'master'."
+                        }
                     }
                 }
             }
