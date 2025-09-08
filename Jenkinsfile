@@ -54,30 +54,79 @@ pipeline{
             }
         }
 
+        // stage('Run PR-Agent Review') {
+        //     when { expression { env.MR_STATE == 'opened' } }
+        //     steps {
+        //         script {
+        //             echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
+        //             withCredentials([
+        //                 string(credentialsId: 'GITLAB_ACCESS_TOKEN', variable: 'GITLAB_TOKEN'),
+        //                 string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
+        //             ]) {
+        //                 sh """
+        //                     docker run --rm \\
+        //                         -e config__git_provider="gitlab" \
+        //                         -e gitlab__url="${env.GITLAB_URL}" \
+        //                         -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
+        //                         -e GOOGLE_API_KEY="${GEMINI_KEY}" \
+        //                         -e config__model_provider="google" \
+        //                         -e config__model="gemini-2.5-pro" \
+        //                         codiumai/pr-agent:latest \
+        //                         --pr_url "${env.MR_URL}" review
+        //                 """
+        //             }
+        //         }
+        //     }
+        // }
+
         stage('Run PR-Agent Review') {
-            when { expression { env.MR_STATE == 'opened' } }
-            steps {
-                script {
-                    echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
-                    withCredentials([
-                        string(credentialsId: 'GITLAB_ACCESS_TOKEN', variable: 'GITLAB_TOKEN'),
-                        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
-                    ]) {
-                        sh """
-                            docker run --rm \\
-                                -e config__git_provider="gitlab" \
-                                -e gitlab__url="${env.GITLAB_URL}" \
-                                -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
-                                -e GOOGLE_API_KEY="${GEMINI_KEY}" \
-                                -e config__model_provider="google" \
-                                -e config__model="gemini-2.5-pro" \
-                                codiumai/pr-agent:latest \
-                                --pr_url "${env.MR_URL}" review
-                        """
-                    }
-                }
-            }
-        }
+  when { expression { env.MR_STATE == 'opened' } }
+  steps {
+    script {
+      echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
+      withCredentials([
+        string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
+        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
+      ]) {
+        sh '''
+          set -euxo pipefail
+
+          echo "==> Docker version check"
+          docker version
+
+          echo "==> Whoami & groups (docker 권한 점검)"
+          id || true
+          groups || true
+          # 리눅스 기준: jenkins 유저가 docker 그룹에 있어야 함 (없으면 permission denied)
+          # sudo usermod -aG docker jenkins && sudo systemctl restart docker && 재로그인 필요
+
+          echo "==> Pull PR-Agent image"
+          docker pull codiumai/pr-agent:latest
+
+          echo "==> Run PR-Agent review"
+          set +e
+          docker run --rm \
+            -e config__git_provider="gitlab" \
+            -e gitlab__url="${GITLAB_URL}" \
+            -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
+            -e GOOGLE_API_KEY="${GEMINI_KEY}" \
+            -e config__model_provider="google" \
+            -e config__model="gemini-1.5-pro" \
+            codiumai/pr-agent:latest \
+            --pr_url "${MR_URL}" review
+          EXIT_CODE=$?
+          set -e
+
+          echo "==> PR-Agent exit code: ${EXIT_CODE}"
+          if [ "${EXIT_CODE}" -ne 0 ]; then
+            echo "❌ PR-Agent failed. Check logs above."
+            exit ${EXIT_CODE}
+          fi
+        '''
+      }
+    }
+  }
+}
 
         stage('Check for Changes') {
             when { expression { env.MR_STATE == 'merged' } }
