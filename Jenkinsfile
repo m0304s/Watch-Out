@@ -23,6 +23,7 @@ pipeline{
         TEST_NETWORK       = "test-network"
         PROD_NETWORK       = "prod-network"
     }
+    
     stages {
 
         stage('Process Webhook Data') {
@@ -48,7 +49,6 @@ pipeline{
                     } else {
                         echo "ℹ️ MR status updated to: ${env.MR_STATE}"
                     }
-                    
                 }
             }
         }
