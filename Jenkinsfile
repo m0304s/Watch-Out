@@ -37,6 +37,18 @@ pipeline{
                     echo "Triggered by   : ${env.USER_NAME}"
                     echo "----------------------------------"
                 }
+                if (env.MR_STATE == 'opened') {
+                    echo "➡️ A new Merge Request has been opened."
+                } else if (env.MR_STATE == 'merged') {
+                    echo "✅ The Merge Request has been merged."
+                } else if (env.MR_STATE == 'closed') {
+                    echo "❌ The Merge Request has been closed without merging."
+                } else if (env.MR_STATE == null) {
+                    echo "⚠️ This build was likely triggered manually, not by a webhook."
+                } else {
+                    echo "ℹ️ MR status updated to: ${env.MR_STATE}"
+                }
+
             }
         }
 
@@ -48,7 +60,7 @@ pipeline{
 
                     // MR의 소스 브랜치와 타겟 브랜치 간의 변경 파일 목록을 가져옴
                     def changedFiles = sh(
-                        script: "git diff --name-only origin/${env.gitlabTargetBranch}...origin/${env.gitlabSourceBranch}",
+                        script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}",
                         returnStdout: true
                     ).trim()
 
