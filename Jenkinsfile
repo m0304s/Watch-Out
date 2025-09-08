@@ -16,8 +16,8 @@ pipeline{
         FE_IMAGE_NAME      = "watchout/frontend-app"
         FE_TEST_CONTAINER  = "watchout-fe-test"
         FE_PROD_CONTAINER  = "watchout-fe-prod"
-        FE_TEST_PORT       = "8085"
-        FE_TEST_SSL_PORT   = "8445"
+        FE_TEST_PORT       = "8080"
+        FE_TEST_SSL_PORT   = "8443"
         FE_PROD_PORT       = "80"
         FE_PROD_SSL_PORT   = "443"
 
