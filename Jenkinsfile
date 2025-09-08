@@ -74,6 +74,7 @@ pipeline{
                                 -e CONFIG__FALLBACK_MODELS="[]" \
                                 codiumai/pr-agent:latest \
                                 --pr_url "${MR_URL}" review
+                                --pr_reviewer.extra_instructions="한국어로 간결하게 코멘트하고, 중요 이슈 위주로 지적해줘"
                         """
                     }
                 }
