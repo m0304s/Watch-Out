@@ -39,7 +39,6 @@ pipeline{
                 }
             }
         }
-        
 
         stage('Check for Changes') {
             steps {
