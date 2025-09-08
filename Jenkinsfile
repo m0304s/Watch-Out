@@ -54,78 +54,33 @@ pipeline{
             }
         }
 
-        // stage('Run PR-Agent Review') {
-        //     when { expression { env.MR_STATE == 'opened' } }
-        //     steps {
-        //         script {
-        //             echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
-        //             withCredentials([
-        //                 string(credentialsId: 'GITLAB_ACCESS_TOKEN', variable: 'GITLAB_TOKEN'),
-        //                 string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
-        //             ]) {
-        //                 sh """
-        //                     docker run --rm \\
-        //                         -e config__git_provider="gitlab" \
-        //                         -e gitlab__url="${env.GITLAB_URL}" \
-        //                         -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
-        //                         -e GOOGLE_API_KEY="${GEMINI_KEY}" \
-        //                         -e config__model_provider="google" \
-        //                         -e config__model="gemini-2.5-pro" \
-        //                         codiumai/pr-agent:latest \
-        //                         --pr_url "${env.MR_URL}" review
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
-
-       stage('Run PR-Agent Review') {
-  when { expression { env.MR_STATE == 'opened' } }
-  steps {
-    script {
-      echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
-      withCredentials([
-        string(credentialsId: 'gitlab-token',   variable: 'GITLAB_TOKEN'),
-        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
-      ]) {
-        // ① 무엇이 실행됐는지 명확히 남기고, 실패해도 로그가 끊기지 않게 run
-        int rc = sh(returnStatus: true, script: '''#!/usr/bin/env bash
-          set -euxo pipefail
-
-          echo "==> whoami & groups"
-          id || true
-          groups || true
-
-          echo "==> Docker version"
-          docker version
-
-          echo "==> Pull codiumai/pr-agent:latest"
-          docker pull codiumai/pr-agent:latest
-
-          echo "==> Run PR-Agent (tee -> pr-agent.log)"
-          docker run --rm \
-            -e config__git_provider="gitlab" \
-            -e gitlab__url="${GITLAB_URL}" \
-            -e gitlab__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
-            -e GOOGLE_API_KEY="${GEMINI_KEY}" \
-            -e config__model_provider="google" \
-            -e config__model="gemini-1.5-pro" \
-            codiumai/pr-agent:latest \
-            --pr_url "${MR_URL}" review \
-            2>&1 | tee pr-agent.log
-        ''')
-
-        echo "==> PR-Agent exit code: ${rc}"
-        // ② 실패하든 성공하든 로그 파일을 남김
-        archiveArtifacts artifacts: 'pr-agent.log', onlyIfSuccessful: false, fingerprint: true
-
-        if (rc != 0) {
-          error "❌ PR-Agent failed. See console and pr-agent.log artifact."
+        stage('Run PR-Agent Review') {
+            when { expression { env.MR_STATE == 'opened' } }
+            steps {
+                script {
+                    echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
+                    withCredentials([
+                        string(credentialsId: 'GITLAB_ACCESS_TOKEN', variable: 'GITLAB_TOKEN'),
+                        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
+                    ]) {
+                        sh """
+                            docker run --rm \
+                                -e CONFIG__GIT_PROVIDER="gitlab" \
+                                -e GITLAB__URL="${GITLAB_URL}" \
+                                -e GITLAB__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
+                                -e GEMINI_API_KEY="${GEMINI_KEY}" \
+                                -e CONFIG__MODEL_PROVIDER=google \
+                                -e CONFIG__MODEL="gemini/gemini-2.5-pro" \
+                                -e CONFIG__FALLBACK_MODELS="[]" \
+                                -e PR_REVIEWER__EXTRA_INSTRUCTIONS="한국어로 간결하게 코멘트하고, 중요 이슈 위주로 지적해줘" \
+                                codiumai/pr-agent:latest \
+                                --pr_url "${MR_URL}" review
+                        """
+                    }
+                }
+            }
         }
-      }
-    }
-  }
-}
+
 
 
 

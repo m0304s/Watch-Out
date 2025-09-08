@@ -29,9 +29,14 @@ function App() {
         Click on the Vite and React logos to learn more-cicd-test
       </p>
       <p className="test-the-pr-agent">
+        테이블 17개??
+
+        PR-Agent 정상 동작 하니??
+        이 코드에선 어떤 것들이 바뀌었니?
+
+        https://j13e102.p.ssafy.io 도메인이야
         PR Agent 테스트용 코드입니다.
         잘못된 부분이 있으면 알려주세요.
-        싫어요
       </p>
     </>
   )
