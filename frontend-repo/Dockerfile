@@ -10,7 +10,7 @@ RUN pnpm run build
 
 FROM nginx:1.25-alpine
 RUN rm -f /etc/nginx/conf.d/*.conf
-ARG ENV=test
+ARG ENV
 COPY docker/nginx/${ENV}.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
