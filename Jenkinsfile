@@ -79,32 +79,30 @@ pipeline{
         //     }
         // }
 
-        stage('Run PR-Agent Review') {
+       stage('Run PR-Agent Review') {
   when { expression { env.MR_STATE == 'opened' } }
   steps {
     script {
       echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
       withCredentials([
-        string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
+        string(credentialsId: 'gitlab-token',   variable: 'GITLAB_TOKEN'),
         string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
       ]) {
-        sh '''
+        // ① 무엇이 실행됐는지 명확히 남기고, 실패해도 로그가 끊기지 않게 run
+        int rc = sh(returnStatus: true, script: '''#!/usr/bin/env bash
           set -euxo pipefail
 
-          echo "==> Docker version check"
-          docker version
-
-          echo "==> Whoami & groups (docker 권한 점검)"
+          echo "==> whoami & groups"
           id || true
           groups || true
-          # 리눅스 기준: jenkins 유저가 docker 그룹에 있어야 함 (없으면 permission denied)
-          # sudo usermod -aG docker jenkins && sudo systemctl restart docker && 재로그인 필요
 
-          echo "==> Pull PR-Agent image"
+          echo "==> Docker version"
+          docker version
+
+          echo "==> Pull codiumai/pr-agent:latest"
           docker pull codiumai/pr-agent:latest
 
-          echo "==> Run PR-Agent review"
-          set +e
+          echo "==> Run PR-Agent (tee -> pr-agent.log)"
           docker run --rm \
             -e config__git_provider="gitlab" \
             -e gitlab__url="${GITLAB_URL}" \
@@ -113,16 +111,17 @@ pipeline{
             -e config__model_provider="google" \
             -e config__model="gemini-1.5-pro" \
             codiumai/pr-agent:latest \
-            --pr_url "${MR_URL}" review
-          EXIT_CODE=$?
-          set -e
+            --pr_url "${MR_URL}" review \
+            2>&1 | tee pr-agent.log
+        ''')
 
-          echo "==> PR-Agent exit code: ${EXIT_CODE}"
-          if [ "${EXIT_CODE}" -ne 0 ]; then
-            echo "❌ PR-Agent failed. Check logs above."
-            exit ${EXIT_CODE}
-          fi
-        '''
+        echo "==> PR-Agent exit code: ${rc}"
+        // ② 실패하든 성공하든 로그 파일을 남김
+        archiveArtifacts artifacts: 'pr-agent.log', onlyIfSuccessful: false, fingerprint: true
+
+        if (rc != 0) {
+          error "❌ PR-Agent failed. See console and pr-agent.log artifact."
+        }
       }
     }
   }
