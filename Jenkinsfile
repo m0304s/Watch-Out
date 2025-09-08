@@ -83,30 +83,30 @@ pipeline{
             }
         }
 
-        // stage('Run PR-Agent Review') {
-        //     when { expression { env.MR_STATE == 'opened' } }
-        //     steps {
-        //         script {
-        //             echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
-        //             withCredentials([
-        //                 string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
-        //                 string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
-        //             ]) {
-        //                 sh """
-        //                     docker run --rm \\
-        //                         -e GIT_PROVIDER="gitlab" \\
-        //                         -e GITLAB_URL="${env.GITLAB_URL}" \\
-        //                         -e GITLAB_TOKEN="${GITLAB_TOKEN}" \\
-        //                         -e GOOGLE_API_KEY="${GEMINI_KEY}" \\
-        //                         -e MODEL="gemini/gemini-2.5-pro" \\
-        //                         -e PR_URL="${env.MR_URL}" \\
-        //                         pr-agent/pr-agent:latest \\
-        //                         review --pr_reviewer.extra_instructions="Answer in Korean"
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Run PR-Agent Review') {
+            when { expression { env.MR_STATE == 'opened' } }
+            steps {
+                script {
+                    echo "🤖 Starting PR-Agent for MR: ${env.MR_URL}"
+                    withCredentials([
+                        string(credentialsId: 'gitlab-token', variable: 'GITLAB_TOKEN'),
+                        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')
+                    ]) {
+                        sh """
+                            docker run --rm \\
+                                -e GIT_PROVIDER="gitlab" \\
+                                -e GITLAB_URL="${env.GITLAB_URL}" \\
+                                -e GITLAB_TOKEN="${GITLAB_TOKEN}" \\
+                                -e GOOGLE_API_KEY="${GEMINI_KEY}" \\
+                                -e MODEL="gemini/gemini-1.5-pro-latest" \\
+                                -e PR_URL="${env.MR_URL}" \\
+                                pr-agent/pr-agent:latest \\
+                                review --pr_reviewer.extra_instructions="Answer in Korean"
+                        """
+                    }
+                }
+            }
+        }
 
         stage('Prepare Networks') {
             steps {
@@ -125,13 +125,12 @@ pipeline{
                 }
             }
             steps {
+                echo "🚀 Starting Backend Deployment for branch: ${env.TARGET_BRANCH}"
                 dir('backend-repo') {
                     script {
-                        if (env.TARGET_BRANCH == 'develop') {
-                            // 백엔드 테스트 배포 로직
-                        } else if (env.TARGET_BRANCH == 'master') {
-                            // 백엔드 실제 서버 배포 로직
-                        }
+                        // 여기에 백엔드 배포 스크립트를 추가하세요.
+                        // (테스트 배포, 운영 Blue/Green 배포 등)
+                        echo "Backend deployment logic goes here."
                     }
                 }
             }
