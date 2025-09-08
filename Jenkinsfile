@@ -69,8 +69,9 @@ pipeline{
                                 -e GITLAB__URL="${GITLAB_URL}" \
                                 -e GITLAB__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
                                 -e GOOGLE_API_KEY="${GEMINI_KEY}" \
-                                -e CONFIG__MODEL_PROVIDER="google" \
-                                -e CONFIG__MODEL="gemini-2.5-pro" \
+                                -e CONFIG__MODEL_PROVIDER=google \
+                                -e CONFIG__MODEL="gemini/gemini-2.5-pro" \
+                                -e CONFIG__FALLBACK_MODELS="[]" \
                                 codiumai/pr-agent:latest \
                                 --pr_url "${MR_URL}" review
                         """
