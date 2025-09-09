@@ -34,26 +34,20 @@ pipeline{
 
         // --- 🔧 Jenkins 설정 변수 ---
         JENKINS_CONTAINER  = "jenkins"
-
-        // --- 💬 Mattermost (전역 설정 사용 시 비워두기) ---
-        // MATTERMOST_CHANNEL = "devops-alert"
-        // MATTERMOST_ENDPOINT = "https://mattermost.example.com/hooks/xxxxx"
     }
 
     stages {
-
-        /********************  🧩 Mattermost 템플릿 유틸 초기화  ********************/
         stage('Init MM Helpers') {
             steps {
                 script {
                     // 반드시 def 없이 전역 바인딩으로 등록
                     mmColor = { String result ->
                         switch (result) {
-                            case 'SUCCESS':  return '#2EB67D' // green
-                            case 'FAILURE':  return '#E01E5A' // red
-                            case 'UNSTABLE': return '#ECB22E' // yellow
-                            case 'ABORTED':  return '#9EA0A4' // gray
-                            default:         return '#4A8FE7' // blue
+                            case 'SUCCESS':  return '#2EB67D'
+                            case 'FAILURE':  return '#E01E5A'
+                            case 'UNSTABLE': return '#ECB22E'
+                            case 'ABORTED':  return '#9EA0A4'
+                            default:         return '#4A8FE7'
                         }
                     }
                     shortSha = { String sha -> (sha ?: '').take(8) }
@@ -72,7 +66,6 @@ pipeline{
                         ]
                     }
 
-                    // ── MR Opened: 웹훅/플러그인 환경변수 기반 정보 ──
                     whoOpened = {
                         return (env.GITLAB_USER_NAME ?: env.gitlabUserName ?: env.CHANGE_AUTHOR ?: env.USER_NAME ?: 'unknown')
                     }
@@ -80,47 +73,51 @@ pipeline{
                         return (env.GITLAB_USER_LOGIN ?: env.gitlabUserId ?: env.CHANGE_AUTHOR_DISPLAY_NAME ?: '')
                     }
 
-                    // ── (선택) GitLab API로 MR 상세 조회 ──
                     fetchMrInfo = { ->
                         if (!env.MR_URL) { return null }
-                        def matcher = (env.MR_URL =~ /https?:\/\/[^\/]+\/(.+)\/-\/merge_requests\/(\d+)/)
-                        if (!matcher || !matcher.matches()) { return null }
-                        def projectPath = matcher[0][1]  // group/subgroup/project
-                        def iid         = matcher[0][2]
-                        def encodedPath = java.net.URLEncoder.encode(projectPath, 'UTF-8').replace("+","%20")
-                        def apiUrl = "${env.GITLAB_URL}/api/v4/projects/${encodedPath}/merge_requests/${iid}"
-
-                        def payload = ''
                         try {
+                            def uri  = new java.net.URI(env.MR_URL.toString())
+                            def path = uri.getPath()             
+                            def marker = "/-/merge_requests/"
+                            def idx = path.indexOf(marker)
+                            if (idx < 0) return null
+                            def projectPath = path.substring(1, idx)
+                            def iidPart     = path.substring(idx + marker.length())
+                            def iidOnly     = iidPart.contains("/") ? iidPart.split("/")[0] : iidPart
+
+                            def encodedPath = java.net.URLEncoder.encode(projectPath, 'UTF-8').replace("+","%20")
+                            def apiUrl = "${env.GITLAB_URL}/api/v4/projects/${encodedPath}/merge_requests/${iidOnly}"
+
+                            def payload = ''
                             withCredentials([string(credentialsId: 'GITLAB_ACCESS_TOKEN', variable: 'GITLAB_TOKEN')]) {
                                 payload = sh(script: "curl -sfSL --header 'PRIVATE-TOKEN: ${GITLAB_TOKEN}' '${apiUrl}'", returnStdout: true).trim()
                             }
-                        } catch (ignored) { payload = '' }
+                            if (!payload) return null
 
-                        if (!payload) { return null }
-                        def data = new groovy.json.JsonSlurperClassic().parseText(payload)
-                        return [
-                            title      : data.title,
-                            iid        : data.iid,
-                            authorName : data.author?.name,
-                            authorUser : data.author?.username,
-                            assignees  : (data.assignees ?: []).collect{ it.name },
-                            reviewers  : (data.reviewers ?: []).collect{ it.name },
-                            labels     : (data.labels ?: []),
-                            webUrl     : data.web_url,
-                            createdAt  : data.created_at,
-                            draft      : (data.draft ?: false),
-                            changesCnt : (data.changes_count ?: null),
-                            state      : data.state
-                        ]
+                            def data = new groovy.json.JsonSlurperClassic().parseText(payload)
+                            return [
+                                title      : data.title,
+                                iid        : data.iid,
+                                authorName : data.author?.name,
+                                authorUser : data.author?.username,
+                                assignees  : (data.assignees ?: []).collect{ it.name },
+                                reviewers  : (data.reviewers ?: []).collect{ it.name },
+                                labels     : (data.labels ?: []),
+                                webUrl     : data.web_url,
+                                createdAt  : data.created_at,
+                                draft      : (data.draft ?: false),
+                                changesCnt : (data.changes_count ?: null),
+                                state      : data.state
+                            ]
+                        } catch (ignore) {
+                            return null
+                        }
                     }
 
-                    // ✅ 모든 정보를 message(마크다운) 본문에 합쳐서 전송 (attachments는 보조)
                     mmNotify = { Map args = [:] ->
                         String result   = args.result  ?: (currentBuild.currentResult ?: 'UNKNOWN')
                         String title    = args.title   ?: "🏗️ 빌드 알림"
                         String summary  = (args.summary ?: "").trim()
-                        String color    = mmColor(result)
                         String duration = sinceStart()
 
                         def vcs = detectVcsInfo()
@@ -150,25 +147,11 @@ pipeline{
                         bodyLines << "_Jenkins • " + new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul')) + "_"
                         def rootMessage = bodyLines.join("\n")
 
-                        // (보조) attachments: 서버가 지원하면 카드도 보임. 미지원이어도 정보는 message에 모두 있음.
-                        def attachments = [[
-                            fallback : "${env.JOB_NAME} #${env.BUILD_NUMBER} ${result}",
-                            color    : color,
-                            title    : title,
-                            text     : (summary ?: " "),  // 일부 서버에서 빈 문자열이면 null로 표기되므로 최소 공백
-                            fields   : []                 // 필드는 message에 합쳤음
-                        ]]
-
-                        mattermostSend(
-                            message    : rootMessage,   // ← 핵심
-                            iconEmoji  : ':jenkins:',
-                            attachments: attachments
-                        )
+                        mattermostSend(message: rootMessage)
                     }
                 }
             }
         }
-        /*******************************************************************/
 
         stage('Process Webhook Data') {
             steps {
@@ -296,6 +279,16 @@ pipeline{
                         echo "✅ Changes detected in edge proxy configuration."
                         env.DO_EDGE_CONFIG_CHANGE = 'true'
                     }
+
+                    mmNotify(
+                        result : 'SUCCESS',
+                        title  : "🔎 변경 파일 분석",
+                        summary: """
+- Backend: `${env.DO_BACKEND_BUILD}`
+- Frontend: `${env.DO_FRONTEND_BUILD}`
+- Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
+""".trim()
+                    )
                 }
             }
         }
