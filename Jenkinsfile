@@ -1,4 +1,4 @@
-pipeline{
+pipeline {
     agent any
 
     /********************  환경 변수  ********************/
@@ -34,14 +34,29 @@ pipeline{
         // --- Jenkins 컨테이너 ---
         JENKINS_CONTAINER = "jenkins"
 
-        MM_HOOK_MR_REVIEWS_ID = "MM_HOOK_MR_REVIEWS_ID"   // Secret text
-        MM_HOOK_GENERAL_ID    = "MM_HOOK_GENERAL_ID"      // Secret text
+        // --- Mattermost Webhook (Credentials ID) ---
+        MM_HOOK_MR_REVIEWS_ID = "MM_HOOK_MR_REVIEWS_ID"  // Secret text: 리뷰 채널 훅 URL
+        MM_HOOK_GENERAL_ID    = "MM_HOOK_GENERAL_ID"     // Secret text: 일반 채널 훅 URL
+
+        // --- 메시지 버퍼 파일 경로 ---
+        MM_BUF_FILE = ".mm_msg.txt"
+        // 최종 제목/엔드포인트 후보(중간에 설정)
+        MM_TITLE    = ""
+        MM_ENDPOINT = ""
+    }
+
+    options {
+        // 실패 시에도 post가 실행되도록 기본 동작 유지
+        // timestamps() 등 필요시 추가
     }
 
     stages {
-        stage('Init MM Helpers') {
+
+        /********************  Init: 자격증명 로드 & 메시지 시작  ********************/
+        stage('Init') {
             steps {
                 script {
+                    // 1) 웹훅 URL 로드
                     withCredentials([
                         string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
                         string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
@@ -50,115 +65,56 @@ pipeline{
                         env.MM_HOOK_GENERAL    = MM_HOOK_GENERAL_SEC
                     }
 
-                    shortSha   = { String sha -> (sha ?: '').take(8) }
-                    mdLink     = { String text, String url -> url ? "[${text}](${url})" : text }
-                    sinceStart = { try { (currentBuild.durationString ?: '').replaceAll('and counting','').trim() } catch (ignored) { '' } }
-                    detectVcsInfo = {
-                        [
-                            branch     : (env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.SOURCE_BRANCH ?: ''),
-                            target     : (env.CHANGE_TARGET ?: env.TARGET_BRANCH ?: ''),
-                            commit     : (env.GIT_COMMIT ?: ''),
-                            changeUrl  : (env.CHANGE_URL ?: env.MR_URL ?: ''),
-                            changeTitle: (env.CHANGE_TITLE ?: ''),
-                            author     : (env.CHANGE_AUTHOR ?: env.USER_NAME ?: '')
-                        ]
-                    }
-                    whoOpened   = { (env.GITLAB_USER_NAME ?: env.gitlabUserName ?: env.CHANGE_AUTHOR ?: env.USER_NAME ?: 'unknown') }
-                    whoOpenedId = { (env.GITLAB_USER_LOGIN ?: env.gitlabUserId ?: env.CHANGE_AUTHOR_DISPLAY_NAME ?: '') }
-
-                    mmInitBuffer = {
-                        mm_sections = []   // 섹션 문자열 배열
-                        mm_title    = null // 최종 타이틀
-                        mm_result   = null // 최종 결과
-                        mm_endpoint = null // 최종 endpoint
-                    }
-                    mmAddSection = { String header, String body ->
-                        if (!mm_sections) { mm_sections = [] }
-                        def h = header?.trim()
-                        def b = (body ?: "").trim()
-                        def section = h ? "**${h}**\n${b}" : b
-                        if (section?.trim()) mm_sections << section
-                    }
-                    mmSetTitle    = { String title -> mm_title = title }
-                    mmSetResult   = { String result -> mm_result = result }
-                    mmSetEndpoint = { String ep    -> mm_endpoint = ep }
-
-                    shEsc = { String s -> (s ?: "").replace("'", "'\"'\"'") }
-
-                    mmFlush = {
-                        def vcs = detectVcsInfo()
-                        def meta = []
-                        meta << (env.JOB_NAME && env.BUILD_NUMBER ? "- **Job**: ${mdLink("${env.JOB_NAME} #${env.BUILD_NUMBER}", env.BUILD_URL)}" : null)
-                        if (vcs.branch)    meta << "- **Branch**: `${vcs.branch}`"
-                        if (vcs.target)    meta << "- **Target**: `${vcs.target}`"
-                        if (vcs.commit)    meta << "- **Commit**: `${shortSha(vcs.commit)}`"
-                        if (vcs.changeUrl) meta << "- **MR**: ${mdLink(vcs.changeTitle ?: 'Merge Request', vcs.changeUrl)}"
-                        def duration = sinceStart()
-                        if (duration)      meta << "- **Duration**: ${duration}"
-
-                        def lines = []
-                        lines << "**${mm_title ?: '파이프라인 알림'}** (${mm_result ?: (currentBuild.currentResult ?: 'UNKNOWN')})"
-                        if (mm_sections && mm_sections.size()>0) {
-                            lines << ""
-                            lines << mm_sections.join("\n\n")
-                        }
-                        if (meta.any{ it }) {
-                            lines << ""
-                            lines.addAll(meta.findAll{ it })
-                        }
-                        lines << ""
-                        lines << "_Jenkins • " + new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul')) + "_"
-
-                        def rootMessage = lines.join("\n")
-
-                        def endpoint = mm_endpoint ?: ((env.MR_STATE == 'opened') ? env.MM_HOOK_MR_REVIEWS : env.MM_HOOK_GENERAL)
-
-                        def payload = groovy.json.JsonOutput.toJson([text: rootMessage])
-                        sh "curl -sS -X POST -H 'Content-Type: application/json' --data '${shEsc(payload)}' '${shEsc(endpoint)}' >/dev/null || true"
-                    }
-
-                    mmInitBuffer()
-                }
-            }
-        }
-
-        stage('Process Webhook Data') {
-            steps {
-                script {
-                    // 타이틀/채널 기본값
+                    // 2) 제목/채널 초깃값
                     if (env.MR_STATE == 'opened') {
-                        mmSetTitle("🆕 MR Opened & 초기 정보")
-                        mmSetEndpoint(env.MM_HOOK_MR_REVIEWS)
+                        env.MM_TITLE    = "🆕 MR Opened & 초기 정보"
+                        env.MM_ENDPOINT = env.MM_HOOK_MR_REVIEWS
                     } else if (env.MR_STATE == 'merged') {
-                        mmSetTitle("🔁 Merge 후 배포 파이프라인")
-                        mmSetEndpoint(env.MM_HOOK_GENERAL)
+                        env.MM_TITLE    = "🔁 Merge 후 배포 파이프라인"
+                        env.MM_ENDPOINT = env.MM_HOOK_GENERAL
                     } else {
-                        mmSetTitle("🚀 파이프라인 시작")
-                        mmSetEndpoint(env.MM_HOOK_GENERAL)
+                        env.MM_TITLE    = "🚀 파이프라인 시작"
+                        env.MM_ENDPOINT = env.MM_HOOK_GENERAL
                     }
-                    mmSetResult('STARTED')
 
-                    // 웹훅 요약
-                    mmAddSection("웹훅", """
+                    // 3) 버퍼 초기화 및 기본 섹션 기록
+                    def header = """**${env.MM_TITLE}** (STARTED)
+
+**웹훅**
 MR State: `${env.MR_STATE ?: 'N/A'}`
 From → To: `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
 트리거: `${env.USER_NAME ?: 'unknown'}`
-""".trim())
+""".stripIndent().trim()
 
-                    // opened일 때 작성자
-                    if (env.MR_STATE == 'opened') {
-                        def opener   = whoOpened()
-                        def openerId = whoOpenedId()
-                        mmAddSection("MR 작성자", """작성자: `${opener}`${openerId ? " (`${openerId}`)" : ""}${env.MR_URL ? "\n링크: ${env.MR_URL}" : ""}""".trim())
-                    }
+                    writeFile file: env.MM_BUF_FILE, text: header + "\n"
                 }
             }
         }
 
+        /********************  MR 작성자 정보 (opened 전용)  ********************/
+        stage('MR Author (opened only)') {
+            when { expression { env.MR_STATE == 'opened' } }
+            steps {
+                script {
+                    def opener   = (env.GITLAB_USER_NAME ?: env.gitlabUserName ?: env.CHANGE_AUTHOR ?: env.USER_NAME ?: 'unknown')
+                    def openerId = (env.GITLAB_USER_LOGIN ?: env.gitlabUserId ?: env.CHANGE_AUTHOR_DISPLAY_NAME ?: '')
+                    def cur = fileExists(env.MM_BUF_FILE) ? readFile(env.MM_BUF_FILE) : ""
+                    def section = """
+                    
+**MR 작성자**
+작성자: `${opener}`${openerId ? " (`${openerId}`)" : ""}${env.MR_URL ? "\n링크: ${env.MR_URL}" : ""}
+""".stripIndent()
+                    writeFile file: env.MM_BUF_FILE, text: cur + section
+                }
+            }
+        }
+
+        /********************  PR-Agent 리뷰 (opened 전용)  ********************/
         stage('Run PR-Agent Review') {
             when { expression { env.MR_STATE == 'opened' } }
             steps {
                 script {
+                    def ok = true
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                         withCredentials([
                             string(credentialsId: 'GITLAB_ACCESS_TOKEN', variable: 'GITLAB_TOKEN'),
@@ -179,19 +135,26 @@ From → To: `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
                             """
                         }
                     }
-                    def ok = (currentBuild.currentResult != 'FAILURE')
-                    mmAddSection("PR-Agent 리뷰 결과", ok ? "자동 리뷰가 정상 완료되었습니다." : "자동 리뷰 실행 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.")
+                    ok = (currentBuild.currentResult != 'FAILURE')
+                    def cur = fileExists(env.MM_BUF_FILE) ? readFile(env.MM_BUF_FILE) : ""
+                    def section = """
+
+**PR-Agent 리뷰 결과**
+${ ok ? "자동 리뷰가 정상 완료되었습니다." : "자동 리뷰 실행 중 오류가 발생했습니다. 콘솔 로그를 확인하세요." }
+""".stripIndent()
+                    writeFile file: env.MM_BUF_FILE, text: cur + section
                 }
             }
         }
 
+        /********************  변경 파일 분석 (merged 전용)  ********************/
         stage('Check for Changes') {
             when { expression { env.MR_STATE == 'merged' } }
             steps {
                 script {
-                    env.DO_BACKEND_BUILD       = 'false'
-                    env.DO_FRONTEND_BUILD      = 'false'
-                    env.DO_EDGE_CONFIG_CHANGE  = 'false'
+                    env.DO_BACKEND_BUILD      = 'false'
+                    env.DO_FRONTEND_BUILD     = 'false'
+                    env.DO_EDGE_CONFIG_CHANGE = 'false'
 
                     sh "git fetch --all >/dev/null 2>&1 || true"
                     def changed = sh(script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}", returnStdout: true).trim()
@@ -200,15 +163,20 @@ From → To: `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
                     if (changed.contains('frontend-repo/')) env.DO_FRONTEND_BUILD = 'true'
                     if (changed.contains('docker/edge/'))   env.DO_EDGE_CONFIG_CHANGE = 'true'
 
-                    mmAddSection("변경 파일 분석", """
+                    def cur = readFile(env.MM_BUF_FILE)
+                    def section = """
+
+**변경 파일 분석**
 Backend: `${env.DO_BACKEND_BUILD}`
 Frontend: `${env.DO_FRONTEND_BUILD}`
 Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
-""".trim())
+""".stripIndent()
+                    writeFile file: env.MM_BUF_FILE, text: cur + section
                 }
             }
         }
 
+        /********************  네트워크 준비/연결 (merged 전용)  ********************/
         stage('Prepare Networks') {
             when { expression { env.MR_STATE == 'merged' } }
             steps { sh "docker network create ${TEST_NETWORK} || true && docker network create ${PROD_NETWORK} || true" }
@@ -219,6 +187,7 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
             steps { sh "docker network connect ${TEST_NETWORK} ${JENKINS_CONTAINER} || true && docker network connect ${PROD_NETWORK} ${JENKINS_CONTAINER} || true" }
         }
 
+        /********************  Edge Proxy 배포/리로드 (merged + 변경 시)  ********************/
         stage('Deploy or Reload Edge Proxy') {
             when {
                 allOf {
@@ -242,7 +211,15 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                     if (running) {
                         sh "docker cp ./docker/edge/nginx/${envType}.conf ${name}:/etc/nginx/nginx.conf"
                         sh "docker exec ${name} nginx -s reload"
-                        mmAddSection("Edge Proxy", "리로드 완료\n- Image: `${tag}`\n- Env: `${envType}`\n- Target: `edge:${httpPort}/${httpsPort}`")
+                        def cur = readFile(env.MM_BUF_FILE)
+                        writeFile file: env.MM_BUF_FILE, text: cur + """
+
+**Edge Proxy**
+리로드 완료  
+- Image: `${tag}`  
+- Env: `${envType}`  
+- Target: `edge:${httpPort}/${httpsPort}`
+"""
                     } else {
                         sh """
                             docker rm -f ${name} || true
@@ -253,12 +230,21 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                                 -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \
                                 ${tag}
                         """
-                        mmAddSection("Edge Proxy", "신규 배포 완료\n- Image: `${tag}`\n- Env: `${envType}`\n- Target: `edge:${httpPort}/${httpsPort}`")
+                        def cur = readFile(env.MM_BUF_FILE)
+                        writeFile file: env.MM_BUF_FILE, text: cur + """
+
+**Edge Proxy**
+신규 배포 완료  
+- Image: `${tag}`  
+- Env: `${envType}`  
+- Target: `edge:${httpPort}/${httpsPort}`
+"""
                     }
                 }
             }
         }
 
+        /********************  Backend 배포 (merged + 변경 시)  ********************/
         stage('Deploy Backend') {
             when {
                 allOf {
@@ -282,7 +268,13 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                                 docker rm -f ${BE_TEST_CONTAINER} || true
                                 docker run -d --name ${BE_TEST_CONTAINER} --network ${TEST_NETWORK} -e SPRING_PROFILES_ACTIVE=docker ${tag}
                             """
-                            mmAddSection("Backend(TEST)", "배포 완료\n- Image: `${tag}`")
+                            def cur = readFile(env.MM_BUF_FILE)
+                            writeFile file: env.MM_BUF_FILE, text: cur + """
+
+**Backend(TEST)**
+배포 완료  
+- Image: `${tag}`
+"""
                         } else if (env.TARGET_BRANCH == 'master') {
                             def tag = "${BE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
                             def active   = sh(script: "docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER}", returnStdout: true).trim() ? BE_PROD_BLUE_CONTAINER : BE_PROD_GREEN_CONTAINER
@@ -300,13 +292,21 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                             """
                             sleep(30)
                             sh "docker rm -f ${active} || true"
-                            mmAddSection("Backend(PROD Blue/Green)", "전환 완료\n- New Active: `${inactive}`\n- Image: `${tag}`")
+                            def cur = readFile(env.MM_BUF_FILE)
+                            writeFile file: env.MM_BUF_FILE, text: cur + """
+
+**Backend(PROD Blue/Green)**
+전환 완료  
+- New Active: `${inactive}`  
+- Image: `${tag}`
+"""
                         }
                     }
                 }
             }
         }
 
+        /********************  Frontend 배포 (merged + 변경 시)  ********************/
         stage('Deploy Frontend') {
             when {
                 allOf {
@@ -328,7 +328,14 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                             }
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
                             sh "docker run -d --name ${FE_TEST_CONTAINER} --network ${TEST_NETWORK} ${tag}"
-                            mmAddSection("Frontend(TEST)", "배포 완료\n- Image: `${tag}`\n- API: `${env.FINAL_API_URL}`")
+                            def cur = readFile(env.MM_BUF_FILE)
+                            writeFile file: env.MM_BUF_FILE, text: cur + """
+
+**Frontend(TEST)**
+배포 완료  
+- Image: `${tag}`  
+- API: `${env.FINAL_API_URL}`
+"""
                         } else if (env.TARGET_BRANCH == 'master') {
                             env.FINAL_API_URL = API_URL_PROD
                             def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
@@ -337,7 +344,14 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
                             sh "docker run -d --name ${FE_PROD_CONTAINER} --network ${PROD_NETWORK} ${tag}"
-                            mmAddSection("Frontend(PROD)", "배포 완료\n- Image: `${tag}`\n- API: `${env.FINAL_API_URL}`")
+                            def cur = readFile(env.MM_BUF_FILE)
+                            writeFile file: env.MM_BUF_FILE, text: cur + """
+
+**Frontend(PROD)**
+배포 완료  
+- Image: `${tag}`  
+- API: `${env.FINAL_API_URL}`
+"""
                         }
                     }
                 }
@@ -345,11 +359,185 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
         }
     }
 
+    /********************  알림 1회만 전송 (플러그인 의존 X)  ********************/
     post {
-        success { script { mmSetResult('SUCCESS'); mmFlush() } }
-        unstable{ script { mmSetResult('UNSTABLE'); mmFlush() } }
-        failure { script { mmSetResult('FAILURE'); mmFlush() } }
-        aborted { script { mmSetResult('ABORTED'); mmFlush() } }
-        always  { echo "📦 Pipeline finished with status: ${currentBuild.currentResult}" }
+        success {
+            script {
+                // post에서 크리덴셜 재로딩: Init 실패해도 알림 보낼 수 있게
+                withCredentials([
+                    string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
+                    string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
+                ]) {
+                    def hookReviews = MM_HOOK_MR_REVIEWS_SEC
+                    def hookGeneral = MM_HOOK_GENERAL_SEC
+
+                    def vcsBranch = (env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.SOURCE_BRANCH ?: '')
+                    def vcsTarget = (env.CHANGE_TARGET ?: env.TARGET_BRANCH ?: '')
+                    def vcsCommit = (env.GIT_COMMIT ?: '')
+                    def vcsChangeUrl   = (env.CHANGE_URL ?: env.MR_URL ?: '')
+                    def vcsChangeTitle = (env.CHANGE_TITLE ?: '')
+                    def duration = (currentBuild.durationString ?: '').replaceAll('and counting','').trim()
+
+                    def meta = []
+                    if (env.JOB_NAME && env.BUILD_NUMBER) meta << "- **Job**: [${env.JOB_NAME} #${env.BUILD_NUMBER}](${env.BUILD_URL})"
+                    if (vcsBranch)    meta << "- **Branch**: `${vcsBranch}`"
+                    if (vcsTarget)    meta << "- **Target**: `${vcsTarget}`"
+                    if (vcsCommit)    meta << "- **Commit**: `${vcsCommit.take(8)}`"
+                    if (vcsChangeUrl) meta << "- **MR**: [${vcsChangeTitle ?: 'Merge Request'}](${vcsChangeUrl})"
+                    if (duration)     meta << "- **Duration**: ${duration}"
+
+                    def title = env.MM_TITLE ?: "파이프라인 알림"
+                    def buf   = fileExists(env.MM_BUF_FILE) ? readFile(env.MM_BUF_FILE) : "**${title}** (SUCCESS)"
+                    def lines = []
+                    // 제목 교체
+                    lines << buf.replaceFirst(/\*\*([^\*]+)\*\* \(STARTED\)/, "**${title}** (SUCCESS)")
+                    if (meta) {
+                        lines << ""
+                        lines.addAll(meta)
+                    }
+                    lines << ""
+                    lines << "_Jenkins • " + new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul')) + "_"
+                    def msg = lines.join("\n")
+
+                    // endpoint 결정: 스테이지에서 설정된 값 > 상태 기반
+                    def endpoint = env.MM_ENDPOINT?.trim() ? env.MM_ENDPOINT : ((env.MR_STATE == 'opened') ? hookReviews : hookGeneral)
+                    def payload  = groovy.json.JsonOutput.toJson([text: msg])
+                    def esc = { String s -> (s ?: "").replace("'", "'\"'\"'") }
+                    sh "curl -sS -X POST -H 'Content-Type: application/json' --data '${esc(payload)}' '${esc(endpoint)}' >/dev/null || true"
+                }
+            }
+        }
+        unstable {
+            script {
+                withCredentials([
+                    string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
+                    string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
+                ]) {
+                    def hookReviews = MM_HOOK_MR_REVIEWS_SEC
+                    def hookGeneral = MM_HOOK_GENERAL_SEC
+
+                    def vcsBranch = (env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.SOURCE_BRANCH ?: '')
+                    def vcsTarget = (env.CHANGE_TARGET ?: env.TARGET_BRANCH ?: '')
+                    def vcsCommit = (env.GIT_COMMIT ?: '')
+                    def vcsChangeUrl   = (env.CHANGE_URL ?: env.MR_URL ?: '')
+                    def vcsChangeTitle = (env.CHANGE_TITLE ?: '')
+                    def duration = (currentBuild.durationString ?: '').replaceAll('and counting','').trim()
+
+                    def meta = []
+                    if (env.JOB_NAME && env.BUILD_NUMBER) meta << "- **Job**: [${env.JOB_NAME} #${env.BUILD_NUMBER}](${env.BUILD_URL})"
+                    if (vcsBranch)    meta << "- **Branch**: `${vcsBranch}`"
+                    if (vcsTarget)    meta << "- **Target**: `${vcsTarget}`"
+                    if (vcsCommit)    meta << "- **Commit**: `${vcsCommit.take(8)}`"
+                    if (vcsChangeUrl) meta << "- **MR**: [${vcsChangeTitle ?: 'Merge Request'}](${vcsChangeUrl})"
+                    if (duration)     meta << "- **Duration**: ${duration}"
+
+                    def title = env.MM_TITLE ?: "파이프라인 알림"
+                    def buf   = fileExists(env.MM_BUF_FILE) ? readFile(env.MM_BUF_FILE) : "**${title}** (STARTED)"
+                    def lines = []
+                    lines << buf.replaceFirst(/\*\*([^\*]+)\*\* \(STARTED\)/, "**${title}** (UNSTABLE)")
+                    if (meta) {
+                        lines << ""
+                        lines.addAll(meta)
+                    }
+                    lines << ""
+                    lines << "_Jenkins • " + new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul')) + "_"
+                    def msg = lines.join("\n")
+
+                    def endpoint = env.MM_ENDPOINT?.trim() ? env.MM_ENDPOINT : ((env.MR_STATE == 'opened') ? hookReviews : hookGeneral)
+                    def payload  = groovy.json.JsonOutput.toJson([text: msg])
+                    def esc = { String s -> (s ?: "").replace("'", "'\"'\"'") }
+                    sh "curl -sS -X POST -H 'Content-Type: application/json' --data '${esc(payload)}' '${esc(endpoint)}' >/dev/null || true"
+                }
+            }
+        }
+        failure {
+            script {
+                withCredentials([
+                    string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
+                    string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
+                ]) {
+                    def hookReviews = MM_HOOK_MR_REVIEWS_SEC
+                    def hookGeneral = MM_HOOK_GENERAL_SEC
+
+                    def vcsBranch = (env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.SOURCE_BRANCH ?: '')
+                    def vcsTarget = (env.CHANGE_TARGET ?: env.TARGET_BRANCH ?: '')
+                    def vcsCommit = (env.GIT_COMMIT ?: '')
+                    def vcsChangeUrl   = (env.CHANGE_URL ?: env.MR_URL ?: '')
+                    def vcsChangeTitle = (env.CHANGE_TITLE ?: '')
+                    def duration = (currentBuild.durationString ?: '').replaceAll('and counting','').trim()
+
+                    def meta = []
+                    if (env.JOB_NAME && env.BUILD_NUMBER) meta << "- **Job**: [${env.JOB_NAME} #${env.BUILD_NUMBER}](${env.BUILD_URL})"
+                    if (vcsBranch)    meta << "- **Branch**: `${vcsBranch}`"
+                    if (vcsTarget)    meta << "- **Target**: `${vcsTarget}`"
+                    if (vcsCommit)    meta << "- **Commit**: `${vcsCommit.take(8)}`"
+                    if (vcsChangeUrl) meta << "- **MR**: [${vcsChangeTitle ?: 'Merge Request'}](${vcsChangeUrl})"
+                    if (duration)     meta << "- **Duration**: ${duration}"
+
+                    def title = env.MM_TITLE ?: "파이프라인 알림"
+                    def buf   = fileExists(env.MM_BUF_FILE) ? readFile(env.MM_BUF_FILE) : "**${title}** (STARTED)"
+                    def lines = []
+                    lines << buf.replaceFirst(/\*\*([^\*]+)\*\* \(STARTED\)/, "**${title}** (FAILURE)")
+                    if (meta) {
+                        lines << ""
+                        lines.addAll(meta)
+                    }
+                    lines << ""
+                    lines << "_Jenkins • " + new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul')) + "_"
+                    def msg = lines.join("\n")
+
+                    def endpoint = env.MM_ENDPOINT?.trim() ? env.MM_ENDPOINT : ((env.MR_STATE == 'opened') ? hookReviews : hookGeneral)
+                    def payload  = groovy.json.JsonOutput.toJson([text: msg])
+                    def esc = { String s -> (s ?: "").replace("'", "'\"'\"'") }
+                    sh "curl -sS -X POST -H 'Content-Type: application/json' --data '${esc(payload)}' '${esc(endpoint)}' >/dev/null || true"
+                }
+            }
+        }
+        aborted {
+            script {
+                withCredentials([
+                    string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
+                    string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
+                ]) {
+                    def hookReviews = MM_HOOK_MR_REVIEWS_SEC
+                    def hookGeneral = MM_HOOK_GENERAL_SEC
+
+                    def vcsBranch = (env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.SOURCE_BRANCH ?: '')
+                    def vcsTarget = (env.CHANGE_TARGET ?: env.TARGET_BRANCH ?: '')
+                    def vcsCommit = (env.GIT_COMMIT ?: '')
+                    def vcsChangeUrl   = (env.CHANGE_URL ?: env.MR_URL ?: '')
+                    def vcsChangeTitle = (env.CHANGE_TITLE ?: '')
+                    def duration = (currentBuild.durationString ?: '').replaceAll('and counting','').trim()
+
+                    def meta = []
+                    if (env.JOB_NAME && env.BUILD_NUMBER) meta << "- **Job**: [${env.JOB_NAME} #${env.BUILD_NUMBER}](${env.BUILD_URL})"
+                    if (vcsBranch)    meta << "- **Branch**: `${vcsBranch}`"
+                    if (vcsTarget)    meta << "- **Target**: `${vcsTarget}`"
+                    if (vcsCommit)    meta << "- **Commit**: `${vcsCommit.take(8)}`"
+                    if (vcsChangeUrl) meta << "- **MR**: [${vcsChangeTitle ?: 'Merge Request'}](${vcsChangeUrl})"
+                    if (duration)     meta << "- **Duration**: ${duration}"
+
+                    def title = env.MM_TITLE ?: "파이프라인 알림"
+                    def buf   = fileExists(env.MM_BUF_FILE) ? readFile(env.MM_BUF_FILE) : "**${title}** (STARTED)"
+                    def lines = []
+                    lines << buf.replaceFirst(/\*\*([^\*]+)\*\* \(STARTED\)/, "**${title}** (ABORTED)")
+                    if (meta) {
+                        lines << ""
+                        lines.addAll(meta)
+                    }
+                    lines << ""
+                    lines << "_Jenkins • " + new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul')) + "_"
+                    def msg = lines.join("\n")
+
+                    def endpoint = env.MM_ENDPOINT?.trim() ? env.MM_ENDPOINT : ((env.MR_STATE == 'opened') ? hookReviews : hookGeneral)
+                    def payload  = groovy.json.JsonOutput.toJson([text: msg])
+                    def esc = { String s -> (s ?: "").replace("'", "'\"'\"'") }
+                    sh "curl -sS -X POST -H 'Content-Type: application/json' --data '${esc(payload)}' '${esc(endpoint)}' >/dev/null || true"
+                }
+            }
+        }
+        always {
+            echo "📦 Pipeline finished with status: ${currentBuild.currentResult}"
+        }
     }
 }
