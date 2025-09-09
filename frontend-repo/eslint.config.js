@@ -40,7 +40,7 @@ export default [
             ['parent', 'sibling', 'index'],
           ],
           alphabetize: { order: 'asc', caseInsensitive: true },
-          ' newlines-between': 'always',
+          'newlines-between': 'always',
         },
       ],
       'react-refresh/only-export-components': 'warn',
