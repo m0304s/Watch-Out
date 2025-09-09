@@ -121,7 +121,7 @@ pipeline{
         stage('Deploy or Reload Edge Proxy') {
              when {
                 allOf {
-                    expression { env.DO_BACKEND_BUILD == 'true' || env.DO_FRONTEND_BUILD == 'true' || env.DO_EDGE_CONFIG_CHANGE == 'true' }
+                    expression { env.DO_EDGE_CONFIG_CHANGE == 'true' }
                     expression { env.MR_STATE == 'merged' }
                 }
             }
