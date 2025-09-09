@@ -32,6 +32,8 @@ pipeline{
         TEST_NETWORK       = "test-network"
         PROD_NETWORK       = "prod-network"
         
+        // --- 🔧 Jenkins 설정 변수 ---
+        JENKINS_CONTAINER  = "jenkins"
     }
     
     stages {
@@ -141,6 +143,7 @@ pipeline{
                 """
             }
         }
+
 
         stage('Deploy Backend') {
             when {
