@@ -1,6 +1,7 @@
 pipeline{
     agent any
 
+    /********************  환경 변수  ********************/
     environment {
         // --- 공통 ---
         GITLAB_URL   = "https://lab.ssafy.com"
@@ -33,12 +34,11 @@ pipeline{
         // --- Jenkins 컨테이너 ---
         JENKINS_CONTAINER = "jenkins"
 
-        MM_HOOK_MR_REVIEWS_ID = "MM_HOOK_MR_REVIEWS_ID"
-        MM_HOOK_GENERAL_ID    = "MM_HOOK_GENERAL_ID"
+        MM_HOOK_MR_REVIEWS_ID = "MM_HOOK_MR_REVIEWS_ID"   // Secret text
+        MM_HOOK_GENERAL_ID    = "MM_HOOK_GENERAL_ID"      // Secret text
     }
 
     stages {
-
         stage('Init MM Helpers') {
             steps {
                 script {
@@ -50,8 +50,8 @@ pipeline{
                         env.MM_HOOK_GENERAL    = MM_HOOK_GENERAL_SEC
                     }
 
-                    shortSha = { String sha -> (sha ?: '').take(8) }
-                    link     = { String text, String url -> url ? "[${text}](${url})" : text }
+                    shortSha   = { String sha -> (sha ?: '').take(8) }
+                    mdLink     = { String text, String url -> url ? "[${text}](${url})" : text }
                     sinceStart = { try { (currentBuild.durationString ?: '').replaceAll('and counting','').trim() } catch (ignored) { '' } }
                     detectVcsInfo = {
                         [
@@ -63,14 +63,14 @@ pipeline{
                             author     : (env.CHANGE_AUTHOR ?: env.USER_NAME ?: '')
                         ]
                     }
-                    whoOpened = { (env.GITLAB_USER_NAME ?: env.gitlabUserName ?: env.CHANGE_AUTHOR ?: env.USER_NAME ?: 'unknown') }
+                    whoOpened   = { (env.GITLAB_USER_NAME ?: env.gitlabUserName ?: env.CHANGE_AUTHOR ?: env.USER_NAME ?: 'unknown') }
                     whoOpenedId = { (env.GITLAB_USER_LOGIN ?: env.gitlabUserId ?: env.CHANGE_AUTHOR_DISPLAY_NAME ?: '') }
 
                     mmInitBuffer = {
                         mm_sections = []   // 섹션 문자열 배열
                         mm_title    = null // 최종 타이틀
                         mm_result   = null // 최종 결과
-                        mm_endpoint = null // 최종 endpoint (없으면 MR_STATE로 자동 선택)
+                        mm_endpoint = null // 최종 endpoint
                     }
                     mmAddSection = { String header, String body ->
                         if (!mm_sections) { mm_sections = [] }
@@ -83,16 +83,18 @@ pipeline{
                     mmSetResult   = { String result -> mm_result = result }
                     mmSetEndpoint = { String ep    -> mm_endpoint = ep }
 
+                    shEsc = { String s -> (s ?: "").replace("'", "'\"'\"'") }
+
                     mmFlush = {
                         def vcs = detectVcsInfo()
-                        def kv = []
-                        kv << (env.JOB_NAME && env.BUILD_NUMBER ? "- **Job**: ${link("${env.JOB_NAME} #${env.BUILD_NUMBER}", env.BUILD_URL)}" : null)
-                        if (vcs.branch)    kv << "- **Branch**: `${vcs.branch}`"
-                        if (vcs.target)    kv << "- **Target**: `${vcs.target}`"
-                        if (vcs.commit)    kv << "- **Commit**: `${shortSha(vcs.commit)}`"
-                        if (vcs.changeUrl) kv << "- **MR**: ${link(vcs.changeTitle ?: 'Merge Request', vcs.changeUrl)}"
+                        def meta = []
+                        meta << (env.JOB_NAME && env.BUILD_NUMBER ? "- **Job**: ${mdLink("${env.JOB_NAME} #${env.BUILD_NUMBER}", env.BUILD_URL)}" : null)
+                        if (vcs.branch)    meta << "- **Branch**: `${vcs.branch}`"
+                        if (vcs.target)    meta << "- **Target**: `${vcs.target}`"
+                        if (vcs.commit)    meta << "- **Commit**: `${shortSha(vcs.commit)}`"
+                        if (vcs.changeUrl) meta << "- **MR**: ${mdLink(vcs.changeTitle ?: 'Merge Request', vcs.changeUrl)}"
                         def duration = sinceStart()
-                        if (duration)      kv << "- **Duration**: ${duration}"
+                        if (duration)      meta << "- **Duration**: ${duration}"
 
                         def lines = []
                         lines << "**${mm_title ?: '파이프라인 알림'}** (${mm_result ?: (currentBuild.currentResult ?: 'UNKNOWN')})"
@@ -100,15 +102,19 @@ pipeline{
                             lines << ""
                             lines << mm_sections.join("\n\n")
                         }
-                        if (kv.any{ it }) {
+                        if (meta.any{ it }) {
                             lines << ""
-                            lines.addAll(kv.findAll{ it })
+                            lines.addAll(meta.findAll{ it })
                         }
                         lines << ""
                         lines << "_Jenkins • " + new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul')) + "_"
 
+                        def rootMessage = lines.join("\n")
+
                         def endpoint = mm_endpoint ?: ((env.MR_STATE == 'opened') ? env.MM_HOOK_MR_REVIEWS : env.MM_HOOK_GENERAL)
-                        mattermostSend(message: lines.join("\n"), endpoint: endpoint)
+
+                        def payload = groovy.json.JsonOutput.toJson([text: rootMessage])
+                        sh "curl -sS -X POST -H 'Content-Type: application/json' --data '${shEsc(payload)}' '${shEsc(endpoint)}' >/dev/null || true"
                     }
 
                     mmInitBuffer()
@@ -141,7 +147,7 @@ From → To: `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
 
                     // opened일 때 작성자
                     if (env.MR_STATE == 'opened') {
-                        def opener = whoOpened()
+                        def opener   = whoOpened()
                         def openerId = whoOpenedId()
                         mmAddSection("MR 작성자", """작성자: `${opener}`${openerId ? " (`${openerId}`)" : ""}${env.MR_URL ? "\n링크: ${env.MR_URL}" : ""}""".trim())
                     }
@@ -173,8 +179,8 @@ From → To: `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
                             """
                         }
                     }
-                    def prOk = (currentBuild.currentResult != 'FAILURE')
-                    mmAddSection("PR-Agent 리뷰 결과", prOk ? "자동 리뷰가 정상 완료되었습니다." : "자동 리뷰 실행 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.")
+                    def ok = (currentBuild.currentResult != 'FAILURE')
+                    mmAddSection("PR-Agent 리뷰 결과", ok ? "자동 리뷰가 정상 완료되었습니다." : "자동 리뷰 실행 중 오류가 발생했습니다. 콘솔 로그를 확인하세요.")
                 }
             }
         }
@@ -183,9 +189,9 @@ From → To: `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
             when { expression { env.MR_STATE == 'merged' } }
             steps {
                 script {
-                    env.DO_BACKEND_BUILD = 'false'
-                    env.DO_FRONTEND_BUILD = 'false'
-                    env.DO_EDGE_CONFIG_CHANGE = 'false'
+                    env.DO_BACKEND_BUILD       = 'false'
+                    env.DO_FRONTEND_BUILD      = 'false'
+                    env.DO_EDGE_CONFIG_CHANGE  = 'false'
 
                     sh "git fetch --all >/dev/null 2>&1 || true"
                     def changed = sh(script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}", returnStdout: true).trim()
@@ -340,20 +346,10 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
     }
 
     post {
-        success {
-            script { mmSetResult('SUCCESS'); mmFlush() }
-        }
-        unstable {
-            script { mmSetResult('UNSTABLE'); mmFlush() }
-        }
-        failure {
-            script { mmSetResult('FAILURE'); mmFlush() }
-        }
-        aborted {
-            script { mmSetResult('ABORTED'); mmFlush() }
-        }
-        always {
-            echo "📦 Pipeline finished with status: ${currentBuild.currentResult}"
-        }
+        success { script { mmSetResult('SUCCESS'); mmFlush() } }
+        unstable{ script { mmSetResult('UNSTABLE'); mmFlush() } }
+        failure { script { mmSetResult('FAILURE'); mmFlush() } }
+        aborted { script { mmSetResult('ABORTED'); mmFlush() } }
+        always  { echo "📦 Pipeline finished with status: ${currentBuild.currentResult}" }
     }
 }
