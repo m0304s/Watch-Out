@@ -135,17 +135,15 @@ pipeline{
             when { expression { env.MR_STATE == 'merged' } }
             steps {
                 sh """
-                    # Jenkins 컨테이너가 실행 중인지 확인
-                    if docker ps --format "table {{.Names}}" | grep -q "^${JENKINS_CONTAINER}$"; then
-                        echo "✅ Jenkins container is running, connecting to networks..."
-                        docker network connect ${TEST_NETWORK} ${JENKINS_CONTAINER} || true
-                        docker network connect ${PROD_NETWORK} ${JENKINS_CONTAINER} || true
-                    else
-                        echo "⚠️ Jenkins container not found. Please ensure Jenkins is running."
-                    fi
+                    # Jenkins 컨테이너를 네트워크에 연결
+                    echo "🔗 Connecting Jenkins to networks..."
+                    docker network connect ${TEST_NETWORK} jenkins || true
+                    docker network connect ${PROD_NETWORK} jenkins || true
+                    echo "✅ Jenkins connected to networks"
                 """
             }
         }
+
 
         stage('Deploy Backend') {
             when {
