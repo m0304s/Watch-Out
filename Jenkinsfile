@@ -496,8 +496,8 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
         aborted {
             script {
                 withCredentials([
-                    string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
-                    string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
+                    string(credentialsId: env.MM_HOOK_MR_REVIEWS, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
+                    string(credentialsId: env.MM_HOOK_GENERAL,  variable: 'MM_HOOK_GENERAL_SEC')
                 ]) {
                     def hookReviews = MM_HOOK_MR_REVIEWS_SEC
                     def hookGeneral = MM_HOOK_GENERAL_SEC
