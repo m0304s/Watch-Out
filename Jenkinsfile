@@ -32,12 +32,12 @@ pipeline{
         // --- 🔧 Jenkins 설정 변수 ---
         JENKINS_CONTAINER  = "jenkins"
 
+    }
 
     stages {
         stage('Init MM Helpers') {
             steps {
                 script {
-                    // 반드시 def 없이 전역 바인딩으로 등록
                     mmColor = { String result ->
                         switch (result) {
                             case 'SUCCESS':  return '#2EB67D' // green
@@ -102,6 +102,7 @@ pipeline{
                             fields   : fields,
                             footer   : "Jenkins • ${new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul'))}"
                         ]]
+
                         def rootMessage = args.message ?: "**${title}** (${result})"
 
                         mattermostSend(
