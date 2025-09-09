@@ -135,7 +135,12 @@ pipeline{
 
                             echo "Building Frontend image..."
                             dir('frontend-repo') {
-                                sh "docker build -t ${fe_tag} --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
+                                sh """
+                                    docker build \\
+                                        -t ${fe_tag} \\
+                                        --build-arg ENV=test \\
+                                        --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' .
+                                """
                             }
                             
                             echo "Building Edge Proxy image..."
@@ -159,8 +164,14 @@ pipeline{
                             echo "✅ Target is 'master'. Deploying Frontend & Edge Proxy to PROD env..."
 
                             echo "Building Frontend image..."
+                            echo "Building Frontend image..."
                             dir('frontend-repo') {
-                                sh "docker build -t ${fe_tag} --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
+                                sh """
+                                    docker build \\
+                                        -t ${fe_tag} \\
+                                        --build-arg ENV=prod \\
+                                        --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' .
+                                """
                             }
 
                             echo "Building Edge Proxy image..."
