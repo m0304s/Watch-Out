@@ -218,16 +218,6 @@ pipeline{
                         echo "✅ Changes detected in edge proxy configuration."
                         env.DO_EDGE_CONFIG_CHANGE = 'true'
                     }
-
-                    mmNotify(
-                        result : 'SUCCESS',
-                        title  : "🔎 변경 파일 분석",
-                        summary: """
-- Backend: `${env.DO_BACKEND_BUILD}`
-- Frontend: `${env.DO_FRONTEND_BUILD}`
-- Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
-""".trim()
-                    )
                 }
             }
         }
