@@ -29,12 +29,8 @@ function App() {
         Click on the Vite and React logos to learn more-cicd-test
       </p>
       <p className="test-the-pr-agent">
-        테이블 17개??
-
-        PR-Agent 정상 동작 하니??
-        이 코드에선 어떤 것들이 바뀌었니?
-
-        아 테스트입니다.ㅇㅇㅇ
+        테이블 17개?? PR-Agent 정상 동작 하니?? 이 코드에선 어떤 것들이
+        바뀌었니? 아 테스트입니다.ㅇㅇㅇ
       </p>
     </>
   )
