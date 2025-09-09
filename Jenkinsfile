@@ -66,7 +66,7 @@ pipeline{
                                 -e GITLAB__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \\
                                 -e GEMINI_API_KEY="${GEMINI_KEY}" \\
                                 -e CONFIG__MODEL_PROVIDER=google \\
-                                -e CONFIG__MODEL="gemini/gemini-1.5-pro-latest" \\
+                                -e CONFIG__MODEL="gemini/gemini-2.5-pro" \\
                                 -e CONFIG__FALLBACK_MODELS="[]" \\
                                 -e PR_REVIEWER__EXTRA_INSTRUCTIONS="한국어로 간결하게 코멘트하고, 중요 이슈 위주로 지적해줘" \\
                                 codiumai/pr-agent:latest \\
