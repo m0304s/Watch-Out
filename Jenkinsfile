@@ -66,7 +66,7 @@ pipeline{
                                 -e GITLAB__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \\
                                 -e GEMINI_API_KEY="${GEMINI_KEY}" \\
                                 -e CONFIG__MODEL_PROVIDER=google \\
-                                -e CONFIG__MODEL="gemini/gemini-2.5-pro" \\
+                                -e CONFIG__MODEL="gemini/gemini-1.5-pro-latest" \\
                                 -e CONFIG__FALLBACK_MODELS="[]" \\
                                 -e PR_REVIEWER__EXTRA_INSTRUCTIONS="한국어로 간결하게 코멘트하고, 중요 이슈 위주로 지적해줘" \\
                                 codiumai/pr-agent:latest \\
@@ -83,11 +83,11 @@ pipeline{
                 script {
                     env.DO_BACKEND_BUILD = false
                     env.DO_FRONTEND_BUILD = false
-                    def changedFiles = sh(
-                        script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}",
-                        returnStdout: true
-                    ).trim()
+                    env.DO_EDGE_CONFIG_CHANGE = false
+
+                    def changedFiles = sh(script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}", returnStdout: true).trim()
                     echo "Changed files in MR:\n${changedFiles}"
+
                     if (changedFiles.contains('backend-repo/')) {
                         echo "✅ Changes detected in backend-repo."
                         env.DO_BACKEND_BUILD = true
@@ -95,6 +95,10 @@ pipeline{
                     if (changedFiles.contains('frontend-repo/')) {
                         echo "✅ Changes detected in frontend-repo."
                         env.DO_FRONTEND_BUILD = true
+                    }
+                    if (changedFiles.contains('docker/edge/')) {
+                        echo "✅ Changes detected in edge proxy configuration."
+                        env.DO_EDGE_CONFIG_CHANGE = true
                     }
                 }
             }
@@ -111,6 +115,46 @@ pipeline{
             when { expression { env.MR_STATE == 'merged' } }
             steps {
                 sh "docker network connect ${TEST_NETWORK} ${JENKINS_CONTAINER} || true && docker network connect ${PROD_NETWORK} ${JENKINS_CONTAINER} || true"
+            }
+        }
+
+        stage('Deploy or Reload Edge Proxy') {
+             when {
+                allOf {
+                    expression { env.DO_BACKEND_BUILD == 'true' || env.DO_FRONTEND_BUILD == 'true' || env.DO_EDGE_CONFIG_CHANGE == 'true' }
+                    expression { env.MR_STATE == 'merged' }
+                }
+            }
+            steps {
+                script {
+                    def isProd = (env.TARGET_BRANCH == 'master')
+                    def proxy_tag = isProd ? "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}" : "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
+                    def proxyContainerName = isProd ? REVERSE_PROXY_PROD_CONTAINER : REVERSE_PROXY_TEST_CONTAINER
+                    def envType = isProd ? "prod" : "test"
+                    def httpPort = isProd ? REVERSE_PROXY_PROD_PORT : REVERSE_PROXY_TEST_PORT
+                    def httpsPort = isProd ? REVERSE_PROXY_PROD_SSL_PORT : REVERSE_PROXY_TEST_SSL_PORT
+                    def networkName = isProd ? PROD_NETWORK : TEST_NETWORK
+
+                    echo "🐳 Building Edge Proxy image: ${proxy_tag}"
+                    sh "docker build -t ${proxy_tag} --build-arg ENV=${envType} -f ./docker/edge/Dockerfile ."
+
+                    def isRunning = sh(script: "docker ps -q --filter name=${proxyContainerName}", returnStdout: true).trim()
+                    if (isRunning) {
+                        echo "✅ Edge container is running. Reloading Nginx configuration..."
+                        sh "docker cp ./docker/edge/nginx/${envType}.conf ${proxyContainerName}:/etc/nginx/nginx.conf"
+                        sh "docker exec ${proxyContainerName} nginx -s reload"
+                    } else {
+                        echo "🚀 Edge container not found. Creating a new one..."
+                        sh """
+                            docker run -d --name ${proxyContainerName} --network ${networkName} \\
+                                -p ${httpPort}:80 \\
+                                -p ${httpsPort}:${httpsPort} \\
+                                -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
+                                -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
+                                ${proxy_tag}
+                        """
+                    }
+                }
             }
         }
 
@@ -170,7 +214,7 @@ pipeline{
             }
         }
 
-        stage('Deploy Frontend and Edge Proxy') {
+        stage('Deploy Frontend') {
             when {
                 allOf {
                     expression { env.DO_FRONTEND_BUILD == 'true' }
@@ -186,53 +230,25 @@ pipeline{
                         if (env.TARGET_BRANCH == 'develop') {
                             env.FINAL_API_URL = API_URL_TEST
                             def fe_tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
-                            def proxy_tag = "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
-                            echo "✅ Target is 'develop'. Deploying Frontend & Edge Proxy to TEST env..."
-
+                            echo "✅ Target is 'develop'. Deploying Frontend to TEST env..."
                             echo "Building Frontend image..."
                             dir('frontend-repo') {
                                 sh "docker build -t ${fe_tag} --build-arg ENV=test --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
                             }
-                            
-                            echo "Building Edge Proxy image..."
-                            sh "docker build -t ${proxy_tag} --build-arg ENV=test -f ./docker/edge/Dockerfile ."
-                            
-                            echo "Running TEST containers..."
-                            sh """
-                                docker rm -f ${FE_TEST_CONTAINER} ${REVERSE_PROXY_TEST_CONTAINER} || true
-                                docker run -d --name ${FE_TEST_CONTAINER} --network ${TEST_NETWORK} ${fe_tag}
-                                docker run -d --name ${REVERSE_PROXY_TEST_CONTAINER} --network ${TEST_NETWORK} \\
-                                    -p ${REVERSE_PROXY_TEST_PORT}:80 \\
-                                    -p ${REVERSE_PROXY_TEST_SSL_PORT}:8443 \\
-                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
-                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
-                                    ${proxy_tag}
-                            """
+                            echo "Running TEST Frontend container..."
+                            sh "docker rm -f ${FE_TEST_CONTAINER} || true"
+                            sh "docker run -d --name ${FE_TEST_CONTAINER} --network ${TEST_NETWORK} ${fe_tag}"
                         } else if (env.TARGET_BRANCH == 'master') {
                             env.FINAL_API_URL = API_URL_PROD
                             def fe_tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
-                            def proxy_tag = "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}"
-                            echo "✅ Target is 'master'. Deploying Frontend & Edge Proxy to PROD env..."
-
+                            echo "✅ Target is 'master'. Deploying Frontend to PROD env..."
                             echo "Building Frontend image..."
                             dir('frontend-repo') {
                                 sh "docker build -t ${fe_tag} --build-arg ENV=prod --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
                             }
-
-                            echo "Building Edge Proxy image..."
-                            sh "docker build -t ${proxy_tag} --build-arg ENV=prod -f ./docker/edge/Dockerfile ."
-
-                            echo "Running PROD containers..."
-                            sh """
-                                docker rm -f ${FE_PROD_CONTAINER} ${REVERSE_PROXY_PROD_CONTAINER} || true
-                                docker run -d --name ${FE_PROD_CONTAINER} --network ${PROD_NETWORK} ${fe_tag}
-                                docker run -d --name ${REVERSE_PROXY_PROD_CONTAINER} --network ${PROD_NETWORK} \\
-                                    -p ${REVERSE_PROXY_PROD_PORT}:80 \\
-                                    -p ${REVERSE_PROXY_PROD_SSL_PORT}:443 \\
-                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
-                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
-                                    ${proxy_tag}
-                            """
+                            echo "Running PROD Frontend container..."
+                            sh "docker rm -f ${FE_PROD_CONTAINER} || true"
+                            sh "docker run -d --name ${FE_PROD_CONTAINER} --network ${PROD_NETWORK} ${fe_tag}"
                         }
                     }
                 }
