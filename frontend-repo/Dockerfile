@@ -30,6 +30,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 HEALTHCHECK --interval=10s --timeout=3s --retries=12 CMD \
   wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1
 
-EXPOSE 80 443
+EXPOSE 80
 
 CMD ["nginx","-g","daemon off;"]
