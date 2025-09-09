@@ -34,25 +34,16 @@ pipeline {
         // --- Jenkins 컨테이너 ---
         JENKINS_CONTAINER = "jenkins"
 
-        // --- Mattermost Webhook (Credentials ID) ---
         MM_HOOK_MR_REVIEWS_ID = "MM_HOOK_MR_REVIEWS_ID"  // Secret text: 리뷰 채널 훅 URL
         MM_HOOK_GENERAL_ID    = "MM_HOOK_GENERAL_ID"     // Secret text: 일반 채널 훅 URL
 
-        // --- 메시지 버퍼 파일 경로 ---
         MM_BUF_FILE = ".mm_msg.txt"
-        // 최종 제목/엔드포인트 후보(중간에 설정)
         MM_TITLE    = ""
         MM_ENDPOINT = ""
     }
 
-    options {
-        // 실패 시에도 post가 실행되도록 기본 동작 유지
-        // timestamps() 등 필요시 추가
-    }
-
     stages {
 
-        /********************  Init: 자격증명 로드 & 메시지 시작  ********************/
         stage('Init') {
             steps {
                 script {
@@ -91,7 +82,6 @@ From → To: `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
             }
         }
 
-        /********************  MR 작성자 정보 (opened 전용)  ********************/
         stage('MR Author (opened only)') {
             when { expression { env.MR_STATE == 'opened' } }
             steps {
@@ -108,8 +98,6 @@ From → To: `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
                 }
             }
         }
-
-        /********************  PR-Agent 리뷰 (opened 전용)  ********************/
         stage('Run PR-Agent Review') {
             when { expression { env.MR_STATE == 'opened' } }
             steps {
@@ -147,7 +135,6 @@ ${ ok ? "자동 리뷰가 정상 완료되었습니다." : "자동 리뷰 실행
             }
         }
 
-        /********************  변경 파일 분석 (merged 전용)  ********************/
         stage('Check for Changes') {
             when { expression { env.MR_STATE == 'merged' } }
             steps {
@@ -175,8 +162,6 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                 }
             }
         }
-
-        /********************  네트워크 준비/연결 (merged 전용)  ********************/
         stage('Prepare Networks') {
             when { expression { env.MR_STATE == 'merged' } }
             steps { sh "docker network create ${TEST_NETWORK} || true && docker network create ${PROD_NETWORK} || true" }
@@ -187,7 +172,6 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
             steps { sh "docker network connect ${TEST_NETWORK} ${JENKINS_CONTAINER} || true && docker network connect ${PROD_NETWORK} ${JENKINS_CONTAINER} || true" }
         }
 
-        /********************  Edge Proxy 배포/리로드 (merged + 변경 시)  ********************/
         stage('Deploy or Reload Edge Proxy') {
             when {
                 allOf {
@@ -243,8 +227,6 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                 }
             }
         }
-
-        /********************  Backend 배포 (merged + 변경 시)  ********************/
         stage('Deploy Backend') {
             when {
                 allOf {
@@ -306,7 +288,6 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
             }
         }
 
-        /********************  Frontend 배포 (merged + 변경 시)  ********************/
         stage('Deploy Frontend') {
             when {
                 allOf {
@@ -359,11 +340,9 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
         }
     }
 
-    /********************  알림 1회만 전송 (플러그인 의존 X)  ********************/
     post {
         success {
             script {
-                // post에서 크리덴셜 재로딩: Init 실패해도 알림 보낼 수 있게
                 withCredentials([
                     string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
                     string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
@@ -389,7 +368,6 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                     def title = env.MM_TITLE ?: "파이프라인 알림"
                     def buf   = fileExists(env.MM_BUF_FILE) ? readFile(env.MM_BUF_FILE) : "**${title}** (SUCCESS)"
                     def lines = []
-                    // 제목 교체
                     lines << buf.replaceFirst(/\*\*([^\*]+)\*\* \(STARTED\)/, "**${title}** (SUCCESS)")
                     if (meta) {
                         lines << ""
@@ -399,7 +377,6 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
                     lines << "_Jenkins • " + new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul')) + "_"
                     def msg = lines.join("\n")
 
-                    // endpoint 결정: 스테이지에서 설정된 값 > 상태 기반
                     def endpoint = env.MM_ENDPOINT?.trim() ? env.MM_ENDPOINT : ((env.MR_STATE == 'opened') ? hookReviews : hookGeneral)
                     def payload  = groovy.json.JsonOutput.toJson([text: msg])
                     def esc = { String s -> (s ?: "").replace("'", "'\"'\"'") }
