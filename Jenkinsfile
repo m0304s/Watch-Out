@@ -9,6 +9,8 @@ pipeline{
         // --- 🐳 백엔드 설정 변수 ---
         BE_IMAGE_NAME      = "watchout/backend-app"
         BE_TEST_CONTAINER  = "watchout-be-test"
+        BE_PROD_BLUE_CONTAINER  = "watchout-be-prod-blue"
+        BE_PROD_GREEN_CONTAINER = "watchout-be-prod-green"
         
         // --- ⚛️ 프론트엔드 설정 변수 ---
         FE_IMAGE_NAME      = "watchout/frontend-app"
@@ -64,7 +66,7 @@ pipeline{
                                 -e GITLAB__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \\
                                 -e GEMINI_API_KEY="${GEMINI_KEY}" \\
                                 -e CONFIG__MODEL_PROVIDER=google \\
-                                -e CONFIG__MODEL="gemini/gemini-1.5-pro-latest" \\
+                                -e CONFIG__MODEL="gemini/gemini-2.5-pro" \\
                                 -e CONFIG__FALLBACK_MODELS="[]" \\
                                 -e PR_REVIEWER__EXTRA_INSTRUCTIONS="한국어로 간결하게 코멘트하고, 중요 이슈 위주로 지적해줘" \\
                                 codiumai/pr-agent:latest \\
@@ -112,19 +114,7 @@ pipeline{
             }
         }
 
-        stage('Deploy Backend') {
-            when {
-                allOf {
-                    expression { env.DO_BACKEND_BUILD == 'true' }
-                    expression { env.MR_STATE == 'merged' }
-                }
-            }
-            steps {
-                echo "🚀 Skipping Backend Deployment as requested."
-            }
-        }
-
-        stage('Deploy Frontend') {
+        stage('Deploy Frontend and Edge Proxy') {
             when {
                 allOf {
                     expression { env.DO_FRONTEND_BUILD == 'true' }
@@ -138,13 +128,15 @@ pipeline{
                 ]) {
                     script {
                         if (env.TARGET_BRANCH == 'develop') {
-                            def apiBaseUrl = API_URL_TEST
+                            env.FINAL_API_URL = API_URL_TEST
                             def fe_tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
                             def proxy_tag = "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
                             echo "✅ Target is 'develop'. Deploying Frontend & Edge Proxy to TEST env..."
 
                             echo "Building Frontend image..."
-                            sh "docker build -t ${fe_tag} --build-arg VITE_API_BASE_URL='${apiBaseUrl}' ./frontend-repo"
+                            dir('frontend-repo') {
+                                sh "docker build -t ${fe_tag} --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
+                            }
                             
                             echo "Building Edge Proxy image..."
                             sh "docker build -t ${proxy_tag} --build-arg ENV=test -f ./docker/edge/Dockerfile ."
@@ -161,13 +153,15 @@ pipeline{
                                     ${proxy_tag}
                             """
                         } else if (env.TARGET_BRANCH == 'master') {
-                            def apiBaseUrl = API_URL_PROD
+                            env.FINAL_API_URL = API_URL_PROD
                             def fe_tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
                             def proxy_tag = "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}"
                             echo "✅ Target is 'master'. Deploying Frontend & Edge Proxy to PROD env..."
 
                             echo "Building Frontend image..."
-                            sh "docker build -t ${fe_tag} --build-arg VITE_API_BASE_URL='${apiBaseUrl}' ./frontend-repo"
+                            dir('frontend-repo') {
+                                sh "docker build -t ${fe_tag} --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
+                            }
 
                             echo "Building Edge Proxy image..."
                             sh "docker build -t ${proxy_tag} --build-arg ENV=prod -f ./docker/edge/Dockerfile ."
