@@ -17,13 +17,23 @@ pipeline{
         FE_TEST_CONTAINER  = "watchout-fe-test"
         FE_PROD_CONTAINER  = "watchout-fe-prod"
         FE_TEST_PORT       = "8080"
-        FE_TEST_SSL_PORT   = "8443"
         FE_PROD_PORT       = "80"
-        FE_PROD_SSL_PORT   = "443"
+        
+        // --- 🔄 리버스 프록시 설정 변수 ---
+        REVERSE_PROXY_IMAGE_NAME = "watchout/edge-proxy"
+        REVERSE_PROXY_TEST_CONTAINER = "watchout-edge-test"
+        REVERSE_PROXY_PROD_CONTAINER = "watchout-edge-prod"
+        REVERSE_PROXY_TEST_PORT = "8080"
+        REVERSE_PROXY_TEST_SSL_PORT = "8443"
+        REVERSE_PROXY_PROD_PORT = "80"
+        REVERSE_PROXY_PROD_SSL_PORT = "443"
 
         // --- 🌐 네트워크 설정 변수 ---
         TEST_NETWORK       = "test-network"
         PROD_NETWORK       = "prod-network"
+        
+        // --- 🔧 Jenkins 설정 변수 ---
+        JENKINS_CONTAINER  = "jenkins"
     }
     
     stages {
@@ -121,6 +131,22 @@ pipeline{
             }
         }
 
+        stage('Connect Jenkins to Networks') {
+            when { expression { env.MR_STATE == 'merged' } }
+            steps {
+                sh """
+                    # Jenkins 컨테이너가 실행 중인지 확인
+                    if docker ps --format "table {{.Names}}" | grep -q "^${JENKINS_CONTAINER}$"; then
+                        echo "✅ Jenkins container is running, connecting to networks..."
+                        docker network connect ${TEST_NETWORK} ${JENKINS_CONTAINER} || true
+                        docker network connect ${PROD_NETWORK} ${JENKINS_CONTAINER} || true
+                    else
+                        echo "⚠️ Jenkins container not found. Please ensure Jenkins is running."
+                    fi
+                """
+            }
+        }
+
         stage('Deploy Backend') {
             when {
                 allOf {
@@ -170,17 +196,34 @@ pipeline{
                                         -t ${tag} .
                                 """
 
-                                echo "🚀 Running TEST container: ${FE_TEST_CONTAINER}"
+                                echo "🚀 Running TEST frontend container: ${FE_TEST_CONTAINER}"
                                 sh """
                                     docker rm -f ${FE_TEST_CONTAINER} || true
                                     docker run -d \\
                                         --name ${FE_TEST_CONTAINER} \\
                                         --network ${TEST_NETWORK} \\
-                                        -p ${FE_TEST_PORT}:80 \\
-                                        -p ${FE_TEST_SSL_PORT}:443 \\
+                                        ${tag}
+                                """
+                                
+                                echo "🐳 Building TEST reverse proxy image"
+                                sh """
+                                    docker build \\
+                                        --build-arg ENV=test \\
+                                        -f docker/edge/Dockerfile \\
+                                        -t ${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER} .
+                                """
+                                
+                                echo "🚀 Running TEST reverse proxy container: ${REVERSE_PROXY_TEST_CONTAINER}"
+                                sh """
+                                    docker rm -f ${REVERSE_PROXY_TEST_CONTAINER} || true
+                                    docker run -d \\
+                                        --name ${REVERSE_PROXY_TEST_CONTAINER} \\
+                                        --network ${TEST_NETWORK} \\
+                                        -p ${REVERSE_PROXY_TEST_PORT}:80 \\
+                                        -p ${REVERSE_PROXY_TEST_SSL_PORT}:443 \\
                                         -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
                                         -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
-                                        ${tag}
+                                        ${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}
                                 """
                             } else if (env.TARGET_BRANCH == 'master') {
                                 apiBaseUrl = API_URL_PROD
@@ -195,17 +238,34 @@ pipeline{
                                         -t ${tag} .
                                 """
                                 
-                                echo "🚀 Running PROD container: ${FE_PROD_CONTAINER}"
+                                echo "🚀 Running PROD frontend container: ${FE_PROD_CONTAINER}"
                                 sh """
                                     docker rm -f ${FE_PROD_CONTAINER} || true
                                     docker run -d \\
                                         --name ${FE_PROD_CONTAINER} \\
                                         --network ${PROD_NETWORK} \\
-                                        -p ${FE_PROD_PORT}:80 \\
-                                        -p ${FE_PROD_SSL_PORT}:443 \\
+                                        ${tag}
+                                """
+                                
+                                echo "🐳 Building PROD reverse proxy image"
+                                sh """
+                                    docker build \\
+                                        --build-arg ENV=prod \\
+                                        -f docker/edge/Dockerfile \\
+                                        -t ${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER} .
+                                """
+                                
+                                echo "🚀 Running PROD reverse proxy container: ${REVERSE_PROXY_PROD_CONTAINER}"
+                                sh """
+                                    docker rm -f ${REVERSE_PROXY_PROD_CONTAINER} || true
+                                    docker run -d \\
+                                        --name ${REVERSE_PROXY_PROD_CONTAINER} \\
+                                        --network ${PROD_NETWORK} \\
+                                        -p ${REVERSE_PROXY_PROD_PORT}:80 \\
+                                        -p ${REVERSE_PROXY_PROD_SSL_PORT}:443 \\
                                         -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
                                         -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
-                                        ${tag}
+                                        ${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}
                                 """
                             } else {
                                 echo "⏩ Skipping frontend deployment. Target branch is neither 'develop' nor 'master'."
