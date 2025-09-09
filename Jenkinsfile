@@ -34,8 +34,8 @@ pipeline {
         // --- Jenkins 컨테이너 ---
         JENKINS_CONTAINER = "jenkins"
 
-        MM_HOOK_MR_REVIEWS_ID = "MM_HOOK_MR_REVIEWS_ID"  // Secret text: 리뷰 채널 훅 URL
-        MM_HOOK_GENERAL_ID    = "MM_HOOK_GENERAL_ID"     // Secret text: 일반 채널 훅 URL
+        MM_HOOK_MR_REVIEWS = "MM_HOOK_MR_REVIEWS"  // Secret text: 리뷰 채널 훅 URL
+        MM_HOOK_GENERAL    = "MM_HOOK_GENERAL"     // Secret text: 일반 채널 훅 URL
 
         MM_BUF_FILE = ".mm_msg.txt"
         MM_TITLE    = ""
@@ -49,8 +49,8 @@ pipeline {
                 script {
                     // 1) 웹훅 URL 로드
                     withCredentials([
-                        string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
-                        string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
+                        string(credentialsId: env.MM_HOOK_MR_REVIEWS, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
+                        string(credentialsId: env.MM_HOOK_GENERAL,  variable: 'MM_HOOK_GENERAL_SEC')
                     ]) {
                         env.MM_HOOK_MR_REVIEWS = MM_HOOK_MR_REVIEWS_SEC
                         env.MM_HOOK_GENERAL    = MM_HOOK_GENERAL_SEC
@@ -344,8 +344,8 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
         success {
             script {
                 withCredentials([
-                    string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
-                    string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
+                    string(credentialsId: env.MM_HOOK_MR_REVIEWS, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
+                    string(credentialsId: env.MM_HOOK_GENERAL,  variable: 'MM_HOOK_GENERAL_SEC')
                 ]) {
                     def hookReviews = MM_HOOK_MR_REVIEWS_SEC
                     def hookGeneral = MM_HOOK_GENERAL_SEC
@@ -387,8 +387,8 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
         unstable {
             script {
                 withCredentials([
-                    string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
-                    string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
+                    string(credentialsId: env.MM_HOOK_MR_REVIEWS, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
+                    string(credentialsId: env.MM_HOOK_GENERAL,  variable: 'MM_HOOK_GENERAL_SEC')
                 ]) {
                     def hookReviews = MM_HOOK_MR_REVIEWS_SEC
                     def hookGeneral = MM_HOOK_GENERAL_SEC
@@ -430,8 +430,8 @@ Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
         failure {
             script {
                 withCredentials([
-                    string(credentialsId: env.MM_HOOK_MR_REVIEWS_ID, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
-                    string(credentialsId: env.MM_HOOK_GENERAL_ID,  variable: 'MM_HOOK_GENERAL_SEC')
+                    string(credentialsId: env.MM_HOOK_MR_REVIEWS, variable: 'MM_HOOK_MR_REVIEWS_SEC'),
+                    string(credentialsId: env.MM_HOOK_GENERAL,  variable: 'MM_HOOK_GENERAL_SEC')
                 ]) {
                     def hookReviews = MM_HOOK_MR_REVIEWS_SEC
                     def hookGeneral = MM_HOOK_GENERAL_SEC
