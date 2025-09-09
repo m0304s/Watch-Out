@@ -114,6 +114,62 @@ pipeline{
             }
         }
 
+        stage('Deploy Backend') {
+            when {
+                allOf {
+                    expression { env.DO_BACKEND_BUILD == 'true' }
+                    expression { env.MR_STATE == 'merged' }
+                }
+            }
+            steps {
+                dir('backend-repo') {
+                    script {
+                        if (env.TARGET_BRANCH == 'develop') {
+                            def tag = "${BE_IMAGE_NAME}:test-${BUILD_NUMBER}"
+                            echo "✅ Target is 'develop'. Deploying Backend to TEST environment..."
+                            withCredentials([
+                                file(credentialsId: 'application-docker.yml', variable: 'APP_YML_DOCKER'),
+                                file(credentialsId: 'application.yml', variable: 'APP_YML')
+                            ]) {
+                                sh "mkdir -p src/main/resources && cp \$APP_YML src/main/resources/application.yml && cp \$APP_YML_DOCKER src/main/resources/application-docker.yml"
+                            }
+                            echo "🐳 Building TEST image: ${tag}"
+                            sh "chmod +x ./gradlew && ./gradlew bootJar && docker build -t ${tag} ."
+                            echo "🚀 Running TEST container: ${BE_TEST_CONTAINER}"
+                            sh """
+                                docker rm -f ${BE_TEST_CONTAINER} || true
+                                docker run -d --name ${BE_TEST_CONTAINER} --network ${TEST_NETWORK} -e SPRING_PROFILES_ACTIVE=docker ${tag}
+                            """
+                        } else if (env.TARGET_BRANCH == 'master') {
+                            def tag = "${BE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
+                            echo "✅ Target is 'master'. Deploying Backend to PRODUCTION with Blue/Green..."
+                            def activeContainer = sh(script: "docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER}", returnStdout: true).trim() ? BE_PROD_BLUE_CONTAINER : BE_PROD_GREEN_CONTAINER
+                            def inactiveContainer = (activeContainer == BE_PROD_BLUE_CONTAINER) ? BE_PROD_GREEN_CONTAINER : BE_PROD_BLUE_CONTAINER
+                            echo "Current Active: ${activeContainer}, Deploying to Inactive: ${inactiveContainer}"
+                            withCredentials([
+                                file(credentialsId: 'application-docker-prod.yml', variable: 'APP_YML_DOCKER_PROD'),
+                                file(credentialsId: 'application-prod.yml', variable: 'APP_YML_PROD')
+                            ]) {
+                                sh "mkdir -p src/main/resources && cp \$APP_YML_PROD src/main/resources/application.yml && cp \$APP_YML_DOCKER_PROD src/main/resources/application-docker.yml"
+                            }
+                            echo "🐳 Building PROD image: ${tag}"
+                            sh "chmod +x ./gradlew && ./gradlew bootJar && docker build -t ${tag} ."
+                            echo "🚀 Running new PROD container: ${inactiveContainer}"
+                            sh """
+                                docker rm -f ${inactiveContainer} || true
+                                docker run -d --name ${inactiveContainer} --network ${PROD_NETWORK} -e SPRING_PROFILES_ACTIVE=docker,prod ${tag}
+                            """
+                            echo "🔍 Health checking for 30 seconds..."
+                            sleep(30)
+                            echo "🛑 Stopping old container: ${activeContainer}"
+                            sh "docker rm -f ${activeContainer} || true"
+                            echo "✅ Production switched to ${inactiveContainer}"
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Deploy Frontend and Edge Proxy') {
             when {
                 allOf {
@@ -135,12 +191,7 @@ pipeline{
 
                             echo "Building Frontend image..."
                             dir('frontend-repo') {
-                                sh """
-                                    docker build \\
-                                        -t ${fe_tag} \\
-                                        --build-arg ENV=test \\
-                                        --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' .
-                                """
+                                sh "docker build -t ${fe_tag} --build-arg ENV=test --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
                             }
                             
                             echo "Building Edge Proxy image..."
@@ -164,14 +215,8 @@ pipeline{
                             echo "✅ Target is 'master'. Deploying Frontend & Edge Proxy to PROD env..."
 
                             echo "Building Frontend image..."
-                            echo "Building Frontend image..."
                             dir('frontend-repo') {
-                                sh """
-                                    docker build \\
-                                        -t ${fe_tag} \\
-                                        --build-arg ENV=prod \\
-                                        --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' .
-                                """
+                                sh "docker build -t ${fe_tag} --build-arg ENV=prod --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
                             }
 
                             echo "Building Edge Proxy image..."
