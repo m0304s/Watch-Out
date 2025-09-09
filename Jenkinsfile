@@ -1,5 +1,8 @@
 pipeline{
     agent any
+
+    /********************  🧩 Mattermost 템플릿 유틸은 Init 스테이지에서 전역 등록  ********************/
+
     environment {
         // --- ⚙️ 공통 설정 변수 ---
         GITLAB_URL         = "https://lab.ssafy.com"
@@ -32,12 +35,18 @@ pipeline{
         // --- 🔧 Jenkins 설정 변수 ---
         JENKINS_CONTAINER  = "jenkins"
 
+        // --- 💬 Mattermost (전역 설정 사용 시 비워두기) ---
+        // MATTERMOST_CHANNEL = "devops-alert"
+        // MATTERMOST_ENDPOINT = "https://mattermost.example.com/hooks/xxxxx"
     }
 
     stages {
+
+        /********************  🧩 Mattermost 템플릿 유틸 초기화  ********************/
         stage('Init MM Helpers') {
             steps {
                 script {
+                    // 반드시 def 없이 전역 바인딩으로 등록
                     mmColor = { String result ->
                         switch (result) {
                             case 'SUCCESS':  return '#2EB67D' // green
@@ -62,51 +71,96 @@ pipeline{
                             author     : (env.CHANGE_AUTHOR ?: env.USER_NAME ?: '')
                         ]
                     }
-                    mmFields = { Map opts = [:] ->
-                        def vcs = detectVcsInfo()
-                        def fields = []
-                        fields << [title:'Job',     value: link("${env.JOB_NAME} #${env.BUILD_NUMBER}", env.BUILD_URL), short:true]
-                        if (vcs.branch) fields << [title:'Branch',  value:"`${vcs.branch}`", short:true]
-                        if (vcs.target) fields << [title:'Target',  value:"`${vcs.target}`", short:true]
-                        if (vcs.commit) fields << [title:'Commit',  value:"`${shortSha(vcs.commit)}`", short:true]
-                        if (vcs.changeUrl) fields << [title:'MR',   value: link(vcs.changeTitle ?: 'Merge Request', vcs.changeUrl), short:false]
-                        if (opts.imageTag)   fields << [title:'Image',   value:"`${opts.imageTag}`", short:true]
-                        if (opts.deployEnv)  fields << [title:'Env',     value:"`${opts.deployEnv}`", short:true]
-                        if (opts.targetHost) fields << [title:'Target',  value:"`${opts.targetHost}`", short:true]
-                        if (opts.duration)   fields << [title:'Duration',value: opts.duration, short:true]
-                        if (opts.note)       fields << [title:'Note',    value: opts.note, short:false]
-                        fields
+
+                    // ── MR Opened: 웹훅/플러그인 환경변수 기반 정보 ──
+                    whoOpened = {
+                        return (env.GITLAB_USER_NAME ?: env.gitlabUserName ?: env.CHANGE_AUTHOR ?: env.USER_NAME ?: 'unknown')
                     }
+                    whoOpenedId = {
+                        return (env.GITLAB_USER_LOGIN ?: env.gitlabUserId ?: env.CHANGE_AUTHOR_DISPLAY_NAME ?: '')
+                    }
+
+                    // ── (선택) GitLab API로 MR 상세 조회 ──
+                    fetchMrInfo = { ->
+                        if (!env.MR_URL) { return null }
+                        def matcher = (env.MR_URL =~ /https?:\/\/[^\/]+\/(.+)\/-\/merge_requests\/(\d+)/)
+                        if (!matcher || !matcher.matches()) { return null }
+                        def projectPath = matcher[0][1]  // group/subgroup/project
+                        def iid         = matcher[0][2]
+                        def encodedPath = java.net.URLEncoder.encode(projectPath, 'UTF-8').replace("+","%20")
+                        def apiUrl = "${env.GITLAB_URL}/api/v4/projects/${encodedPath}/merge_requests/${iid}"
+
+                        def payload = ''
+                        try {
+                            withCredentials([string(credentialsId: 'GITLAB_ACCESS_TOKEN', variable: 'GITLAB_TOKEN')]) {
+                                payload = sh(script: "curl -sfSL --header 'PRIVATE-TOKEN: ${GITLAB_TOKEN}' '${apiUrl}'", returnStdout: true).trim()
+                            }
+                        } catch (ignored) { payload = '' }
+
+                        if (!payload) { return null }
+                        def data = new groovy.json.JsonSlurperClassic().parseText(payload)
+                        return [
+                            title      : data.title,
+                            iid        : data.iid,
+                            authorName : data.author?.name,
+                            authorUser : data.author?.username,
+                            assignees  : (data.assignees ?: []).collect{ it.name },
+                            reviewers  : (data.reviewers ?: []).collect{ it.name },
+                            labels     : (data.labels ?: []),
+                            webUrl     : data.web_url,
+                            createdAt  : data.created_at,
+                            draft      : (data.draft ?: false),
+                            changesCnt : (data.changes_count ?: null),
+                            state      : data.state
+                        ]
+                    }
+
+                    // ✅ 모든 정보를 message(마크다운) 본문에 합쳐서 전송 (attachments는 보조)
                     mmNotify = { Map args = [:] ->
                         String result   = args.result  ?: (currentBuild.currentResult ?: 'UNKNOWN')
                         String title    = args.title   ?: "🏗️ 빌드 알림"
-                        String summary  = args.summary ?: ""
+                        String summary  = (args.summary ?: "").trim()
                         String color    = mmColor(result)
                         String duration = sinceStart()
 
-                        summary = (summary?.trim()) ? summary : " "
+                        def vcs = detectVcsInfo()
+                        def kv = []
+                        kv << (env.JOB_NAME && env.BUILD_NUMBER ? "- **Job**: [${env.JOB_NAME} #${env.BUILD_NUMBER}](${env.BUILD_URL ?: '#'})" : null)
+                        if (vcs.branch)      kv << "- **Branch**: `${vcs.branch}`"
+                        if (vcs.target)      kv << "- **Target**: `${vcs.target}`"
+                        if (vcs.commit)      kv << "- **Commit**: `${shortSha(vcs.commit)}`"
+                        if (vcs.changeUrl)   kv << "- **MR**: [${vcs.changeTitle ?: 'Merge Request'}](${vcs.changeUrl})"
+                        if (args.imageTag)   kv << "- **Image**: `${args.imageTag}`"
+                        if (args.deployEnv)  kv << "- **Env**: `${args.deployEnv}`"
+                        if (args.targetHost) kv << "- **Target Host**: `${args.targetHost}`"
+                        if (duration)        kv << "- **Duration**: ${duration}"
+                        if (args.note)       kv << "- **Note**: ${args.note}"
 
-                        def fields = mmFields(
-                            imageTag  : args.imageTag,
-                            deployEnv : args.deployEnv,
-                            targetHost: args.targetHost,
-                            duration  : duration,
-                            note      : args.note
-                        )
+                        def bodyLines = []
+                        bodyLines << "**${title}** (${result})"
+                        if (summary) {
+                            bodyLines << ""
+                            bodyLines << summary
+                        }
+                        if (kv.any{ it }) {
+                            bodyLines << ""
+                            bodyLines.addAll(kv.findAll{ it })
+                        }
+                        bodyLines << ""
+                        bodyLines << "_Jenkins • " + new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul')) + "_"
+                        def rootMessage = bodyLines.join("\n")
 
+                        // (보조) attachments: 서버가 지원하면 카드도 보임. 미지원이어도 정보는 message에 모두 있음.
                         def attachments = [[
                             fallback : "${env.JOB_NAME} #${env.BUILD_NUMBER} ${result}",
                             color    : color,
                             title    : title,
-                            text     : summary,
-                            fields   : fields,
-                            footer   : "Jenkins • ${new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul'))}"
+                            text     : (summary ?: " "),  // 일부 서버에서 빈 문자열이면 null로 표기되므로 최소 공백
+                            fields   : []                 // 필드는 message에 합쳤음
                         ]]
 
-                        def rootMessage = args.message ?: "**${title}** (${result})"
-
                         mattermostSend(
-                            message    : rootMessage,
+                            message    : rootMessage,   // ← 핵심
                             iconEmoji  : ':jenkins:',
                             attachments: attachments
                         )
@@ -114,6 +168,7 @@ pipeline{
                 }
             }
         }
+        /*******************************************************************/
 
         stage('Process Webhook Data') {
             steps {
@@ -135,6 +190,40 @@ pipeline{
 **From → To:** `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
 트리거: `${env.USER_NAME ?: 'unknown'}`
 """.trim()
+                    )
+                }
+            }
+        }
+
+        // ── MR Opened 알림 (작성자/라벨/리뷰어 등) ──
+        stage('Notify MR Opened') {
+            when { expression { env.MR_STATE == 'opened' } }
+            steps {
+                script {
+                    def openerName = whoOpened()
+                    def openerId   = whoOpenedId()
+                    def lines = []
+                    lines << "**작성자:** `${openerName}`" + (openerId ? " (`${openerId}`)" : "")
+                    if (env.SOURCE_BRANCH || env.TARGET_BRANCH) {
+                        lines << "**브랜치:** `${env.SOURCE_BRANCH ?: '?'}` → `${env.TARGET_BRANCH ?: '?'}`"
+                    }
+                    if (env.MR_URL) lines << "**링크:** ${env.MR_URL}"
+
+                    def info = null
+                    try { info = fetchMrInfo() } catch (ignored) { info = null }
+                    if (info) {
+                        if (info.title)   lines << "**제목:** ${info.title}${info.draft ? ' _(Draft)_' : ''}"
+                        if (info.labels && info.labels.size()>0)   lines << "**라벨:** " + info.labels.collect{ "`${it}`" }.join(", ")
+                        if (info.reviewers && info.reviewers.size()>0) lines << "**리뷰어:** " + info.reviewers.collect{ "`${it}`" }.join(", ")
+                        if (info.assignees && info.assignees.size()>0) lines << "**담당자:** " + info.assignees.collect{ "`${it}`" }.join(", ")
+                        if (info.createdAt) lines << "**생성:** `${info.createdAt}`"
+                        if (info.changesCnt) lines << "**변경 수:** `${info.changesCnt}`"
+                    }
+
+                    mmNotify(
+                        result  : 'STARTED',
+                        title   : "🆕 MR Opened",
+                        summary : lines.join("\n")
                     )
                 }
             }
@@ -207,6 +296,16 @@ pipeline{
                         echo "✅ Changes detected in edge proxy configuration."
                         env.DO_EDGE_CONFIG_CHANGE = 'true'
                     }
+
+                    mmNotify(
+                        result : 'SUCCESS',
+                        title  : "🔎 변경 파일 분석",
+                        summary: """
+- Backend: `${env.DO_BACKEND_BUILD}`
+- Frontend: `${env.DO_FRONTEND_BUILD}`
+- Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
+""".trim()
+                    )
                 }
             }
         }
