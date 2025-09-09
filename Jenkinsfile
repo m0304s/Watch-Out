@@ -1,93 +1,5 @@
 pipeline{
     agent any
-
-    // 색상/링크/브랜치/필드 생성 등 공용 함수
-    def mmColor = { String result ->
-        switch (result) {
-            case 'SUCCESS':  return '#2EB67D' // green
-            case 'FAILURE':  return '#E01E5A' // red
-            case 'UNSTABLE': return '#ECB22E' // yellow
-            case 'ABORTED':  return '#9EA0A4' // gray
-            default:         return '#4A8FE7' // blue
-        }
-    }
-    def shortSha = { String sha -> (sha ?: '').take(8) }
-    def link    = { String text, String url -> url ? "[${text}](${url})" : text }
-    def sinceStart = {
-        try { (currentBuild.durationString ?: '').replaceAll('and counting','').trim() } catch (ignored) { '' }
-    }
-    def detectVcsInfo = {
-        return [
-            branch     : (env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.SOURCE_BRANCH ?: ''),
-            target     : (env.CHANGE_TARGET ?: env.TARGET_BRANCH ?: ''),
-            commit     : (env.GIT_COMMIT ?: ''),
-            changeUrl  : (env.CHANGE_URL ?: env.MR_URL ?: ''),
-            changeTitle: (env.CHANGE_TITLE ?: ''),
-            author     : (env.CHANGE_AUTHOR ?: env.USER_NAME ?: '')
-        ]
-    }
-    def mmFields = { Map opts = [:] ->
-        def vcs = detectVcsInfo()
-        def fields = []
-        fields << [title:'Job',     value: link("${env.JOB_NAME} #${env.BUILD_NUMBER}", env.BUILD_URL), short:true]
-        if (vcs.branch) fields << [title:'Branch',  value:"`${vcs.branch}`", short:true]
-        if (vcs.target) fields << [title:'Target',  value:"`${vcs.target}`", short:true]
-        if (vcs.commit) fields << [title:'Commit',  value:"`${shortSha(vcs.commit)}`", short:true]
-        if (vcs.changeUrl) fields << [title:'MR',   value: link(vcs.changeTitle ?: 'Merge Request', vcs.changeUrl), short:false]
-        if (opts.imageTag) fields << [title:'Image',   value:"`${opts.imageTag}`", short:true]
-        if (opts.deployEnv) fields << [title:'Env',     value:"`${opts.deployEnv}`", short:true]
-        if (opts.targetHost) fields << [title:'Target', value:"`${opts.targetHost}`", short:true]
-        if (opts.duration) fields << [title:'Duration', value: opts.duration, short:true]
-        if (opts.note) fields << [title:'Note', value: opts.note, short:false]
-        return fields
-    }
-    /**
-     * 예쁜 Mattermost 카드 알림
-     * @param result   'STARTED' | 'SUCCESS' | 'FAILURE' | 'UNSTABLE' | 'ABORTED'
-     * @param title    상단 제목(이모지 OK)
-     * @param summary  본문 요약(마크다운)
-     * @param imageTag (옵션) 예: watchout/backend-app:prod-123
-     * @param deployEnv(옵션) 예: test/prod-blue/prod-green
-     * @param targetHost(옵션) 예: j13e102.p.ssafy.io
-     * @param note     (옵션) 추가 메모
-     */
-    def mmNotify = { Map args = [:] ->
-        String result   = args.result  ?: (currentBuild.currentResult ?: 'UNKNOWN')
-        String title    = args.title   ?: "🏗️ 빌드 알림"
-        String summary  = args.summary ?: ""
-        String color    = mmColor(result)
-        String duration = sinceStart()
-
-        def fields = mmFields(
-            imageTag  : args.imageTag,
-            deployEnv : args.deployEnv,
-            targetHost: args.targetHost,
-            duration  : duration,
-            note      : args.note
-        )
-
-        def attachments = [[
-            fallback : "${env.JOB_NAME} #${env.BUILD_NUMBER} ${result}",
-            color    : color,
-            title    : title,
-            text     : summary,
-            fields   : fields,
-            footer   : "Jenkins • ${new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul'))}",
-            mrkdwn_in: ['text','fields']
-        ]]
-
-        def argsToSend = [
-            iconEmoji  : ':jenkins:',
-            attachments: attachments
-        ]
-        // 필요 시 채널/엔드포인트 지정
-        if (env.MATTERMOST_CHANNEL?.trim())  argsToSend.channel  = env.MATTERMOST_CHANNEL
-        if (env.MATTERMOST_ENDPOINT?.trim()) argsToSend.endpoint = env.MATTERMOST_ENDPOINT
-
-        mattermostSend(argsToSend)
-    }
-    /*******************************************************************/
-
     environment {
         // --- ⚙️ 공통 설정 변수 ---
         GITLAB_URL         = "https://lab.ssafy.com"
@@ -119,14 +31,85 @@ pipeline{
 
         // --- 🔧 Jenkins 설정 변수 ---
         JENKINS_CONTAINER  = "jenkins"
-
-        // --- 💬 Mattermost (옵션) ---
-        // 글로벌 설정을 쓰면 비워두셔도 됩니다.
-        // MATTERMOST_CHANNEL = "devops-alert"
-        // MATTERMOST_ENDPOINT = "https://mattermost.example.com/hooks/xxxxx"
     }
 
     stages {
+        stage('Init MM Helpers') {
+            steps {
+                script {
+                    mmColor = { String result ->
+                        switch (result) {
+                            case 'SUCCESS':  return '#2EB67D' // green
+                            case 'FAILURE':  return '#E01E5A' // red
+                            case 'UNSTABLE': return '#ECB22E' // yellow
+                            case 'ABORTED':  return '#9EA0A4' // gray
+                            default:         return '#4A8FE7' // blue
+                        }
+                    }
+                    shortSha = { String sha -> (sha ?: '').take(8) }
+                    link     = { String text, String url -> url ? "[${text}](${url})" : text }
+                    sinceStart = {
+                        try { (currentBuild.durationString ?: '').replaceAll('and counting','').trim() } catch (ignored) { '' }
+                    }
+                    detectVcsInfo = {
+                        [
+                            branch     : (env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.SOURCE_BRANCH ?: ''),
+                            target     : (env.CHANGE_TARGET ?: env.TARGET_BRANCH ?: ''),
+                            commit     : (env.GIT_COMMIT ?: ''),
+                            changeUrl  : (env.CHANGE_URL ?: env.MR_URL ?: ''),
+                            changeTitle: (env.CHANGE_TITLE ?: ''),
+                            author     : (env.CHANGE_AUTHOR ?: env.USER_NAME ?: '')
+                        ]
+                    }
+                    mmFields = { Map opts = [:] ->
+                        def vcs = detectVcsInfo()
+                        def fields = []
+                        fields << [title:'Job',     value: link("${env.JOB_NAME} #${env.BUILD_NUMBER}", env.BUILD_URL), short:true]
+                        if (vcs.branch) fields << [title:'Branch',  value:"`${vcs.branch}`", short:true]
+                        if (vcs.target) fields << [title:'Target',  value:"`${vcs.target}`", short:true]
+                        if (vcs.commit) fields << [title:'Commit',  value:"`${shortSha(vcs.commit)}`", short:true]
+                        if (vcs.changeUrl) fields << [title:'MR',   value: link(vcs.changeTitle ?: 'Merge Request', vcs.changeUrl), short:false]
+                        if (opts.imageTag)   fields << [title:'Image',   value:"`${opts.imageTag}`", short:true]
+                        if (opts.deployEnv)  fields << [title:'Env',     value:"`${opts.deployEnv}`", short:true]
+                        if (opts.targetHost) fields << [title:'Target',  value:"`${opts.targetHost}`", short:true]
+                        if (opts.duration)   fields << [title:'Duration',value: opts.duration, short:true]
+                        if (opts.note)       fields << [title:'Note',    value: opts.note, short:false]
+                        fields
+                    }
+                    mmNotify = { Map args = [:] ->
+                        String result   = args.result  ?: (currentBuild.currentResult ?: 'UNKNOWN')
+                        String title    = args.title   ?: "🏗️ 빌드 알림"
+                        String summary  = args.summary ?: ""
+                        String color    = mmColor(result)
+                        String duration = sinceStart()
+
+                        def fields = mmFields(
+                            imageTag  : args.imageTag,
+                            deployEnv : args.deployEnv,
+                            targetHost: args.targetHost,
+                            duration  : duration,
+                            note      : args.note
+                        )
+
+                        def attachments = [[
+                            fallback : "${env.JOB_NAME} #${env.BUILD_NUMBER} ${result}",
+                            color    : color,
+                            title    : title,
+                            text     : summary,
+                            fields   : fields,
+                            footer   : "Jenkins • ${new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul'))}",
+                            mrkdwn_in: ['text','fields']
+                        ]]
+
+                        mattermostSend(
+                            iconEmoji: ':jenkins:',
+                            attachments: attachments
+                        )
+                    }
+                }
+            }
+        }
+
         stage('Process Webhook Data') {
             steps {
                 script {
@@ -143,9 +126,9 @@ pipeline{
                         result  : 'STARTED',
                         title   : "🚀 파이프라인 시작",
                         summary : """
-**MR State:** `${env.MR_STATE ?: 'N/A'}`  
-**From → To:** `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`  
-트리거: `${env.USER_NAME ?: 'unknown'}`  
+**MR State:** `${env.MR_STATE ?: 'N/A'}`
+**From → To:** `${env.SOURCE_BRANCH ?: 'N/A'}` → `${env.TARGET_BRANCH ?: 'N/A'}`
+트리거: `${env.USER_NAME ?: 'unknown'}`
 """.trim()
                     )
                 }
@@ -203,7 +186,8 @@ pipeline{
                     env.DO_FRONTEND_BUILD = 'false'
                     env.DO_EDGE_CONFIG_CHANGE = 'false'
 
-                    def changedFiles = sh(script: "git fetch --all >/dev/null 2>&1 || true; git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}", returnStdout: true).trim()
+                    sh "git fetch --all >/dev/null 2>&1 || true"
+                    def changedFiles = sh(script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}", returnStdout: true).trim()
                     echo "Changed files in MR:\n${changedFiles}"
 
                     if (changedFiles.contains('backend-repo/')) {
@@ -272,11 +256,11 @@ pipeline{
                         sh "docker cp ./docker/edge/nginx/${envType}.conf ${proxyContainerName}:/etc/nginx/nginx.conf"
                         sh "docker exec ${proxyContainerName} nginx -s reload"
                         mmNotify(
-                            result   : 'SUCCESS',
-                            title    : "♻️ Edge Proxy 리로드",
-                            summary  : "Nginx 설정이 재적용되었습니다.",
-                            imageTag : proxy_tag,
-                            deployEnv: envType,
+                            result    : 'SUCCESS',
+                            title     : "♻️ Edge Proxy 리로드",
+                            summary   : "Nginx 설정이 재적용되었습니다.",
+                            imageTag  : proxy_tag,
+                            deployEnv : envType,
                             targetHost: "edge:${httpPort}/${httpsPort}"
                         )
                     } else {
@@ -290,11 +274,11 @@ pipeline{
                                 ${proxy_tag}
                         """
                         mmNotify(
-                            result   : 'SUCCESS',
-                            title    : "🚀 Edge Proxy 배포",
-                            summary  : "새 컨테이너가 기동되었습니다.",
-                            imageTag : proxy_tag,
-                            deployEnv: envType,
+                            result    : 'SUCCESS',
+                            title     : "🚀 Edge Proxy 배포",
+                            summary   : "새 컨테이너가 기동되었습니다.",
+                            imageTag  : proxy_tag,
+                            deployEnv : envType,
                             targetHost: "edge:${httpPort}/${httpsPort}"
                         )
                     }
