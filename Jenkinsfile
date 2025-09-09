@@ -31,12 +31,13 @@ pipeline{
 
         // --- 🔧 Jenkins 설정 변수 ---
         JENKINS_CONTAINER  = "jenkins"
-    }
+
 
     stages {
         stage('Init MM Helpers') {
             steps {
                 script {
+                    // 반드시 def 없이 전역 바인딩으로 등록
                     mmColor = { String result ->
                         switch (result) {
                             case 'SUCCESS':  return '#2EB67D' // green
@@ -83,6 +84,8 @@ pipeline{
                         String color    = mmColor(result)
                         String duration = sinceStart()
 
+                        summary = (summary?.trim()) ? summary : " "
+
                         def fields = mmFields(
                             imageTag  : args.imageTag,
                             deployEnv : args.deployEnv,
@@ -97,12 +100,13 @@ pipeline{
                             title    : title,
                             text     : summary,
                             fields   : fields,
-                            footer   : "Jenkins • ${new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul'))}",
-                            mrkdwn_in: ['text','fields']
+                            footer   : "Jenkins • ${new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Seoul'))}"
                         ]]
+                        def rootMessage = args.message ?: "**${title}** (${result})"
 
                         mattermostSend(
-                            iconEmoji: ':jenkins:',
+                            message    : rootMessage,
+                            iconEmoji  : ':jenkins:',
                             attachments: attachments
                         )
                     }
@@ -202,16 +206,6 @@ pipeline{
                         echo "✅ Changes detected in edge proxy configuration."
                         env.DO_EDGE_CONFIG_CHANGE = 'true'
                     }
-
-                    mmNotify(
-                        result : 'SUCCESS',
-                        title  : "🔎 변경 파일 분석",
-                        summary: """
-- Backend: `${env.DO_BACKEND_BUILD}`
-- Frontend: `${env.DO_FRONTEND_BUILD}`
-- Edge(Proxy): `${env.DO_EDGE_CONFIG_CHANGE}`
-""".trim()
-                    )
                 }
             }
         }
