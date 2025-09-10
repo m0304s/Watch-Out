@@ -98,6 +98,8 @@ pipeline {
                                     -e CONFIG__MODEL_PROVIDER=google \
                                     -e CONFIG__MODEL="gemini/gemini-2.5-pro" \
                                     -e CONFIG__FALLBACK_MODELS="[]" \
+                                    -e REVIEW__PERSISTENT_COMMENT=true \
+                                    -e REVIEW__FINAL_UPDATE_MESSAGE=false \
                                     -e PR_REVIEWER__EXTRA_INSTRUCTIONS="한국어로 간결하게 코멘트하고, 중요 이슈 위주로 지적해줘" \
                                     codiumai/pr-agent:latest \
                                     --pr_url "${MR_URL}" review
