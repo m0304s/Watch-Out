@@ -36,17 +36,50 @@ pipeline {
     }
 
     stages {
+        stage('Debug Webhook Vars') {
+            steps {
+                script {
+                    echo "MR_STATE=${env.MR_STATE}; MR_ACTION=${env.MR_ACTION}; MR_LAST_COMMIT=${env.MR_LAST_COMMIT}; MR_IID=${env.MR_IID}; SOURCE_BRANCH=${env.SOURCE_BRANCH}; TARGET_BRANCH=${env.TARGET_BRANCH}; MR_URL=${env.MR_URL}"
+                    sh 'env | sort | head -n 80'
+                }
+            }
+        }
 
-        /********************  PR-Agent: 커밋이 올라온 경우만  ********************/
+        /********************  PR-Agent 실행 여부 결정  ********************/
+        stage('Decide PR-Review Run') {
+            when { expression { (env.MR_STATE ?: '') == 'opened' } }
+            steps {
+                script {
+                    def mrKey   = (env.MR_IID ?: env.SOURCE_BRANCH ?: 'default').replaceAll('[^A-Za-z0-9._-]','_')
+                    def shaFile = ".pr_agent_last_sha_${mrKey}"
+                    env.PR_AGENT_SHA_FILE = shaFile
+
+                    def nowSha = (env.MR_LAST_COMMIT ?: '').trim()
+                    env.MR_LAST_COMMIT = nowSha
+
+                    def prevSha = ""
+                    if (fileExists(shaFile)) {
+                        prevSha = sh(script: "cat '${shaFile}' 2>/dev/null || true", returnStdout: true).trim()
+                    }
+
+                    def action = (env.MR_ACTION ?: '').trim()
+                    def shouldRun = false
+                    if (action == 'open') {
+                        shouldRun = true
+                    } else if (action == 'update' && nowSha && nowSha != prevSha) {
+                        shouldRun = true
+                    }
+
+                    env.SKIP_REVIEW = shouldRun ? 'false' : 'true'
+                    echo "PR-Agent review decide → action=${action}, prevSha=${prevSha}, nowSha=${nowSha}, shouldRun=${shouldRun}, shaFile=${shaFile}"
+                }
+            }
+        }
+
         stage('Run PR-Agent Review') {
             when {
                 expression {
-                    def state   = env.MR_STATE ?: ''
-                    def action  = env.MR_ACTION ?: ''
-                    def lastSha = env.MR_LAST_COMMIT ?: ''
-                    return state == 'opened' && (
-                        action == 'open' || (action == 'update' && lastSha.trim())
-                    )
+                    (env.MR_STATE ?: '') == 'opened' && (env.SKIP_REVIEW ?: 'true') == 'false'
                 }
             }
             steps {
@@ -71,12 +104,15 @@ pipeline {
                             """
                         }
                     }
+                    if ((env.MR_LAST_COMMIT ?: '').trim()) {
+                        writeFile file: env.PR_AGENT_SHA_FILE, text: (env.MR_LAST_COMMIT.trim() + "\n")
+                    }
                 }
             }
         }
 
         stage('Check for Changes') {
-            when { expression { env.MR_STATE == 'merged' } }
+            when { expression { (env.MR_STATE ?: '') == 'merged' } }
             steps {
                 script {
                     env.DO_BACKEND_BUILD      = 'false'
@@ -94,14 +130,14 @@ pipeline {
         }
 
         stage('Prepare Networks') {
-            when { expression { env.MR_STATE == 'merged' } }
+            when { expression { (env.MR_STATE ?: '') == 'merged' } }
             steps {
                 sh "docker network create ${TEST_NETWORK} || true && docker network create ${PROD_NETWORK} || true"
             }
         }
 
         stage('Connect Jenkins to Networks') {
-            when { expression { env.MR_STATE == 'merged' } }
+            when { expression { (env.MR_STATE ?: '') == 'merged' } }
             steps {
                 sh "docker network connect ${TEST_NETWORK} ${JENKINS_CONTAINER} || true && docker network connect ${PROD_NETWORK} ${JENKINS_CONTAINER} || true"
             }
@@ -110,7 +146,7 @@ pipeline {
         stage('Deploy or Reload Edge Proxy') {
             when {
                 allOf {
-                    expression { env.MR_STATE == 'merged' }
+                    expression { (env.MR_STATE ?: '') == 'merged' }
                     expression { env.DO_EDGE_CONFIG_CHANGE == 'true' }
                 }
             }
@@ -148,7 +184,7 @@ pipeline {
         stage('Deploy Backend') {
             when {
                 allOf {
-                    expression { env.MR_STATE == 'merged' }
+                    expression { (env.MR_STATE ?: '') == 'merged' }
                     expression { env.DO_BACKEND_BUILD == 'true' }
                 }
             }
@@ -194,7 +230,7 @@ pipeline {
         stage('Deploy Frontend') {
             when {
                 allOf {
-                    expression { env.MR_STATE == 'merged' }
+                    expression { (env.MR_STATE ?: '') == 'merged' }
                     expression { env.DO_FRONTEND_BUILD == 'true' }
                 }
             }
