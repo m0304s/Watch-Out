@@ -45,7 +45,6 @@ pipeline {
             }
         }
 
-        /********************  PR-Agent 실행 여부 결정  ********************/
         stage('Decide PR-Review Run') {
             when { expression { (env.MR_STATE ?: '') == 'opened' } }
             steps {
@@ -198,32 +197,60 @@ pipeline {
                         if (env.TARGET_BRANCH == 'develop') {
                             def tag = "${BE_IMAGE_NAME}:test-${BUILD_NUMBER}"
                             withCredentials([
+                                file(credentialsId: 'application.yml',         variable: 'APP_YML'),
                                 file(credentialsId: 'application-docker.yml', variable: 'APP_YML_DOCKER'),
-                                file(credentialsId: 'application.yml',          variable: 'APP_YML')
+                                file(credentialsId: 'application-test.yml',   variable: 'APP_YML_TEST')
                             ]) {
-                                sh "mkdir -p src/main/resources && cp \$APP_YML src/main/resources/application.yml && cp \$APP_YML_DOCKER src/main/resources/application-docker.yml"
+                                sh """
+                                  mkdir -p src/main/resources
+                                  cp "\$APP_YML"         src/main/resources/application.yml
+                                  cp "\$APP_YML_DOCKER"  src/main/resources/application-docker.yml
+                                  cp "\$APP_YML_TEST"    src/main/resources/application-test.yml
+                                """
                             }
-                            sh "chmod +x ./gradlew && ./gradlew bootJar && docker build -t ${tag} ."
+                            sh """
+                                chmod +x ./gradlew
+                                ./gradlew bootJar
+                                docker build -t ${tag} .
+                            """
                             sh """
                                 docker rm -f ${BE_TEST_CONTAINER} || true
-                                docker run -d --name ${BE_TEST_CONTAINER} --network ${TEST_NETWORK} -e SPRING_PROFILES_ACTIVE=docker ${tag}
+                                docker run -d --name ${BE_TEST_CONTAINER} \\
+                                  --network ${TEST_NETWORK} \\
+                                  -e SPRING_PROFILES_ACTIVE=docker,test \\
+                                  ${tag}
                             """
+
                         } else if (env.TARGET_BRANCH == 'master') {
                             def tag = "${BE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
                             def active   = sh(script: "docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER}", returnStdout: true).trim() ? BE_PROD_BLUE_CONTAINER : BE_PROD_GREEN_CONTAINER
                             def inactive = (active == BE_PROD_BLUE_CONTAINER) ? BE_PROD_GREEN_CONTAINER : BE_PROD_BLUE_CONTAINER
+
                             withCredentials([
-                                file(credentialsId: 'application-docker-prod.yml', variable: 'APP_YML_DOCKER_PROD'),
-                                file(credentialsId: 'application-prod.yml',        variable: 'APP_YML_PROD')
+                                file(credentialsId: 'application.yml',         variable: 'APP_YML'),
+                                file(credentialsId: 'application-docker.yml', variable: 'APP_YML_DOCKER'),
+                                file(credentialsId: 'application-prod.yml',   variable: 'APP_YML_PROD')
                             ]) {
-                                sh "mkdir -p src/main/resources && cp \$APP_YML_PROD src/main/resources/application.yml && cp \$APP_YML_DOCKER_PROD src/main/resources/application-docker.yml"
+                                sh """
+                                  mkdir -p src/main/resources
+                                  cp "\$APP_YML"         src/main/resources/application.yml
+                                  cp "\$APP_YML_DOCKER"  src/main/resources/application-docker.yml
+                                  cp "\$APP_YML_PROD"    src/main/resources/application-prod.yml
+                                """
                             }
-                            sh "chmod +x ./gradlew && ./gradlew bootJar && docker build -t ${tag} ."
+
+                            sh """
+                                chmod +x ./gradlew
+                                ./gradlew bootJar
+                                docker build -t ${tag} .
+                            """
                             sh """
                                 docker rm -f ${inactive} || true
-                                docker run -d --name ${inactive} --network ${PROD_NETWORK} -e SPRING_PROFILES_ACTIVE=docker,prod ${tag}
+                                docker run -d --name ${inactive} \\
+                                  --network ${PROD_NETWORK} \\
+                                  -e SPRING_PROFILES_ACTIVE=docker,prod \\
+                                  ${tag}
                             """
-                            sleep(30)
                             sh "docker rm -f ${active} || true"
                         }
                     }
