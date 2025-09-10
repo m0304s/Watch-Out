@@ -1,7 +1,9 @@
+# util/cctv_bound.py
 import cv2, torch, re, time, numpy as np
 from pathlib import Path
-import logging, json, os
+import logging, json, os, math
 from collections import Counter
+
 # ===== 경로 / 설정 =====
 BASE_DIR = Path(__file__).parent.parent
 REPO_DIR = BASE_DIR / "yolactMaster"
@@ -118,7 +120,7 @@ def infer_one(frame_bgr):
     masks   = res[3].detach().cpu().numpy() if res[3] is not None else None
 
     vis = frame_bgr.copy()
-    dets = []  # ← JSON/트리거용 구조: [{'class': str, 'score': float, 'bbox':[x1,y1,x2,y2]}, ...]
+    dets = []
 
     for i in range(min(TOP_K, scores.shape[0])):
         sc = float(scores[i])
@@ -134,14 +136,12 @@ def infer_one(frame_bgr):
             continue
 
         x1, y1, x2, y2 = boxes[i].astype(int)
-        # JSON용 기록
         dets.append({
             "class": name,
             "score": sc,
             "bbox": [int(x1), int(y1), int(x2), int(y2)],
         })
 
-        # 시각화
         cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(vis, f"{name}:{sc:.2f}", (x1, max(0, y1-6)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
@@ -153,9 +153,9 @@ def infer_one(frame_bgr):
 
     return vis, dets
 
-TRIGGERS = {"Helmet on", "Helmet off", "Belt on", "Belt off"}  # 원하면 수정
+TRIGGERS = {"Helmet on", "Helmet off", "Belt on", "Belt off"}
 SNAPSHOT_DIR = "./snapshot"
-SNAPSHOT_COOLDOWN = 60.0  # 1분
+SNAPSHOT_COOLDOWN = 60.0
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -167,7 +167,7 @@ def mjpeg_generator(src=0, mirror=True):
     if cap is None:
         return  # 빈 yield 금지
 
-    last_shot_ts = 0.0  # 전역 쿨다운
+    last_shot_ts = 0.0
 
     try:
         while True:
@@ -179,10 +179,8 @@ def mjpeg_generator(src=0, mirror=True):
 
             vis, dets = infer_one(frame_bgr)
 
-            # --- 트리거 매칭 ---
             matched = [d for d in dets if d["class"] in TRIGGERS]
 
-            # --- 스냅샷 & 로그 (1분 쿨다운) ---
             now = time.time()
             if matched and (now - last_shot_ts) >= SNAPSHOT_COOLDOWN:
                 last_shot_ts = now
@@ -194,13 +192,12 @@ def mjpeg_generator(src=0, mirror=True):
                 payload = {
                     "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(now)),
                     "src": str(src),
-                    "snapshot_path": fpath,   # 정적 서빙 시 "/shots/..."로 접근 가능
+                    "snapshot_path": fpath,
                     "triggers": sorted(list({d["class"] for d in matched})),
-                    "detections": dict(counts),    # 매치된 항목만
+                    "detections": dict(counts),
                 }
                 logging.info(json.dumps(payload, ensure_ascii=False))
 
-            # --- MJPEG 전송 ---
             ok, buf = cv2.imencode(".jpg", vis)
             if not ok:
                 continue
@@ -208,3 +205,103 @@ def mjpeg_generator(src=0, mirror=True):
                    b"Content-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n")
     finally:
         cap.release()
+
+# ===== 멀티뷰 유틸 & 제너레이터 =====
+
+def _resize_keep_ratio(img, target_h: int):
+    if img is None or img.size == 0:
+        return None
+    h, w = img.shape[:2]
+    if h <= 0 or w <= 0:
+        return None
+    scale = target_h / float(h)
+    new_w = max(1, int(w * scale))
+    return cv2.resize(img, (new_w, target_h))
+
+def _make_grid(frames, cols: int, cell_h: int = 360):
+    tiles = []
+    for f in frames:
+        r = _resize_keep_ratio(f, cell_h)
+        if r is not None:
+            tiles.append(r)
+    if not tiles:
+        return None
+
+    rows = math.ceil(len(tiles) / cols)
+    grid_rows = []
+    idx = 0
+    for _ in range(rows):
+        row_tiles = tiles[idx: idx + cols]
+        idx += cols
+        if len(row_tiles) < cols:
+            h = row_tiles[0].shape[0]
+            pad = [np.zeros((h, 1, 3), dtype=row_tiles[0].dtype)] * (cols - len(row_tiles))
+            row_tiles = row_tiles + pad
+        row = cv2.hconcat(row_tiles)
+        grid_rows.append(row)
+
+    if len(grid_rows) == 1:
+        return grid_rows[0]
+    return cv2.vconcat(grid_rows)
+
+def mjpeg_multi_generator(src_list, cols: int = 2, mirror: bool = True, cell_h: int = 360):
+    """
+    여러 소스를 동시에 열고 infer_one 적용 → 그리드로 합쳐 MJPEG 송출
+    src_list: [0, 1, "rtsp://...", "http://...", "file.mp4", ...]
+    """
+    init_model()
+
+    caps = []
+    for s in src_list:
+        src = int(s) if isinstance(s, str) and s.isdigit() else s
+        cap = open_capture(src)
+        if cap is not None:
+            caps.append(cap)
+
+    if not caps:
+        return
+
+    try:
+        while True:
+            vis_list = []
+            dead = []
+            for i, cap in enumerate(caps):
+                ok, f = cap.read()
+                if not ok or f is None or f.size == 0:
+                    dead.append(i)
+                    vis_list.append(None)
+                    continue
+                if mirror:
+                    f = cv2.flip(f, 1)
+
+                vis, _ = infer_one(f)
+                vis_list.append(vis)
+
+            if dead:
+                for i in sorted(dead, reverse=True):
+                    try:
+                        caps[i].release()
+                    except:
+                        pass
+                    del caps[i]
+
+            vis_list = [v for v in vis_list if v is not None]
+            if not vis_list:
+                break
+
+            grid = _make_grid(vis_list, cols=cols, cell_h=cell_h)
+            if grid is None:
+                continue
+
+            ok, buf = cv2.imencode(".jpg", grid)
+            if not ok:
+                continue
+
+            yield (b"--frame\r\n"
+                   b"Content-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n")
+    finally:
+        for c in caps:
+            try:
+                c.release()
+            except:
+                pass
