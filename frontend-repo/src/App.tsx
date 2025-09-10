@@ -6,6 +6,7 @@ import {
 } from 'react-router-dom'
 
 import { LoginPage } from '@/features/auth'
+import { SelectedWorkersPage } from '@/features/worker'
 import GlobalStyles from '@/styles/GlobalStyles'
 
 export const App = () => {
@@ -21,6 +22,8 @@ export const App = () => {
 
           {/* 로그인 페이지 라우트 */}
           <Route path="/login" element={<LoginPage />} />
+          {/* 선택한 작업자 목록 페이지 (좌/우 사이드바 제외, 내부 컨텐츠만) */}
+          <Route path="/workers/selected" element={<SelectedWorkersPage />} />
         </Routes>
       </Router>
     </>
