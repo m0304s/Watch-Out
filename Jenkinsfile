@@ -99,6 +99,7 @@ pipeline {
                                     -e CONFIG__MODEL="gemini/gemini-2.5-pro" \
                                     -e CONFIG__FALLBACK_MODELS="[]" \
                                     -e CONFIG__PUBLISH_OUTPUT_PROGRESS=false \
+                                    -e PR_REVIEWER__FINAL_UPDATE_MESSAGE=false \
                                     -e REVIEW__PERSISTENT_COMMENT=true \
                                     -e REVIEW__FINAL_UPDATE_MESSAGE=false \
                                     -e PR_REVIEWER__EXTRA_INSTRUCTIONS="한국어로 간결하게 코멘트하고, 중요 이슈 위주로 지적해줘" \
