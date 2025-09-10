@@ -40,6 +40,7 @@ public class SecurityConfig {
                     "/user/signup",
                     "/auth/**"
                 ).permitAll()
+                .requestMatchers("POST", "/area").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

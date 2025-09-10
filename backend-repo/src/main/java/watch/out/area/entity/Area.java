@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import watch.out.common.entity.BaseTimeEntity;
@@ -11,6 +13,8 @@ import watch.out.common.entity.BaseTimeEntity;
 @Entity
 @Table(name = "area")
 @Getter
+@Builder(toBuilder = true)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Area extends BaseTimeEntity {
 
