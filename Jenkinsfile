@@ -152,31 +152,33 @@ pipeline {
                 }
             }
             steps {
-                script {
-                    def isProd   = (env.TARGET_BRANCH == 'master')
-                    def tag      = isProd ? "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}" : "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
-                    def envType  = isProd ? "prod" : "test"
-                    def httpPort = isProd ? REVERSE_PROXY_PROD_PORT : REVERSE_PROXY_TEST_PORT
-                    def httpsPort= isProd ? REVERSE_PROXY_PROD_SSL_PORT : REVERSE_PROXY_TEST_SSL_PORT
-                    def network  = isProd ? PROD_NETWORK : TEST_NETWORK
-                    def name     = isProd ? REVERSE_PROXY_PROD_CONTAINER : REVERSE_PROXY_TEST_CONTAINER
+                dir('frontend-repo') {
+                    script {
+                        def isProd   = (env.TARGET_BRANCH == 'master')
+                        def tag      = isProd ? "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}" : "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
+                        def envType  = isProd ? "prod" : "test"
+                        def httpPort = isProd ? REVERSE_PROXY_PROD_PORT : REVERSE_PROXY_TEST_PORT
+                        def httpsPort= isProd ? REVERSE_PROXY_PROD_SSL_PORT : REVERSE_PROXY_TEST_SSL_PORT
+                        def network  = isProd ? PROD_NETWORK : TEST_NETWORK
+                        def name     = isProd ? REVERSE_PROXY_PROD_CONTAINER : REVERSE_PROXY_TEST_CONTAINER
 
-                    sh "docker build -t ${tag} --build-arg ENV=${envType} -f ./docker/edge/Dockerfile ."
+                        sh "docker build -t ${tag} --build-arg ENV=${envType} -f ./docker/edge/Dockerfile ."
 
-                    def running = sh(script: "docker ps -q --filter name=${name}", returnStdout: true).trim()
-                    if (running) {
-                        sh "docker cp ./docker/edge/nginx/${envType}.conf ${name}:/etc/nginx/nginx.conf"
-                        sh "docker exec ${name} nginx -s reload"
-                    } else {
-                        sh """
-                            docker rm -f ${name} || true
-                            docker run -d --name ${name} --network ${network} \\
-                                -p ${httpPort}:80 \\
-                                -p ${httpsPort}:${httpsPort} \\
-                                -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
-                                -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
-                                ${tag}
-                        """
+                        def running = sh(script: "docker ps -q --filter name=${name}", returnStdout: true).trim()
+                        if (running) {
+                            sh "docker cp ./docker/edge/nginx/${envType}.conf ${name}:/etc/nginx/nginx.conf"
+                            sh "docker exec ${name} nginx -s reload"
+                        } else {
+                            sh """
+                                docker rm -f ${name} || true
+                                docker run -d --name ${name} --network ${network} \\
+                                    -p ${httpPort}:80 \\
+                                    -p ${httpsPort}:${httpsPort} \\
+                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
+                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
+                                    ${tag}
+                            """
+                        }
                     }
                 }
             }
