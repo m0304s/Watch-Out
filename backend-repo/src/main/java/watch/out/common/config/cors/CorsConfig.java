@@ -1,4 +1,4 @@
-package watch.out.common.cors;
+package watch.out.common.config.cors;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

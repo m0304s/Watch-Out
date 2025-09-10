@@ -1,4 +1,4 @@
-package watch.out.common;
+package watch.out.common.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
