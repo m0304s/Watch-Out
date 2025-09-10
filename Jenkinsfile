@@ -199,31 +199,28 @@ pipeline {
                         }
 
                         if (branch == 'develop') {
+                            // ---- TEST 빌드/배포: Dockerfile(멀티스테이지)로 빌드만 수행 ----
                             def tag = "${BE_IMAGE_NAME}:test-${BUILD_NUMBER}"
                             echo "[Deploy Backend] TEST 배포 시작. image=${tag}"
-
                             withCredentials([
                                 file(credentialsId: 'APP_YML',         variable: 'APP_YML'),
                                 file(credentialsId: 'APP_YML_DOCKER',  variable: 'APP_YML_DOCKER'),
                                 file(credentialsId: 'APP_YML_TEST',    variable: 'APP_YML_TEST')
                             ]) {
                                 sh '''
-                                  set -eux
-                                  mkdir -p src/main/resources
-                                  cp "$APP_YML"         src/main/resources/application.yml
-                                  cp "$APP_YML_DOCKER"  src/main/resources/application-docker.yml
-                                  cp "$APP_YML_TEST"    src/main/resources/application-test.yml
+                                set -eux
+                                mkdir -p src/main/resources
+                                cp "$APP_YML"         src/main/resources/application.yml
+                                cp "$APP_YML_DOCKER"  src/main/resources/application-docker.yml
+                                cp "$APP_YML_TEST"    src/main/resources/application-test.yml
                                 '''
                             }
 
                             sh """
-                              set -eux
-                              test -f gradlew || (echo "[ERROR] gradlew가 없습니다." && exit 1)
-                              chmod +x ./gradlew
-                              ./gradlew --no-daemon clean bootJar
-                              docker build -t ${tag} .
-                              docker rm -f ${BE_TEST_CONTAINER} || true
-                              docker run -d --name ${BE_TEST_CONTAINER} \\
+                            set -eux
+                            docker build -t ${tag} -f Dockerfile .
+                            docker rm -f ${BE_TEST_CONTAINER} || true
+                            docker run -d --name ${BE_TEST_CONTAINER} \\
                                 --network ${TEST_NETWORK} \\
                                 -e SPRING_PROFILES_ACTIVE=docker,test \\
                                 ${tag}
@@ -239,37 +236,35 @@ pipeline {
                                 file(credentialsId: 'APP_YML_PROD',    variable: 'APP_YML_PROD')
                             ]) {
                                 sh '''
-                                  set -eux
-                                  mkdir -p src/main/resources
-                                  cp "$APP_YML"         src/main/resources/application.yml
-                                  cp "$APP_YML_DOCKER"  src/main/resources/application-docker.yml
-                                  cp "$APP_YML_PROD"    src/main/resources/application-prod.yml
+                                set -eux
+                                mkdir -p src/main/resources
+                                cp "$APP_YML"         src/main/resources/application.yml
+                                cp "$APP_YML_DOCKER"  src/main/resources/application-docker.yml
+                                cp "$APP_YML_PROD"    src/main/resources/application-prod.yml
                                 '''
                             }
 
                             sh """
-                              set -eux
-                              test -f gradlew || (echo "[ERROR] gradlew가 없습니다." && exit 1)
-                              chmod +x ./gradlew
-                              ./gradlew --no-daemon clean bootJar
-                              docker build -t ${tag} .
+                            set -eux
+                            docker build -t ${tag} -f Dockerfile .
 
-                              if docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER} | grep -q . ; then
+                            if docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER} | grep -q . ; then
                                 ACTIVE=${BE_PROD_BLUE_CONTAINER}
                                 INACTIVE=${BE_PROD_GREEN_CONTAINER}
-                              else
+                            else
                                 ACTIVE=${BE_PROD_GREEN_CONTAINER}
                                 INACTIVE=${BE_PROD_BLUE_CONTAINER}
-                              fi
+                            fi
 
-                              docker rm -f \$INACTIVE || true
-                              docker run -d --name \$INACTIVE \\
+                            docker rm -f \$INACTIVE || true
+                            docker run -d --name \$INACTIVE \\
                                 --network ${PROD_NETWORK} \\
                                 -e SPRING_PROFILES_ACTIVE=docker,prod \\
                                 ${tag}
 
-                              sleep 30
-                              docker rm -f \$ACTIVE || true
+                            echo "[Deploy Backend] Health check 대기..."
+                            sleep 30
+                            docker rm -f \$ACTIVE || true
                             """
                         } else {
                             error "[Deploy Backend] 지원하지 않는 TARGET_BRANCH='${branch}'. (develop/master 만 지원)"
