@@ -36,6 +36,7 @@ pipeline {
     }
 
     stages {
+
         /********************  PR-Agent 실행 여부 결정  ********************/
         stage('Decide PR-Review Run') {
             when { expression { (env.MR_STATE ?: '') == 'opened' } }
@@ -181,7 +182,7 @@ pipeline {
             }
         }
 
-        /********************  백엔드 배포  ********************/
+        /********************  백엔드 배포 (컨테이너 빌드/실행)  ********************/
         stage('Deploy Backend') {
             when {
                 allOf {
@@ -198,73 +199,81 @@ pipeline {
                             error "[Deploy Backend] TARGET_BRANCH가 비어 있습니다."
                         }
 
+                        sh '''
+                          set -eux
+                          rm -rf _docker_ctx _run_config
+                          mkdir -p _docker_ctx _run_config
+                          # 소스(.git 제외)만 컨텍스트에 복사
+                          tar -cf - --exclude=.git . | (cd _docker_ctx && tar -xf -)
+                        '''
+
                         if (branch == 'develop') {
-                            // ---- TEST 빌드/배포: Dockerfile(멀티스테이지)로 빌드만 수행 ----
                             def tag = "${BE_IMAGE_NAME}:test-${BUILD_NUMBER}"
-                            echo "[Deploy Backend] TEST 배포 시작. image=${tag}"
+                            echo "[Deploy Backend] TEST 이미지 빌드 시작: ${tag}"
+
                             withCredentials([
-                                file(credentialsId: 'APP_YML',         variable: 'APP_YML'),
-                                file(credentialsId: 'APP_YML_DOCKER',  variable: 'APP_YML_DOCKER'),
-                                file(credentialsId: 'APP_YML_TEST',    variable: 'APP_YML_TEST')
+                                file(credentialsId: 'APP_YML',        variable: 'APP_YML'),
+                                file(credentialsId: 'APP_YML_DOCKER', variable: 'APP_YML_DOCKER'),
+                                file(credentialsId: 'APP_YML_TEST',   variable: 'APP_YML_TEST')
                             ]) {
                                 sh '''
-                                set -eux
-                                mkdir -p src/main/resources
-                                cp "$APP_YML"         src/main/resources/application.yml
-                                cp "$APP_YML_DOCKER"  src/main/resources/application-docker.yml
-                                cp "$APP_YML_TEST"    src/main/resources/application-test.yml
+                                  set -eux
+                                  cp "$APP_YML"        _run_config/application.yml
+                                  cp "$APP_YML_DOCKER" _run_config/application-docker.yml
+                                  cp "$APP_YML_TEST"   _run_config/application-test.yml
                                 '''
                             }
 
+                            sh "docker build -t ${tag} -f _docker_ctx/Dockerfile _docker_ctx"
+
                             sh """
-                            set -eux
-                            docker build -t ${tag} -f Dockerfile .
-                            docker rm -f ${BE_TEST_CONTAINER} || true
-                            docker run -d --name ${BE_TEST_CONTAINER} \\
+                              docker rm -f ${BE_TEST_CONTAINER} || true
+                              docker run -d --name ${BE_TEST_CONTAINER} \\
                                 --network ${TEST_NETWORK} \\
+                                -v "\${PWD}/_run_config:/app/config:ro" \\
                                 -e SPRING_PROFILES_ACTIVE=docker,test \\
+                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \\
                                 ${tag}
                             """
 
                         } else if (branch == 'master') {
                             def tag = "${BE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
-                            echo "[Deploy Backend] PROD 배포 시작. image=${tag}"
+                            echo "[Deploy Backend] PROD 이미지 빌드 시작: ${tag}"
 
                             withCredentials([
-                                file(credentialsId: 'APP_YML',         variable: 'APP_YML'),
-                                file(credentialsId: 'APP_YML_DOCKER',  variable: 'APP_YML_DOCKER'),
-                                file(credentialsId: 'APP_YML_PROD',    variable: 'APP_YML_PROD')
+                                file(credentialsId: 'APP_YML',        variable: 'APP_YML'),
+                                file(credentialsId: 'APP_YML_DOCKER', variable: 'APP_YML_DOCKER'),
+                                file(credentialsId: 'APP_YML_PROD',   variable: 'APP_YML_PROD')
                             ]) {
                                 sh '''
-                                set -eux
-                                mkdir -p src/main/resources
-                                cp "$APP_YML"         src/main/resources/application.yml
-                                cp "$APP_YML_DOCKER"  src/main/resources/application-docker.yml
-                                cp "$APP_YML_PROD"    src/main/resources/application-prod.yml
+                                  set -eux
+                                  cp "$APP_YML"        _run_config/application.yml
+                                  cp "$APP_YML_DOCKER" _run_config/application-docker.yml
+                                  cp "$APP_YML_PROD"   _run_config/application-prod.yml
                                 '''
                             }
 
-                            sh """
-                            set -eux
-                            docker build -t ${tag} -f Dockerfile .
+                            sh "docker build -t ${tag} -f _docker_ctx/Dockerfile _docker_ctx"
 
-                            if docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER} | grep -q . ; then
+                            sh """
+                              if docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER} | grep -q . ; then
                                 ACTIVE=${BE_PROD_BLUE_CONTAINER}
                                 INACTIVE=${BE_PROD_GREEN_CONTAINER}
-                            else
+                              else
                                 ACTIVE=${BE_PROD_GREEN_CONTAINER}
                                 INACTIVE=${BE_PROD_BLUE_CONTAINER}
-                            fi
+                              fi
 
-                            docker rm -f \$INACTIVE || true
-                            docker run -d --name \$INACTIVE \\
+                              docker rm -f \$INACTIVE || true
+                              docker run -d --name \$INACTIVE \\
                                 --network ${PROD_NETWORK} \\
+                                -v "\${PWD}/_run_config:/app/config:ro" \\
                                 -e SPRING_PROFILES_ACTIVE=docker,prod \\
+                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \\
                                 ${tag}
 
-                            echo "[Deploy Backend] Health check 대기..."
-                            sleep 30
-                            docker rm -f \$ACTIVE || true
+                              sleep 30
+                              docker rm -f \$ACTIVE || true
                             """
                         } else {
                             error "[Deploy Backend] 지원하지 않는 TARGET_BRANCH='${branch}'. (develop/master 만 지원)"
@@ -274,6 +283,7 @@ pipeline {
             }
         }
 
+        /********************  프론트엔드 배포  ********************/
         stage('Deploy Frontend') {
             when {
                 allOf {
