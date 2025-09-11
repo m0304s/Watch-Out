@@ -20,4 +20,3 @@ public interface AreaRepositoryCustom {
 
     boolean hasAreaAccess(UUID userUuid, UUID areaUuid);
 }
-

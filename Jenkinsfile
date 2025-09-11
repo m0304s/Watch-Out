@@ -263,12 +263,14 @@ pipeline {
                               docker run -d --name cfgseed -v watchout_be_test:/app/config alpine:3.20 sleep 300
                               docker exec cfgseed sh -lc 'rm -rf /app/config/*'
                               docker cp _run_config/. cfgseed:/app/config/
+                              docker exec cfgseed sh -lc 'chown -R 1000:1000 /app/config && find /app/config -type d -exec chmod 750 {} \\; && find /app/config -type f -exec chmod 640 {} \\;'
                               docker rm -f cfgseed || true
 
                               docker rm -f ${BE_TEST_CONTAINER} || true
                               docker run -d --name ${BE_TEST_CONTAINER} \
                                 --network ${TEST_NETWORK} \
                                 -v watchout_be_test:/app/config:ro \
+                                --user 1000:1000 \
                                 -e SPRING_PROFILES_ACTIVE=docker,test \
                                 -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
                                 ${tag}
@@ -309,12 +311,14 @@ pipeline {
                               docker run -d --name cfgseed-prod -v watchout_be_prod:/app/config alpine:3.20 sleep 300
                               docker exec cfgseed-prod sh -lc 'rm -rf /app/config/*'
                               docker cp _run_config/. cfgseed-prod:/app/config/
+                              docker exec cfgseed-prod sh -lc 'chown -R 1000:1000 /app/config && find /app/config -type d -exec chmod 750 {} \\; && find /app/config -type f -exec chmod 640 {} \\;'
                               docker rm -f cfgseed-prod || true
 
                               docker rm -f \$INACTIVE || true
                               docker run -d --name \$INACTIVE \
                                 --network ${PROD_NETWORK} \
                                 -v watchout_be_prod:/app/config:ro \
+                                --user 1000:1000 \
                                 -e SPRING_PROFILES_ACTIVE=docker,prod \
                                 -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
                                 ${tag}
