@@ -41,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
         CookieUtil.addHttpOnlyCookie(response, "refresh_token", refreshToken,
             refreshTokenExpiration);
 
-        return new LoginResponse(accessToken, user.getUuid(), user.getUserId(), user.getUserName(), user.getRole());
+        return new LoginResponse(accessToken, user.getUuid(), user.getUserId(), user.getUserName(),
+            user.getRole());
     }
 }

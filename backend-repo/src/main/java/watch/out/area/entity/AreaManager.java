@@ -2,6 +2,9 @@ package watch.out.area.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -9,23 +12,21 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import watch.out.common.entity.BaseTimeEntity;
+import watch.out.user.entity.User;
 
 @Entity
-@Table(name = "area")
+@Table(name = "area_manager")
 @Getter
 @Builder(toBuilder = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Area extends BaseTimeEntity {
+public class AreaManager extends BaseTimeEntity {
 
-    @Column(name = "area_name", nullable = false, length = 50)
-    private String areaName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "area_uuid", nullable = false)
+    private Area area;
 
-    @Column(name = "area_alias", length = 50)
-    private String areaAlias;
-
-    public void updateArea(String areaName, String areaAlias) {
-        this.areaName = areaName;
-        this.areaAlias = areaAlias;
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_uuid", nullable = false)
+    private User user;
 }

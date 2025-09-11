@@ -10,4 +10,6 @@ public record LoginRequest(
     @NotBlank
     @Size(min = 8, max = 16)
     String password
-) {}
+) {
+
+}

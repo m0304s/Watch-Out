@@ -13,6 +13,8 @@ public enum ErrorCode {
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레시 토큰"),
     INVALID_SIGNIN(HttpStatus.BAD_REQUEST, "존재하지 않는 사용자 또는 비밀번호 불일치"),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호 불일치"),
+    INVALID_INPUT(HttpStatus.BAD_REQUEST, "잘못된 입력값"),
+    INVALID_FILE_NAME(HttpStatus.BAD_REQUEST, "잘못된 파일명"),
     ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 데이터"),
     NOT_FOUND(HttpStatus.NOT_FOUND, "대상 데이터를 찾을 수 없음"),
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "올바르지 않은 요청"),

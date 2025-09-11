@@ -18,14 +18,18 @@ public class SwaggerConfig {
             .description("WatchOut Spring Boot API 문서")
             .version("v1.0.0");
 
+        // JWT 인증 스키마 설정
         String securitySchemeName = "bearerAuth";
         SecurityScheme securityScheme = new SecurityScheme()
             .name(securitySchemeName)
             .type(SecurityScheme.Type.HTTP)
             .scheme("bearer")
-            .bearerFormat("JWT");
+            .bearerFormat("JWT")
+            .description("JWT 토큰을 입력하세요. 예: Bearer your-jwt-token");
 
-        SecurityRequirement securityRequirement = new SecurityRequirement().addList(securitySchemeName);
+        // 보안 요구사항 설정 (선택적 적용)
+        SecurityRequirement securityRequirement = new SecurityRequirement().addList(
+            securitySchemeName);
 
         return new OpenAPI()
             .info(info)
