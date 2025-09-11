@@ -36,14 +36,6 @@ pipeline {
     }
 
     stages {
-        stage('Debug Webhook Vars') {
-            steps {
-                script {
-                    echo "MR_STATE=${env.MR_STATE}; MR_ACTION=${env.MR_ACTION}; MR_LAST_COMMIT=${env.MR_LAST_COMMIT}; MR_IID=${env.MR_IID}; SOURCE_BRANCH=${env.SOURCE_BRANCH}; TARGET_BRANCH=${env.TARGET_BRANCH}; MR_URL=${env.MR_URL}"
-                    sh 'env | sort | head -n 80'
-                }
-            }
-        }
 
         /********************  PR-Agent 실행 여부 결정  ********************/
         stage('Decide PR-Review Run') {
@@ -76,6 +68,7 @@ pipeline {
             }
         }
 
+        /********************  PR-Agent 리뷰  ********************/
         stage('Run PR-Agent Review') {
             when {
                 expression {
@@ -90,20 +83,20 @@ pipeline {
                             string(credentialsId: 'gemini-api-key',    variable: 'GEMINI_KEY')
                         ]) {
                             sh """
-                                docker run --rm \
-                                    -e CONFIG__GIT_PROVIDER="gitlab" \
-                                    -e GITLAB__URL="${GITLAB_URL}" \
-                                    -e GITLAB__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \
-                                    -e GEMINI_API_KEY="${GEMINI_KEY}" \
-                                    -e CONFIG__MODEL_PROVIDER=google \
-                                    -e CONFIG__MODEL="gemini/gemini-2.5-pro" \
-                                    -e CONFIG__FALLBACK_MODELS="[]" \
-                                    -e CONFIG__PUBLISH_OUTPUT_PROGRESS=false \
-                                    -e PR_REVIEWER__FINAL_UPDATE_MESSAGE=false \
-                                    -e REVIEW__PERSISTENT_COMMENT=true \
-                                    -e REVIEW__FINAL_UPDATE_MESSAGE=false \
-                                    -e PR_REVIEWER__EXTRA_INSTRUCTIONS="한국어로 간결하게 코멘트하고, 중요 이슈 위주로 지적해줘" \
-                                    codiumai/pr-agent:latest \
+                                docker run --rm \\
+                                    -e CONFIG__GIT_PROVIDER="gitlab" \\
+                                    -e GITLAB__URL="${GITLAB_URL}" \\
+                                    -e GITLAB__PERSONAL_ACCESS_TOKEN="${GITLAB_TOKEN}" \\
+                                    -e GEMINI_API_KEY="${GEMINI_KEY}" \\
+                                    -e CONFIG__MODEL_PROVIDER=google \\
+                                    -e CONFIG__MODEL="gemini/gemini-2.5-pro" \\
+                                    -e CONFIG__FALLBACK_MODELS="[]" \\
+                                    -e CONFIG__PUBLISH_OUTPUT_PROGRESS=false \\
+                                    -e REVIEW__PERSISTENT_COMMENT=true \\
+                                    -e REVIEW__FINAL_UPDATE_MESSAGE=false \\
+                                    -e PR_REVIEWER__FINAL_UPDATE_MESSAGE=false \\
+                                    -e PR_REVIEWER__EXTRA_INSTRUCTIONS="한국어로 간결하게 코멘트하고, 중요 이슈 위주로 지적해줘" \\
+                                    codiumai/pr-agent:latest \\
                                     --pr_url "${MR_URL}" review
                             """
                         }
@@ -115,6 +108,7 @@ pipeline {
             }
         }
 
+        /********************  변경 파일 확인 (머지 시)  ********************/
         stage('Check for Changes') {
             when { expression { (env.MR_STATE ?: '') == 'merged' } }
             steps {
@@ -133,6 +127,7 @@ pipeline {
             }
         }
 
+        /********************  네트워크 준비  ********************/
         stage('Prepare Networks') {
             when { expression { (env.MR_STATE ?: '') == 'merged' } }
             steps {
@@ -140,6 +135,7 @@ pipeline {
             }
         }
 
+        /********************  Jenkins 컨테이너 네트워크 연결  ********************/
         stage('Connect Jenkins to Networks') {
             when { expression { (env.MR_STATE ?: '') == 'merged' } }
             steps {
@@ -147,6 +143,7 @@ pipeline {
             }
         }
 
+        /********************  엣지 프록시 배포/리로드  ********************/
         stage('Deploy or Reload Edge Proxy') {
             when {
                 allOf {
@@ -155,36 +152,39 @@ pipeline {
                 }
             }
             steps {
-                script {
-                    def isProd   = (env.TARGET_BRANCH == 'master')
-                    def tag      = isProd ? "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}" : "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
-                    def envType  = isProd ? "prod" : "test"
-                    def httpPort = isProd ? REVERSE_PROXY_PROD_PORT : REVERSE_PROXY_TEST_PORT
-                    def httpsPort= isProd ? REVERSE_PROXY_PROD_SSL_PORT : REVERSE_PROXY_TEST_SSL_PORT
-                    def network  = isProd ? PROD_NETWORK : TEST_NETWORK
-                    def name     = isProd ? REVERSE_PROXY_PROD_CONTAINER : REVERSE_PROXY_TEST_CONTAINER
+                dir('frontend-repo') {
+                    script {
+                        def isProd   = (env.TARGET_BRANCH == 'master')
+                        def tag      = isProd ? "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}" : "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
+                        def envType  = isProd ? "prod" : "test"
+                        def httpPort = isProd ? REVERSE_PROXY_PROD_PORT : REVERSE_PROXY_TEST_PORT
+                        def httpsPort= isProd ? REVERSE_PROXY_PROD_SSL_PORT : REVERSE_PROXY_TEST_SSL_PORT
+                        def network  = isProd ? PROD_NETWORK : TEST_NETWORK
+                        def name     = isProd ? REVERSE_PROXY_PROD_CONTAINER : REVERSE_PROXY_TEST_CONTAINER
 
-                    sh "docker build -t ${tag} --build-arg ENV=${envType} -f ./docker/edge/Dockerfile ."
+                        sh "docker build -t ${tag} --build-arg ENV=${envType} -f ./docker/edge/Dockerfile ."
 
-                    def running = sh(script: "docker ps -q --filter name=${name}", returnStdout: true).trim()
-                    if (running) {
-                        sh "docker cp ./docker/edge/nginx/${envType}.conf ${name}:/etc/nginx/nginx.conf"
-                        sh "docker exec ${name} nginx -s reload"
-                    } else {
-                        sh """
-                            docker rm -f ${name} || true
-                            docker run -d --name ${name} --network ${network} \
-                                -p ${httpPort}:80 \
-                                -p ${httpsPort}:${httpsPort} \
-                                -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \
-                                -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \
-                                ${tag}
-                        """
+                        def running = sh(script: "docker ps -q --filter name=${name}", returnStdout: true).trim()
+                        if (running) {
+                            sh "docker cp ./docker/edge/nginx/${envType}.conf ${name}:/etc/nginx/nginx.conf"
+                            sh "docker exec ${name} nginx -s reload"
+                        } else {
+                            sh """
+                                docker rm -f ${name} || true
+                                docker run -d --name ${name} --network ${network} \\
+                                    -p ${httpPort}:80 \\
+                                    -p ${httpsPort}:${httpsPort} \\
+                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
+                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
+                                    ${tag}
+                            """
+                        }
                     }
                 }
             }
         }
 
+        /********************  백엔드 배포 (컨테이너 빌드/실행)  ********************/
         stage('Deploy Backend') {
             when {
                 allOf {
@@ -195,42 +195,97 @@ pipeline {
             steps {
                 dir('backend-repo') {
                     script {
-                        if (env.TARGET_BRANCH == 'develop') {
+                        echo "[Deploy Backend] TARGET_BRANCH=${env.TARGET_BRANCH} | SOURCE_BRANCH=${env.SOURCE_BRANCH}"
+                        def branch = (env.TARGET_BRANCH ?: '').trim()
+                        if (!branch) {
+                            error "[Deploy Backend] TARGET_BRANCH가 비어 있습니다."
+                        }
+
+                        sh '''
+                          set -eux
+                          rm -rf _docker_ctx _run_config
+                          mkdir -p _docker_ctx _run_config
+                          # 소스(.git 제외)만 컨텍스트에 복사
+                          tar -cf - --exclude=.git . | (cd _docker_ctx && tar -xf -)
+                        '''
+
+                        if (branch == 'develop') {
                             def tag = "${BE_IMAGE_NAME}:test-${BUILD_NUMBER}"
+                            echo "[Deploy Backend] TEST 이미지 빌드 시작: ${tag}"
+
                             withCredentials([
-                                file(credentialsId: 'application-docker.yml', variable: 'APP_YML_DOCKER'),
-                                file(credentialsId: 'application.yml',          variable: 'APP_YML')
+                                file(credentialsId: 'APP_YML',        variable: 'APP_YML'),
+                                file(credentialsId: 'APP_YML_DOCKER', variable: 'APP_YML_DOCKER'),
+                                file(credentialsId: 'APP_YML_TEST',   variable: 'APP_YML_TEST')
                             ]) {
-                                sh "mkdir -p src/main/resources && cp \$APP_YML src/main/resources/application.yml && cp \$APP_YML_DOCKER src/main/resources/application-docker.yml"
+                                sh '''
+                                  set -eux
+                                  cp "$APP_YML"        _run_config/application.yml
+                                  cp "$APP_YML_DOCKER" _run_config/application-docker.yml
+                                  cp "$APP_YML_TEST"   _run_config/application-test.yml
+                                '''
                             }
-                            sh "chmod +x ./gradlew && ./gradlew bootJar && docker build -t ${tag} ."
+
+                            sh "docker build -t ${tag} -f _docker_ctx/Dockerfile _docker_ctx"
+
                             sh """
-                                docker rm -f ${BE_TEST_CONTAINER} || true
-                                docker run -d --name ${BE_TEST_CONTAINER} --network ${TEST_NETWORK} -e SPRING_PROFILES_ACTIVE=docker ${tag}
+                              docker rm -f ${BE_TEST_CONTAINER} || true
+                              docker run -d --name ${BE_TEST_CONTAINER} \\
+                                --network ${TEST_NETWORK} \\
+                                -v "\${PWD}/_run_config:/app/config:ro" \\
+                                -e SPRING_PROFILES_ACTIVE=docker,test \\
+                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \\
+                                ${tag}
                             """
-                        } else if (env.TARGET_BRANCH == 'master') {
+
+                        } else if (branch == 'master') {
                             def tag = "${BE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
-                            def active   = sh(script: "docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER}", returnStdout: true).trim() ? BE_PROD_BLUE_CONTAINER : BE_PROD_GREEN_CONTAINER
-                            def inactive = (active == BE_PROD_BLUE_CONTAINER) ? BE_PROD_GREEN_CONTAINER : BE_PROD_BLUE_CONTAINER
+                            echo "[Deploy Backend] PROD 이미지 빌드 시작: ${tag}"
+
                             withCredentials([
-                                file(credentialsId: 'application-docker-prod.yml', variable: 'APP_YML_DOCKER_PROD'),
-                                file(credentialsId: 'application-prod.yml',        variable: 'APP_YML_PROD')
+                                file(credentialsId: 'APP_YML',        variable: 'APP_YML'),
+                                file(credentialsId: 'APP_YML_DOCKER', variable: 'APP_YML_DOCKER'),
+                                file(credentialsId: 'APP_YML_PROD',   variable: 'APP_YML_PROD')
                             ]) {
-                                sh "mkdir -p src/main/resources && cp \$APP_YML_PROD src/main/resources/application.yml && cp \$APP_YML_DOCKER_PROD src/main/resources/application-docker.yml"
+                                sh '''
+                                  set -eux
+                                  cp "$APP_YML"        _run_config/application.yml
+                                  cp "$APP_YML_DOCKER" _run_config/application-docker.yml
+                                  cp "$APP_YML_PROD"   _run_config/application-prod.yml
+                                '''
                             }
-                            sh "chmod +x ./gradlew && ./gradlew bootJar && docker build -t ${tag} ."
+
+                            sh "docker build -t ${tag} -f _docker_ctx/Dockerfile _docker_ctx"
+
                             sh """
-                                docker rm -f ${inactive} || true
-                                docker run -d --name ${inactive} --network ${PROD_NETWORK} -e SPRING_PROFILES_ACTIVE=docker,prod ${tag}
+                              if docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER} | grep -q . ; then
+                                ACTIVE=${BE_PROD_BLUE_CONTAINER}
+                                INACTIVE=${BE_PROD_GREEN_CONTAINER}
+                              else
+                                ACTIVE=${BE_PROD_GREEN_CONTAINER}
+                                INACTIVE=${BE_PROD_BLUE_CONTAINER}
+                              fi
+
+                              docker rm -f \$INACTIVE || true
+                              docker run -d --name \$INACTIVE \\
+                                --network ${PROD_NETWORK} \\
+                                -v "\${PWD}/_run_config:/app/config:ro" \\
+                                -e SPRING_PROFILES_ACTIVE=docker,prod \\
+                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \\
+                                ${tag}
+
+                              sleep 30
+                              docker rm -f \$ACTIVE || true
                             """
-                            sleep(30)
-                            sh "docker rm -f ${active} || true"
+                        } else {
+                            error "[Deploy Backend] 지원하지 않는 TARGET_BRANCH='${branch}'. (develop/master 만 지원)"
                         }
                     }
                 }
             }
         }
 
+        /********************  프론트엔드 배포  ********************/
         stage('Deploy Frontend') {
             when {
                 allOf {
@@ -252,11 +307,12 @@ pipeline {
                             }
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
                             sh "docker run -d --name ${FE_TEST_CONTAINER} --network ${TEST_NETWORK} ${tag}"
+
                         } else if (env.TARGET_BRANCH == 'master') {
                             env.FINAL_API_URL = API_URL_PROD
                             def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
                             dir('frontend-repo') {
-                                sh "docker build -t ${tag} --build-arg ENV=prod --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
+                                sh 'docker build -t '"${tag}"' --build-arg ENV=prod --build-arg VITE_API_BASE_URL='"'${env.FINAL_API_URL}'"' .'
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
                             sh "docker run -d --name ${FE_PROD_CONTAINER} --network ${PROD_NETWORK} ${tag}"
