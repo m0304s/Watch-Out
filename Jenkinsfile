@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    options {
-        skipDefaultCheckout true
-    }
-
     parameters {
         booleanParam(name: 'BUILD_BACKEND', defaultValue: false, description: '백엔드를 수동으로 빌드하고 배포하려면 체크하세요.')
         booleanParam(name: 'BUILD_FRONTEND', defaultValue: false, description: '프론트엔드를 수동으로 빌드하고 배포하려면 체크하세요.')
@@ -47,20 +43,6 @@ pipeline {
     }
 
     stages {
-
-        /********************  워크스페이스 정리  ********************/
-        stage('Clean Workspace') {
-            steps {
-                cleanWs()
-            }
-        }
-
-        /********************  소스코드 체크아웃  ********************/
-        stage('Checkout SCM') {
-            steps {
-                checkout scm
-            }
-        }
 
         /********************  PR-Agent 실행 여부 결정  ********************/
         stage('Decide PR-Review Run') {
