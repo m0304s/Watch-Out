@@ -45,10 +45,11 @@ public class JwtUtil {
             .compact();
     }
 
-    public String generateRefreshToken(UUID userUuid) {
+    public String generateRefreshToken(UUID userUuid, UserRole role) {
         long now = System.currentTimeMillis();
         String refreshToken = Jwts.builder()
             .setSubject(userUuid.toString())
+            .claim("role", role.name())
             .setIssuedAt(new Date(now))
             .setExpiration(new Date(now + refreshTokenExpiration))
             .signWith(key)
