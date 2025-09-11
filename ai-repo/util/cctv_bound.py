@@ -4,10 +4,11 @@ from pathlib import Path
 import logging, json, os, math
 from collections import Counter
 from datetime import datetime, timezone
+from botocore.config import Config
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(override=True)
 except Exception:
     pass
 
@@ -180,7 +181,8 @@ def _get_s3():
         try:
             import boto3
             cfg = _s3_cfg()
-            _s3 = boto3.client("s3", region_name=cfg["region"]) if cfg["region"] else boto3.client("s3")
+            boto_cfg = Config(signature_version="s3v4", retries={"max_attempts": 5, "mode": "standard"})
+            _s3 = boto3.client("s3", region_name=cfg["region"], config=boto_cfg) if cfg["region"] else boto3.client("s3", config=boto_cfg)
         except Exception as e:
             logging.error(f"S3 client init failed: {e}")
             _s3 = False
