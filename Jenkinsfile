@@ -267,6 +267,12 @@ pipeline {
                                   cp "$APP_YML"        _run_config/application.yml
                                   cp "$APP_YML_DOCKER" _run_config/application-docker.yml
                                   cp "$APP_YML_TEST"   _run_config/application-test.yml
+
+                                  echo "============================================================"
+                                  echo "==== DEBUG: Final application.yml content for container ===="
+                                  cat _run_config/application.yml
+                                  cat _run_config/application-test.yml
+                                  echo "============================================================"
                                 '''
                             }
 
