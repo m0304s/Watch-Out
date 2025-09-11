@@ -9,4 +9,6 @@ public record LoginResponse(
     String userId,
     String userName,
     UserRole userRole
-) {}
+) {
+
+}

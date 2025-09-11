@@ -86,9 +86,14 @@ public class User extends BaseSoftDeleteEntity {
     @JoinColumn(name = "area_uuid")
     private Area area;
 
+
     @PrePersist
     void applyDefaults() {
-        if (this.trainingStatus == null) this.trainingStatus = TrainingStatus.NOT_COMPLETED;
-        if (this.role == null) this.role = UserRole.WORKER;
+        if (this.trainingStatus == null) {
+            this.trainingStatus = TrainingStatus.NOT_COMPLETED;
+        }
+        if (this.role == null) {
+            this.role = UserRole.WORKER;
+        }
     }
 }

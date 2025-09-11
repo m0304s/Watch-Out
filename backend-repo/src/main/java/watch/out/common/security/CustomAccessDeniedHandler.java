@@ -6,23 +6,23 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.exception.ErrorResponse;
 
 @Component
 @RequiredArgsConstructor
-public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
+public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
     private final ObjectMapper objectMapper;
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-        AuthenticationException authException) throws IOException {
+    public void handle(HttpServletRequest request, HttpServletResponse response,
+        AccessDeniedException accessDeniedException) throws IOException {
 
-        ErrorCode errorCode = ErrorCode.INVALID_TOKEN;
+        ErrorCode errorCode = ErrorCode.PERMISSION_DENIED;
 
         response.setStatus(errorCode.getStatus().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
