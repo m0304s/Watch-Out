@@ -259,18 +259,18 @@ pipeline {
 
                               docker volume create watchout_be_test || true
 
-                              chmod a+r _run_config/application*.yml || true
-                              docker run --rm \
-                                  -v watchout_be_test:/app/config \
-                                  -v "\${PWD}/_run_config":/src:ro \
-                                  alpine:3.20 sh -lc 'rm -rf /app/config/* && cp -a /src/. /app/config/ && ls -l /app/config'
+                              docker rm -f cfgseed || true
+                              docker run -d --name cfgseed -v watchout_be_test:/app/config alpine:3.20 sleep 300
+                              docker exec cfgseed sh -lc 'rm -rf /app/config/*'
+                              docker cp _run_config/. cfgseed:/app/config/
+                              docker rm -f cfgseed || true
 
                               docker rm -f ${BE_TEST_CONTAINER} || true
                               docker run -d --name ${BE_TEST_CONTAINER} \
                                 --network ${TEST_NETWORK} \
                                 -v watchout_be_test:/app/config:ro \
                                 -e SPRING_PROFILES_ACTIVE=docker,test \
-                                -e SPRING_CONFIG_LOCATION=file:/app/config/ \
+                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
                                 ${tag}
                             """
                         } else if (branch == 'master') {
@@ -305,18 +305,18 @@ pipeline {
 
                               docker volume create watchout_be_prod || true
 
-                              chmod a+r _run_config/application*.yml || true
-                                docker run --rm \
-                                  -v watchout_be_prod:/app/config \
-                                  -v "\${PWD}/_run_config":/src:ro \
-                                  alpine:3.20 sh -lc 'rm -rf /app/config/* && cp -a /src/. /app/config/ && ls -l /app/config'
+                              docker rm -f cfgseed-prod || true
+                              docker run -d --name cfgseed-prod -v watchout_be_prod:/app/config alpine:3.20 sleep 300
+                              docker exec cfgseed-prod sh -lc 'rm -rf /app/config/*'
+                              docker cp _run_config/. cfgseed-prod:/app/config/
+                              docker rm -f cfgseed-prod || true
 
                               docker rm -f \$INACTIVE || true
                               docker run -d --name \$INACTIVE \
                                 --network ${PROD_NETWORK} \
                                 -v watchout_be_prod:/app/config:ro \
                                 -e SPRING_PROFILES_ACTIVE=docker,prod \
-                                -e SPRING_CONFIG_LOCATION=file:/app/config/ \
+                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
                                 ${tag}
 
                               sleep 30
