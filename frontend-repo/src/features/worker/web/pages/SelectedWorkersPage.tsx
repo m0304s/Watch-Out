@@ -15,6 +15,8 @@ const MOCK_DATA: PaginatedResponse<Employee> = {
       areaName: 'A구역',
       trainingStatus: 'COMPLETED',
       lastEntryTime: '2025-09-07T08:55:12Z',
+      userRole: 'WORKER',
+      photoUrl: 'https://via.placeholder.com/56',
     },
     {
       userUuid: '22c99179-5189-5b71-c809-f29abb9g5d3b',
@@ -24,6 +26,8 @@ const MOCK_DATA: PaginatedResponse<Employee> = {
       areaName: 'B구역',
       trainingStatus: 'EXPIRED',
       lastEntryTime: '2025-09-07T09:01:30Z',
+      userRole: 'AREA_ADMIN',
+      photoUrl: 'https://via.placeholder.com/56',
     },
   ],
   pagination: {
@@ -34,23 +38,6 @@ const MOCK_DATA: PaginatedResponse<Employee> = {
   },
 }
 
-const pageStyles = {
-  container: css`
-    padding: 24px;
-    display: grid;
-    grid-template-columns: 1fr; /* 좌/우 사이드바 제외, 내부 컨텐츠만 */
-    gap: 16px;
-  `,
-  header: css`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  `,
-  title: css`
-    font-size: 20px;
-    color: var(--color-gray-900);
-  `,
-}
 
 const defaultFilterState: WorkerFilterState = {
   search: '',
@@ -67,10 +54,6 @@ export const SelectedWorkersPage = () => {
   const [filters, setFilters] = useState<WorkerFilterState>(defaultFilterState)
   const [pageNum, setPageNum] = useState<number>(MOCK_DATA.pagination.pageNum)
 
-  const companyOptions = useMemo(
-    () => [],
-    [],
-  )
   const areaOptions = useMemo(
     () => unique(MOCK_DATA.data.map((d) => d.areaName)),
     [],
@@ -142,3 +125,20 @@ export const SelectedWorkersPage = () => {
 }
 
 
+const pageStyles = {
+  container: css`
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr; /* 좌/우 사이드바 제외, 내부 컨텐츠만 */
+    gap: 16px;
+  `,
+  header: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  `,
+  title: css`
+    font-size: 20px;
+    color: var(--color-gray-900);
+  `,
+}

@@ -1,4 +1,5 @@
 export type TrainingStatus = 'COMPLETED' | 'EXPIRED'
+export type UserRole = 'WORKER' | 'AREA_ADMIN'
 
 export interface Employee {
   userUuid: string
@@ -8,6 +9,8 @@ export interface Employee {
   areaName: string
   trainingStatus: TrainingStatus
   lastEntryTime: string
+  userRole: UserRole
+  photoUrl: string
 }
 
 export interface Pagination {
