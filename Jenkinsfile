@@ -37,6 +37,13 @@ pipeline {
 
     stages {
 
+        /********************  이전 빌드에서 남은 파일 모두 삭제  ********************/
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
         /********************  PR-Agent 실행 여부 결정  ********************/
         stage('Decide PR-Review Run') {
             when { expression { (env.MR_STATE ?: '') == 'opened' } }
