@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    /********************  자동 체크아웃 방지  ********************/
+    options {
+        skipDefaultCheckout true
+    }
+
     /********************  환경 변수  ********************/
     environment {
         // --- 공통 ---
@@ -41,6 +46,13 @@ pipeline {
         stage('Clean Workspace') {
             steps {
                 cleanWs()
+            }
+        }
+
+        /********************  수동 체크아웃  ********************/
+        stage('Checkout SCM') {
+            steps {
+                checkout scm
             }
         }
 
