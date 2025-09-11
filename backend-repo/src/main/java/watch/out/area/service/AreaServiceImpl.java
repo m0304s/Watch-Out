@@ -1,26 +1,21 @@
 package watch.out.area.service;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+import java.util.UUID;
 import watch.out.area.dto.request.AreaRequest;
-import watch.out.area.entity.Area;
-import watch.out.area.repository.AreaRepository;
+import watch.out.area.dto.response.AreaDetailResponse;
+import watch.out.area.dto.response.AreaListResponse;
+import watch.out.common.dto.PageRequest;
 
-@Service
-@RequiredArgsConstructor
-public class AreaServiceImpl implements AreaService {
+public interface AreaService {
 
-    private final AreaRepository areaRepository;
+    void createArea(AreaRequest areaRequest);
 
-    @Override
-    @Transactional
-    public void createArea(AreaRequest areaRequest) {
-        Area area = Area.builder()
-            .areaName(areaRequest.areaName())
-            .areaAlias(areaRequest.areaAlias())
-            .build();
+    List<AreaListResponse> getAreas();
 
-        areaRepository.save(area);
-    }
+    AreaDetailResponse getArea(UUID areaUuid, PageRequest pageRequest);
+
+    void updateArea(UUID areaUuid, AreaRequest areaRequest);
+
+    void deleteArea(UUID areaUuid);
 }

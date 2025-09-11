@@ -11,5 +11,6 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "cors")
 public class CorsProperties {
+
     private List<String> allowedOrigins;
 }

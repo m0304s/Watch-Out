@@ -71,6 +71,18 @@ clean {
 	delete file(generated)
 }
 
+// QueryDSL 생성 태스크
+task generateQueryDSL(type: JavaCompile, group: 'build') {
+	classpath = configurations.compileClasspath
+	source = sourceSets.main.java
+	destinationDirectory = file(generated)
+	options.annotationProcessorPath = configurations.annotationProcessor
+	options.compilerArgs = [
+		'-proc:only',
+		'-processor', 'com.querydsl.apt.jpa.JPAAnnotationProcessor'
+	]
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 }

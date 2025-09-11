@@ -46,6 +46,7 @@ public record SignupRequest(
     @NotNull
     UUID companyUuid
 ) {
+
     public User toEntity(String encodedPassword, Company company, String photoKey) {
         return User.builder()
             .userId(userId)

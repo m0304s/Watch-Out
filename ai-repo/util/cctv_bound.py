@@ -1,8 +1,16 @@
 # util/cctv_bound.py
 import cv2, torch, re, time, numpy as np
 from pathlib import Path
-import logging, json, os, math
+import logging, json, os, math, hashlib  # [KAFKA] hashlib 추가 (eventId 생성용)
 from collections import Counter
+from datetime import datetime, timezone
+from botocore.config import Config
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
+except Exception:
+    pass
 
 # ===== 경로 / 설정 =====
 BASE_DIR = Path(__file__).parent.parent
@@ -14,12 +22,33 @@ USE_ALLOWED_FILTER = False
 ALLOWED = {"Helmet on","Helmet off","Belt on","Belt off"}
 LABELMAP_PATH = BASE_DIR / "labelmap.txt"
 
+# 스냅샷/알림 설정
+TRIGGERS = {"Helmet on", "Helmet off", "Belt on", "Belt off"}
+SNAPSHOT_DIR = "./snapshot"
+SNAPSHOT_COOLDOWN = 60.0
+NOTICE_SECS = 5.0
+
+# 로깅
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+# [KAFKA] 이벤트 토픽 이름
+KAFKA_TOPIC_EVENTS = os.getenv("KAFKA_TOPIC_EVENTS", "cctv.events")
+
+# ===== YOLACT 로드 =====
 import sys
 sys.path.insert(0, str(REPO_DIR))
 from data.config import cfg, set_cfg
 from yolact import Yolact
 from utils.augmentations import FastBaseTransform
 from layers.output_utils import postprocess
+
+# [KAFKA] 프로듀서 유틸
+try:
+    from util.kafka_client import send_json  # 없으면 ImportError → 그냥 로그만 남고 동작
+    _kafka_ok = True
+except Exception as e:
+    logging.warning(f"Kafka disabled (producer import failed): {e}")
+    _kafka_ok = False
 
 _net = None
 _device = None
@@ -56,7 +85,6 @@ def _load_class_names_from_labelmap(default_names):
     return default_names
 
 def init_model():
-    """Lazy singleton init; 서버 스타트업에서 1회 호출 권장"""
     global _net, _device, _class_names
     if _net is not None:
         return
@@ -83,10 +111,6 @@ def init_model():
     _net, _device, _class_names = net, device, class_names
 
 def open_capture(src):
-    """
-    src: int(0/1/2...) 또는 rtsp/http/file 경로(str)
-    Windows에서 int 소스는 CAP_DSHOW 사용
-    """
     if isinstance(src, int):
         cap = cv2.VideoCapture(src, cv2.CAP_DSHOW)
     else:
@@ -96,7 +120,6 @@ def open_capture(src):
     return cap
 
 def infer_one(frame_bgr):
-    """단일 프레임에 YOLACT 추론 후 시각화된 프레임과 탐지 리스트 반환"""
     net, device, class_names = _net, _device, _class_names
     if net is None:
         raise RuntimeError("Model not initialized. Call init_model().")
@@ -153,21 +176,104 @@ def infer_one(frame_bgr):
 
     return vis, dets
 
-TRIGGERS = {"Helmet on", "Helmet off", "Belt on", "Belt off"}
-SNAPSHOT_DIR = "./snapshot"
-SNAPSHOT_COOLDOWN = 60.0
+# ====== S3 설정/업로드 ======
+def _s3_cfg():
+    bucket = os.getenv("S3_BUCKET", "").strip()
+    region = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
+    do_presign = (os.getenv("S3_PRESIGN", "0").lower() in ("1", "true", "yes"))
+    presign_ex = int(os.getenv("S3_PRESIGN_EX", "3600"))
+    prefix = os.getenv("S3_PREFIX", "").strip()
+    return {"bucket": bucket, "region": region, "do_presign": do_presign, "presign_ex": presign_ex, "prefix": prefix}
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+_s3 = None
+def _get_s3():
+    global _s3
+    if _s3 is None:
+        try:
+            import boto3
+            cfg = _s3_cfg()
+            boto_cfg = Config(signature_version="s3v4", retries={"max_attempts": 5, "mode": "standard"})
+            _s3 = boto3.client("s3", region_name=cfg["region"], config=boto_cfg) if cfg["region"] else boto3.client("s3", config=boto_cfg)
+        except Exception as e:
+            logging.error(f"S3 client init failed: {e}")
+            _s3 = False
+    return _s3
 
-def mjpeg_generator(src=0, mirror=True):
+def _save_jpeg_to_s3(image_bgr, key):
+    cfg = _s3_cfg()
+    if not cfg["bucket"]:
+        return None
+    s3 = _get_s3()
+    if not s3:
+        return None
+    ok, buf = cv2.imencode(".jpg", image_bgr)
+    if not ok:
+        return None
+    try:
+        s3.put_object(
+            Bucket=cfg["bucket"],
+            Key=key,
+            Body=buf.tobytes(),
+            ContentType="image/jpeg",
+        )
+        url = None
+        if cfg["do_presign"]:
+            url = s3.generate_presigned_url(
+                ClientMethod="get_object",
+                Params={"Bucket": cfg["bucket"], "Key": key},
+                ExpiresIn=cfg["presign_ex"],
+            )
+        return {"s3_uri": f"s3://{cfg['bucket']}/{key}", "url": url}
+    except Exception as e:
+        logging.error(f"S3 upload failed: {e}")
+        return None
+
+def _save_jpeg_local(image_bgr, fpath):
+    os.makedirs(os.path.dirname(fpath), exist_ok=True)
+    cv2.imwrite(fpath, image_bgr)
+    return {"path": fpath}
+
+# ===== 알림(오버레이) 유틸 =====
+def _draw_notice(vis, lines, alpha=0.65, pad=10):
+    if not lines:
+        return vis
+    overlay = vis.copy()
+    x0, y0 = 12, 12
+    widths = []
+    line_h = 0
+    for t in lines:
+        (w, h), _ = cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+        widths.append(w)
+        line_h = max(line_h, h)
+    box_w = max(widths) + pad * 2
+    box_h = line_h * len(lines) + pad * 2 + (len(lines)-1) * 6
+    cv2.rectangle(overlay, (x0, y0), (x0 + box_w, y0 + box_h), (0, 0, 0), -1)
+    vis = cv2.addWeighted(overlay, alpha, vis, 1 - alpha, 0)
+    y = y0 + pad + line_h
+    for t in lines:
+        cv2.putText(vis, t, (x0 + pad, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        y += line_h + 6
+    return vis
+
+# ===== 스트림 제너레이터 =====
+def mjpeg_generator(src=0, mirror=True, meta=None):
+    """
+    단일 소스 스트림: 트리거 시 S3 저장(실패 시 로컬) + 화면 알림(5초)
+    meta: {"company": str | None, "camera": str | None}
+    """
     init_model()
     os.makedirs(SNAPSHOT_DIR, exist_ok=True)
 
+    company = (meta or {}).get("company")
+    camera  = (meta or {}).get("camera")
+
     cap = open_capture(src)
     if cap is None:
-        return  # 빈 yield 금지
+        return
 
     last_shot_ts = 0.0
+    notice_until = 0.0
+    notice_lines = []
 
     try:
         while True:
@@ -178,25 +284,72 @@ def mjpeg_generator(src=0, mirror=True):
                 frame_bgr = cv2.flip(frame_bgr, 1)
 
             vis, dets = infer_one(frame_bgr)
-
             matched = [d for d in dets if d["class"] in TRIGGERS]
 
             now = time.time()
             if matched and (now - last_shot_ts) >= SNAPSHOT_COOLDOWN:
                 last_shot_ts = now
+
                 classes_str = "_".join(sorted({d["class"] for d in matched}))[:80]
-                fname = f"{int(now*1000)}_{classes_str}.jpg"
-                fpath = os.path.join(SNAPSHOT_DIR, fname)
-                cv2.imwrite(fpath, vis)
+                ts_ms = int(now * 1000)
+                dt_iso = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+                cfg = _s3_cfg()
+                safe_src = str(src).replace("/", "_")
+                prefix = cfg["prefix"]
+                if prefix and not prefix.endswith("/"):
+                    prefix += "/"
+                key = f"{prefix}{dt_iso}_{classes_str}_src-{safe_src}.jpg" if prefix else f"{dt_iso}_{classes_str}_src-{safe_src}.jpg"
+
+                local_path = os.path.join(SNAPSHOT_DIR, f"{ts_ms}_{classes_str}.jpg")
+
+                upload_info = _save_jpeg_to_s3(vis, key) if cfg["bucket"] else None
+                if upload_info:
+                    snap_ref = upload_info.get("url") or upload_info.get("s3_uri")
+                else:
+                    info = _save_jpeg_local(vis, local_path)
+                    snap_ref = info.get("path")
+
                 counts = Counter(d["class"] for d in dets if d["class"] in TRIGGERS)
                 payload = {
-                    "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(now)),
+                    "ts": datetime.now(timezone.utc).isoformat(),
                     "src": str(src),
-                    "snapshot_path": fpath,
+                    "company": company,
+                    "camera": camera,
+                    "snapshot": snap_ref,
                     "triggers": sorted(list({d["class"] for d in matched})),
                     "detections": dict(counts),
+                    # [KAFKA] 추가 메타
+                    "model": cfg.name,
+                    "scoreThreshold": SCORE_THRESHOLD,
                 }
+                # [KAFKA] eventId 생성(멱등/중복제거용)
+                base = f"{payload['ts']}|{company}|{camera}|{payload['src']}|{','.join(payload['triggers'])}"
+                payload["eventId"] = hashlib.sha256(base.encode("utf-8")).hexdigest()[:16]
+
                 logging.info(json.dumps(payload, ensure_ascii=False))
+
+                # [KAFKA] 이벤트 발행 (company:camera 를 파티션 키로 → 순서 보장)
+                if _kafka_ok:
+                    key_part = f"{(company or '')}:{(camera or '')}".strip(":") or str(src)
+                    try:
+                        send_json(KAFKA_TOPIC_EVENTS, key=key_part, payload=payload)
+                    except Exception as e:
+                        logging.error(f"Kafka publish failed: {e}")
+
+                short_ref = (snap_ref[:60] + "...") if isinstance(snap_ref, str) and len(snap_ref) > 64 else snap_ref
+                lines = [
+                    "⚠ Trigger detected",
+                    f"Classes: {', '.join(payload['triggers'])}",
+                ]
+                if company: lines.append(f"Company: {company}")
+                if camera:  lines.append(f"Camera: {camera}")
+                if short_ref: lines.append(f"Snapshot: {short_ref}")
+                notice_lines = lines
+                notice_until = now + NOTICE_SECS
+
+            if now < notice_until and notice_lines:
+                vis = _draw_notice(vis, notice_lines)
 
             ok, buf = cv2.imencode(".jpg", vis)
             if not ok:
@@ -206,8 +359,7 @@ def mjpeg_generator(src=0, mirror=True):
     finally:
         cap.release()
 
-# ===== 멀티뷰 유틸 & 제너레이터 =====
-
+# ===== 멀티뷰 (그리드 합성) =====
 def _resize_keep_ratio(img, target_h: int):
     if img is None or img.size == 0:
         return None
@@ -245,10 +397,6 @@ def _make_grid(frames, cols: int, cell_h: int = 360):
     return cv2.vconcat(grid_rows)
 
 def mjpeg_multi_generator(src_list, cols: int = 2, mirror: bool = True, cell_h: int = 360):
-    """
-    여러 소스를 동시에 열고 infer_one 적용 → 그리드로 합쳐 MJPEG 송출
-    src_list: [0, 1, "rtsp://...", "http://...", "file.mp4", ...]
-    """
     init_model()
 
     caps = []
@@ -279,10 +427,8 @@ def mjpeg_multi_generator(src_list, cols: int = 2, mirror: bool = True, cell_h: 
 
             if dead:
                 for i in sorted(dead, reverse=True):
-                    try:
-                        caps[i].release()
-                    except:
-                        pass
+                    try: caps[i].release()
+                    except: pass
                     del caps[i]
 
             vis_list = [v for v in vis_list if v is not None]
@@ -301,7 +447,5 @@ def mjpeg_multi_generator(src_list, cols: int = 2, mirror: bool = True, cell_h: 
                    b"Content-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n")
     finally:
         for c in caps:
-            try:
-                c.release()
-            except:
-                pass
+            try: c.release()
+            except: pass

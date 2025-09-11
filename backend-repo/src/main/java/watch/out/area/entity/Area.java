@@ -23,4 +23,9 @@ public class Area extends BaseTimeEntity {
 
     @Column(name = "area_alias", length = 50)
     private String areaAlias;
+
+    public void updateArea(String areaName, String areaAlias) {
+        this.areaName = areaName;
+        this.areaAlias = areaAlias;
+    }
 }
