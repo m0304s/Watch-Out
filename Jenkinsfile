@@ -284,7 +284,7 @@ pipeline {
                                 --network ${TEST_NETWORK} \\
                                 -v "\${PWD}/_run_config:/app/config:ro" \\
                                 -e SPRING_PROFILES_ACTIVE=docker,test \\
-                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \\
+                                -e SPRING_CONFIG_LOCATION=file:/app/config/ \\
                                 ${tag}
                             """
                         } else if (branch == 'master') {
@@ -320,7 +320,7 @@ pipeline {
                                 --network ${PROD_NETWORK} \\
                                 -v "\${PWD}/_run_config:/app/config:ro" \\
                                 -e SPRING_PROFILES_ACTIVE=docker,prod \\
-                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \\
+                                -e SPRING_CONFIG_LOCATION=file:/app/config/ \\
                                 ${tag}
 
                               sleep 30
