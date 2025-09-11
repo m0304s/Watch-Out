@@ -68,7 +68,7 @@ export const SelectedWorkersPage = () => {
   const [pageNum, setPageNum] = useState<number>(MOCK_DATA.pagination.pageNum)
 
   const companyOptions = useMemo(
-    () => unique(MOCK_DATA.data.map((d) => d.companyName)),
+    () => [],
     [],
   )
   const areaOptions = useMemo(
@@ -88,10 +88,6 @@ export const SelectedWorkersPage = () => {
       const matchesSearch = !searchLower
         || d.userName.toLowerCase().includes(searchLower)
         || d.userId.toLowerCase().includes(searchLower)
-        || d.companyName.toLowerCase().includes(searchLower)
-
-      const matchesCompany = filters.companies.length === 0
-        || filters.companies.includes(d.companyName)
 
       const matchesArea = filters.areas.length === 0
         || filters.areas.includes(d.areaName)
@@ -99,7 +95,7 @@ export const SelectedWorkersPage = () => {
       const matchesStatus = filters.statuses.length === 0
         || filters.statuses.includes(d.trainingStatus)
 
-      return matchesSearch && matchesCompany && matchesArea && matchesStatus
+      return matchesSearch && matchesArea && matchesStatus
     })
 
     rows = rows.sort((a, b) => {
@@ -131,7 +127,6 @@ export const SelectedWorkersPage = () => {
       <SelectedWorkerFilters
         state={filters}
         onChange={handleChangeFilters}
-        companyOptions={companyOptions}
         areaOptions={areaOptions}
       />
 

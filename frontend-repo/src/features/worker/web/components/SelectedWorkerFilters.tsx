@@ -5,7 +5,6 @@ import type { TrainingStatus, WorkerFilterState } from '@/features/worker/types'
 interface SelectedWorkerFiltersProps {
   state: WorkerFilterState
   onChange: (next: Partial<WorkerFilterState>) => void
-  companyOptions: string[]
   areaOptions: string[]
 }
 
@@ -82,7 +81,6 @@ const sortOptions: { key: WorkerFilterState['sortKey']; label: string }[] = [
 export const SelectedWorkerFilters = ({
   state,
   onChange,
-  companyOptions,
   areaOptions,
 }: SelectedWorkerFiltersProps) => {
   const toggleArrayValue = (
@@ -96,10 +94,9 @@ export const SelectedWorkerFilters = ({
   ): TrainingStatus[] => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value])
 
   const derivedChips = useMemo(() => ({
-    companies: companyOptions,
     areas: areaOptions,
     statuses: trainingStatusOptions,
-  }), [companyOptions, areaOptions])
+  }), [areaOptions])
 
   return (
     <div css={section.container}>
@@ -113,18 +110,7 @@ export const SelectedWorkerFilters = ({
         />
       </div>
 
-      <div css={section.row}>
-        <span css={section.label}>회사</span>
-        {derivedChips.companies.map((c) => (
-          <button
-            key={c}
-            css={section.chip(state.companies.includes(c))}
-            onClick={() => onChange({ companies: toggleArrayValue(state.companies, c) })}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
+      {/* 회사 필터 제거 */}
 
       <div css={section.row}>
         <span css={section.label}>구역</span>

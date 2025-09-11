@@ -89,7 +89,6 @@ export const SelectedWorkerTable = ({ rows, pageNum, display, totalItems, onPage
           <tr>
             <th css={styles.th}>이름</th>
             <th css={styles.th}>사번</th>
-            <th css={styles.th}>회사</th>
             <th css={styles.th}>구역</th>
             <th css={styles.th}>교육상태</th>
             <th css={styles.th}>최근 출입시간</th>
@@ -100,7 +99,6 @@ export const SelectedWorkerTable = ({ rows, pageNum, display, totalItems, onPage
             <tr key={r.userUuid}>
               <td css={styles.td}>{r.userName}</td>
               <td css={styles.td}>{r.userId}</td>
-              <td css={styles.td}>{r.companyName}</td>
               <td css={styles.td}>{r.areaName}</td>
               <td css={styles.td}><span css={styles.badge(r.trainingStatus)}>{r.trainingStatus === 'COMPLETED' ? '교육완료' : '만료'}</span></td>
               <td css={styles.td}>{formatDate(r.lastEntryTime)}</td>

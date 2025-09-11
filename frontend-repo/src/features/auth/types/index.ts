@@ -8,7 +8,8 @@ export interface LoginResponse {
   userUuid: string
   userId: string
   userName: string
-  userRole: 'WORKER' | 'MANAGER' | 'ADMIN'
+  userRole: 'WORKER' | 'AREA_ADMIN' | 'ADMIN'
+  isApproved: boolean
 }
 
 export interface LoginFormData {
