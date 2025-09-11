@@ -1,4 +1,9 @@
+import { isMobilePlatform } from '@/utils/platform'
+import RouterMobile from '@/routes/RouterMobile'
+import RouterWeb from '@/routes/RouterWeb'
+
 const App = () => {
-  return <div>App</div>
+  const isMobile = isMobilePlatform()
+  return <div>{isMobile ? <RouterMobile /> : <RouterWeb />}</div>
 }
 export default App
