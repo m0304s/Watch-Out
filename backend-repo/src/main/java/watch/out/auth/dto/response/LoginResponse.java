@@ -8,7 +8,8 @@ public record LoginResponse(
     UUID userUuid,
     String userId,
     String userName,
-    UserRole userRole
+    UserRole userRole,
+    boolean isApproved
 ) {
 
 }

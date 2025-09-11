@@ -50,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
             refreshTokenExpiration);
 
         return new LoginResponse(accessToken, user.getUuid(), user.getUserId(), user.getUserName(),
-            user.getRole());
+            user.getRole(), user.isApproved());
     }
 
     @Override
