@@ -1,7 +1,7 @@
 # util/cctv_bound.py
 import cv2, torch, re, time, numpy as np
 from pathlib import Path
-import logging, json, os, math
+import logging, json, os, math, hashlib  # [KAFKA] hashlib 추가 (eventId 생성용)
 from collections import Counter
 from datetime import datetime, timezone
 from botocore.config import Config
@@ -31,6 +31,9 @@ NOTICE_SECS = 5.0
 # 로깅
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+# [KAFKA] 이벤트 토픽 이름
+KAFKA_TOPIC_EVENTS = os.getenv("KAFKA_TOPIC_EVENTS", "cctv.events")
+
 # ===== YOLACT 로드 =====
 import sys
 sys.path.insert(0, str(REPO_DIR))
@@ -38,6 +41,14 @@ from data.config import cfg, set_cfg
 from yolact import Yolact
 from utils.augmentations import FastBaseTransform
 from layers.output_utils import postprocess
+
+# [KAFKA] 프로듀서 유틸
+try:
+    from util.kafka_client import send_json  # 없으면 ImportError → 그냥 로그만 남고 동작
+    _kafka_ok = True
+except Exception as e:
+    logging.warning(f"Kafka disabled (producer import failed): {e}")
+    _kafka_ok = False
 
 _net = None
 _device = None
@@ -303,13 +314,28 @@ def mjpeg_generator(src=0, mirror=True, meta=None):
                 payload = {
                     "ts": datetime.now(timezone.utc).isoformat(),
                     "src": str(src),
-                    "company": company,      # ✅ 포함
-                    "camera": camera,        # ✅ 포함
+                    "company": company,
+                    "camera": camera,
                     "snapshot": snap_ref,
                     "triggers": sorted(list({d["class"] for d in matched})),
                     "detections": dict(counts),
+                    # [KAFKA] 추가 메타
+                    "model": cfg.name,
+                    "scoreThreshold": SCORE_THRESHOLD,
                 }
+                # [KAFKA] eventId 생성(멱등/중복제거용)
+                base = f"{payload['ts']}|{company}|{camera}|{payload['src']}|{','.join(payload['triggers'])}"
+                payload["eventId"] = hashlib.sha256(base.encode("utf-8")).hexdigest()[:16]
+
                 logging.info(json.dumps(payload, ensure_ascii=False))
+
+                # [KAFKA] 이벤트 발행 (company:camera 를 파티션 키로 → 순서 보장)
+                if _kafka_ok:
+                    key_part = f"{(company or '')}:{(camera or '')}".strip(":") or str(src)
+                    try:
+                        send_json(KAFKA_TOPIC_EVENTS, key=key_part, payload=payload)
+                    except Exception as e:
+                        logging.error(f"Kafka publish failed: {e}")
 
                 short_ref = (snap_ref[:60] + "...") if isinstance(snap_ref, str) and len(snap_ref) > 64 else snap_ref
                 lines = [

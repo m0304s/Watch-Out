@@ -10,12 +10,20 @@ from util.cctv_bound import init_model, mjpeg_generator, open_capture, mjpeg_mul
 from util.capture_utils import try_open_capture
 import asyncio
 
+from util.kafka_control_consumer import start_control_consumer
+from util.stream_workers import list_running
+
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 @app.on_event("startup")
 def on_start():
     init_model()
+    start_control_consumer()
+
+@app.get("/running")
+async def running(company: str | None = None):
+    return {"items": list_running(company)}
 
 # 기본 폼 페이지(옵션)
 @app.get("/", response_class=HTMLResponse)
