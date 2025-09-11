@@ -68,6 +68,44 @@ const GlobalStyles = () => (
 
       body {
         font-family: 'PretendardRegular', sans-serif;
+      
+        color: var(--color-text);
+        line-height: 1.6;
+      }
+
+      /* 기본 제목 스타일 */
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        font-family: 'PretendardBold', sans-serif;
+        color: var(--color-gray-900);
+        line-height: 1.2;
+        margin: 0;
+      }
+
+      /* 기본 문단 스타일 */
+      p {
+        margin: 0;
+        line-height: 1.6;
+      }
+
+      /* 기본 버튼 스타일 */
+      button {
+        font-family: inherit;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      /* 기본 입력 필드 스타일 */
+      input,
+      textarea {
+        font-family: inherit;
+        border: none;
+        outline: none;
       }
 
       /* 모바일 전용 미디어 쿼리 */
@@ -81,3 +119,4 @@ const GlobalStyles = () => (
 )
 
 export default GlobalStyles
+
