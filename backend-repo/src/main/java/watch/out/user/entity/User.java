@@ -78,6 +78,9 @@ public class User extends BaseSoftDeleteEntity {
     @Column(name = "avg_embedding")
     private byte[] avgEmbedding;
 
+    @Column(name = "is_approved")
+    private boolean isApproved;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_uuid", nullable = false)
     private Company company;
