@@ -249,24 +249,28 @@ pipeline {
                                   cp "$APP_YML"        _run_config/application.yml
                                   cp "$APP_YML_DOCKER" _run_config/application-docker.yml
                                   cp "$APP_YML_TEST"   _run_config/application-test.yml
-
-                                  echo "============================================================"
-                                  echo "==== DEBUG: Final application.yml content for container ===="
-                                  cat _run_config/application.yml
-                                  cat _run_config/application-test.yml
-                                  echo "============================================================"
                                 '''
                             }
 
                             sh "docker build -t ${tag} -f _docker_ctx/Dockerfile _docker_ctx"
 
                             sh """
+                              set -eux
+
+                              docker volume create watchout_be_test || true
+
+                              chmod a+r _run_config/application*.yml || true
+                              docker run --rm \
+                                  -v watchout_be_test:/app/config \
+                                  -v "\${PWD}/_run_config":/src:ro \
+                                  alpine:3.20 sh -lc 'rm -rf /app/config/* && cp -a /src/. /app/config/ && ls -l /app/config'
+
                               docker rm -f ${BE_TEST_CONTAINER} || true
-                              docker run -d --name ${BE_TEST_CONTAINER} \\
-                                --network ${TEST_NETWORK} \\
-                                -v "\${PWD}/_run_config:/app/config:ro" \\
-                                -e SPRING_PROFILES_ACTIVE=docker,test \\
-                                -e SPRING_CONFIG_LOCATION=file:/app/config/ \\
+                              docker run -d --name ${BE_TEST_CONTAINER} \
+                                --network ${TEST_NETWORK} \
+                                -v watchout_be_test:/app/config:ro \
+                                -e SPRING_PROFILES_ACTIVE=docker,test \
+                                -e SPRING_CONFIG_LOCATION=file:/app/config/ \
                                 ${tag}
                             """
                         } else if (branch == 'master') {
@@ -289,6 +293,8 @@ pipeline {
                             sh "docker build -t ${tag} -f _docker_ctx/Dockerfile _docker_ctx"
 
                             sh """
+                              set -eux
+
                               if docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER} | grep -q . ; then
                                 ACTIVE=${BE_PROD_BLUE_CONTAINER}
                                 INACTIVE=${BE_PROD_GREEN_CONTAINER}
@@ -297,12 +303,20 @@ pipeline {
                                 INACTIVE=${BE_PROD_BLUE_CONTAINER}
                               fi
 
+                              docker volume create watchout_be_prod || true
+
+                              chmod a+r _run_config/application*.yml || true
+                                docker run --rm \
+                                  -v watchout_be_prod:/app/config \
+                                  -v "\${PWD}/_run_config":/src:ro \
+                                  alpine:3.20 sh -lc 'rm -rf /app/config/* && cp -a /src/. /app/config/ && ls -l /app/config'
+
                               docker rm -f \$INACTIVE || true
-                              docker run -d --name \$INACTIVE \\
-                                --network ${PROD_NETWORK} \\
-                                -v "\${PWD}/_run_config:/app/config:ro" \\
-                                -e SPRING_PROFILES_ACTIVE=docker,prod \\
-                                -e SPRING_CONFIG_LOCATION=file:/app/config/ \\
+                              docker run -d --name \$INACTIVE \
+                                --network ${PROD_NETWORK} \
+                                -v watchout_be_prod:/app/config:ro \
+                                -e SPRING_PROFILES_ACTIVE=docker,prod \
+                                -e SPRING_CONFIG_LOCATION=file:/app/config/ \
                                 ${tag}
 
                               sleep 30
