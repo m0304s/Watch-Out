@@ -89,7 +89,6 @@ public class User extends BaseSoftDeleteEntity {
     @JoinColumn(name = "area_uuid")
     private Area area;
 
-
     @PrePersist
     void applyDefaults() {
         if (this.trainingStatus == null) {
