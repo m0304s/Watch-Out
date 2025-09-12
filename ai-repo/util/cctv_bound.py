@@ -318,10 +318,7 @@ def mjpeg_generator(src=0, mirror=True, meta=None):
                     "camera": camera,
                     "snapshot": snap_ref,
                     "triggers": sorted(list({d["class"] for d in matched})),
-                    "detections": dict(counts),
-                    # [KAFKA] 추가 메타
-                    "model": cfg.name,
-                    "scoreThreshold": SCORE_THRESHOLD,
+                    "detections": dict(counts)
                 }
                 # [KAFKA] eventId 생성(멱등/중복제거용)
                 base = f"{payload['ts']}|{company}|{camera}|{payload['src']}|{','.join(payload['triggers'])}"

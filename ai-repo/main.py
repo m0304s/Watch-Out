@@ -154,3 +154,4 @@ async def multi_stream(
                 pass
 
     return StreamingResponse(sync_gen(), media_type="multipart/x-mixed-replace; boundary=frame")
+
