@@ -42,7 +42,8 @@ public class AreaController {
         @RequestParam(defaultValue = "10") int display,
         @RequestParam(required = false) String search) {
         PageRequest pageRequest = PageRequest.of(pageNum, display);
-        PageResponse<AreaListResponse> areaListPageResponse = areaService.getAreas(pageRequest, search);
+        PageResponse<AreaListResponse> areaListPageResponse = areaService.getAreas(pageRequest,
+            search);
         return ResponseEntity.ok(areaListPageResponse);
     }
 
