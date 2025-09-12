@@ -36,6 +36,9 @@ dependencies {
 	// Database & Persistence
 	runtimeOnly 'org.postgresql:postgresql'
 
+	// AWS SDK BOM
+	implementation("software.amazon.awssdk:s3:2.32.14")
+
 	// Redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
