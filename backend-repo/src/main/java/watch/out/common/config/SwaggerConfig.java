@@ -5,14 +5,21 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class SwaggerConfig {
 
+    @Value("${spring.mvc.servlet.path:/}")
+    private String servletPath;
+
     @Bean
     public OpenAPI openAPI() {
+        String url = normalize(servletPath);
+
         Info info = new Info()
             .title("WatchOut API")
             .description("WatchOut Spring Boot API 문서")
@@ -32,8 +39,15 @@ public class SwaggerConfig {
             securitySchemeName);
 
         return new OpenAPI()
+            .addServersItem(new Server().url(url))
             .info(info)
             .components(new Components().addSecuritySchemes(securitySchemeName, securityScheme))
             .addSecurityItem(securityRequirement);
+    }
+
+    private static String normalize(String p) {
+        if (p == null || p.isBlank()) return "/";
+        String s = p.startsWith("/") ? p : "/" + p;
+        return (s.endsWith("/") && s.length() > 1) ? s.substring(0, s.length() - 1) : s;
     }
 }
