@@ -9,14 +9,14 @@ import org.springframework.transaction.annotation.Transactional;
 import watch.out.area.dto.request.AreaRequest;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
-import watch.out.area.dto.response.WorkerResponse;
+import watch.out.area.dto.response.AreaDetailItemResponse;
+import watch.out.common.dto.PageResponse;
 import watch.out.area.entity.Area;
 import watch.out.area.entity.AreaManager;
 import watch.out.area.repository.AreaManagerRepository;
 import watch.out.area.repository.AreaRepository;
 import watch.out.common.dto.PageRequest;
 import watch.out.user.repository.UserRepository;
-import watch.out.common.dto.PageResponse;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.SecurityUtil;
@@ -96,7 +96,7 @@ public class AreaServiceImpl implements AreaService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AreaListResponse> getAreas() {
+    public PageResponse<AreaListResponse> getAreas(PageRequest pageRequest, String search) {
         Optional<UserRole> currentUserRole = SecurityUtil.getCurrentUserRole();
 
         if (currentUserRole.isEmpty()) {
@@ -105,9 +105,19 @@ public class AreaServiceImpl implements AreaService {
 
         UserRole role = currentUserRole.get();
 
+        int pageNum = pageRequest.pageNum();
+        int display = pageRequest.display();
+
+        // 검색어 정규화 (null이거나 빈 문자열인 경우 null로 처리)
+        String searchTerm = (search == null || search.trim().isEmpty()) ? null : search.trim();
+
+        List<AreaListResponse> areas;
+        long totalItems;
+
         if (role == UserRole.ADMIN) {
             // ADMIN은 모든 구역 조회
-            return areaRepository.findAreasAsDto();
+            areas = areaRepository.findAreasAsDto(pageNum, display, searchTerm);
+            totalItems = areaRepository.countAreas(searchTerm);
         } else if (role == UserRole.AREA_ADMIN) {
             // AREA_ADMIN은 자신이 배정된 구역만 조회
             Optional<UUID> currentUserUuid = SecurityUtil.getCurrentUserUuid();
@@ -115,10 +125,14 @@ public class AreaServiceImpl implements AreaService {
                 throw new BusinessException(ErrorCode.PERMISSION_DENIED);
             }
 
-            return areaRepository.findAreasByUserUuidAsDto(currentUserUuid.get());
+            areas = areaRepository.findAreasByUserUuidAsDto(currentUserUuid.get(), pageNum, display,
+                searchTerm);
+            totalItems = areaRepository.countAreasByUserUuid(currentUserUuid.get(), searchTerm);
         } else {
             throw new BusinessException(ErrorCode.PERMISSION_DENIED);
         }
+
+        return PageResponse.of(areas, pageNum, display, totalItems);
     }
 
     @Override
@@ -139,16 +153,17 @@ public class AreaServiceImpl implements AreaService {
         }
 
         // 작업자 목록 조회 (작업자가 없을 수도 있음)
-        int offset = pageRequest.page() * pageRequest.size();
-        List<WorkerResponse> workers = areaRepository.findWorkersByAreaUuidAsDto(areaUuid, offset,
-            pageRequest.size());
+        int offset = pageRequest.pageNum() * pageRequest.display();
+        List<AreaDetailItemResponse> workers = areaRepository.findWorkersByAreaUuidAsDto(areaUuid,
+            offset,
+            pageRequest.display());
         long totalWorkers = areaRepository.countWorkersByAreaUuid(areaUuid);
 
         // 페이지네이션 정보 생성 (작업자가 없어도 빈 배열로 반환)
-        PageResponse<WorkerResponse> workersPage = PageResponse.of(
-            workers, // QueryDSL fetch()는 빈 리스트를 반환하므로 null이 아님
-            pageRequest.page(),
-            pageRequest.size(),
+        PageResponse<AreaDetailItemResponse> workersPage = PageResponse.of(
+            workers,
+            pageRequest.pageNum(),
+            pageRequest.display(),
             totalWorkers
         );
 

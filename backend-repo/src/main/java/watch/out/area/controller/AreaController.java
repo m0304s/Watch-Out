@@ -1,7 +1,6 @@
 package watch.out.area.controller;
 
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import watch.out.area.dto.request.AreaRequest;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
+import watch.out.common.dto.PageResponse;
 import watch.out.area.service.AreaService;
 import watch.out.common.dto.PageRequest;
 
@@ -37,18 +37,22 @@ public class AreaController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'AREA_ADMIN')")
-    public ResponseEntity<List<AreaListResponse>> getAreas() {
-        List<AreaListResponse> areaListResponse = areaService.getAreas();
-        return ResponseEntity.ok(areaListResponse);
+    public ResponseEntity<PageResponse<AreaListResponse>> getAreas(
+        @RequestParam(defaultValue = "0") int pageNum,
+        @RequestParam(defaultValue = "10") int display,
+        @RequestParam(required = false) String search) {
+        PageRequest pageRequest = PageRequest.of(pageNum, display);
+        PageResponse<AreaListResponse> areaListPageResponse = areaService.getAreas(pageRequest, search);
+        return ResponseEntity.ok(areaListPageResponse);
     }
 
     @GetMapping("/{areaUuid}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AREA_ADMIN')")
     public ResponseEntity<AreaDetailResponse> getArea(
         @PathVariable UUID areaUuid,
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "10") int size) {
-        PageRequest pageRequest = PageRequest.of(page, size);
+        @RequestParam(defaultValue = "0") int pageNum,
+        @RequestParam(defaultValue = "10") int display) {
+        PageRequest pageRequest = PageRequest.of(pageNum, display);
         AreaDetailResponse areaDetailResponse = areaService.getArea(areaUuid, pageRequest);
         return ResponseEntity.ok(areaDetailResponse);
     }

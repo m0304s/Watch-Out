@@ -1,17 +1,17 @@
 package watch.out.area.service;
 
-import java.util.List;
 import java.util.UUID;
 import watch.out.area.dto.request.AreaRequest;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
+import watch.out.common.dto.PageResponse;
 import watch.out.common.dto.PageRequest;
 
 public interface AreaService {
 
     void createArea(AreaRequest areaRequest);
 
-    List<AreaListResponse> getAreas();
+    PageResponse<AreaListResponse> getAreas(PageRequest pageRequest, String search);
 
     AreaDetailResponse getArea(UUID areaUuid, PageRequest pageRequest);
 
