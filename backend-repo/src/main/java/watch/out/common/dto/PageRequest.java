@@ -5,27 +5,27 @@ import jakarta.validation.constraints.Min;
 
 public record PageRequest(
     @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다")
-    int page,
+    int pageNum,
 
     @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다")
     @Max(value = 100, message = "페이지 크기는 100 이하여야 합니다")
-    int size
+    int display
 ) {
 
     public PageRequest {
-        if (page < 0) {
-            page = 0;
+        if (pageNum < 0) {
+            pageNum = 0;
         }
-        if (size < 1) {
-            size = 10;
+        if (display < 1) {
+            display = 10;
         }
-        if (size > 100) {
-            size = 100;
+        if (display > 100) {
+            display = 100;
         }
     }
 
-    public static PageRequest of(int page, int size) {
-        return new PageRequest(page, size);
+    public static PageRequest of(int pageNum, int display) {
+        return new PageRequest(pageNum, display);
     }
 
     public static PageRequest defaultPage() {

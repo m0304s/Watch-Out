@@ -2,7 +2,7 @@ package watch.out.area.dto.response;
 
 import java.util.UUID;
 
-public record WorkerResponse(
+public record AreaDetailItemResponse(
     UUID userUuid,
     String userName,
     String userId

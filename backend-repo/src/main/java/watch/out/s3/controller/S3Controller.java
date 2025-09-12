@@ -43,7 +43,8 @@ public class S3Controller {
             .map(UUID::toString)
             .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
 
-        List<PresignedUrlResponse> responses = s3Service.generateFacesPresignedUrls(request, userUuid);
+        List<PresignedUrlResponse> responses = s3Service.generateFacesPresignedUrls(request,
+            userUuid);
 
         return ResponseEntity.ok(responses);
     }

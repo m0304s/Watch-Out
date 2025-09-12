@@ -3,25 +3,33 @@ package watch.out.common.dto;
 import java.util.List;
 
 public record PageResponse<T>(
-    List<T> content,
-    int page,
-    int size,
-    long totalElements,
-    int totalPages,
-    boolean first,
-    boolean last
+    List<T> data,
+    PaginationInfo pagination
 ) {
 
-    public static <T> PageResponse<T> of(List<T> content, int page, int size, long totalElements) {
-        int totalPages = (int) Math.ceil((double) totalElements / size);
-        return new PageResponse<>(
-            content,
-            page,
-            size,
-            totalElements,
+    public record PaginationInfo(
+        int pageNum,
+        int display,
+        long totalItems,
+        int totalPages,
+        boolean first,
+        boolean last
+    ) {
+
+    }
+
+    public static <T> PageResponse<T> of(List<T> data, int pageNum, int display, long totalItems) {
+        int totalPages = (int) Math.ceil((double) totalItems / display);
+
+        PaginationInfo pagination = new PaginationInfo(
+            pageNum,
+            display,
+            totalItems,
             totalPages,
-            page == 0,
-            page >= totalPages - 1
+            pageNum == 0,
+            pageNum >= totalPages - 1
         );
+
+        return new PageResponse<>(data, pagination);
     }
 }

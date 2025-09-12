@@ -46,7 +46,9 @@ public class SwaggerConfig {
     }
 
     private static String normalize(String p) {
-        if (p == null || p.isBlank()) return "/";
+        if (p == null || p.isBlank()) {
+            return "/";
+        }
         String s = p.startsWith("/") ? p : "/" + p;
         return (s.endsWith("/") && s.length() > 1) ? s.substring(0, s.length() - 1) : s;
     }
