@@ -34,13 +34,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         FilterChain filterChain)
         throws ServletException, IOException {
 
-        // Swagger 관련 경로는 JWT 필터를 건너뛰기
-        String requestURI = request.getRequestURI();
-        if (isSwaggerPath(requestURI)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         String accessToken = JwtUtil.extractAccessToken(request);
 
         if (accessToken != null) {
@@ -87,17 +80,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.getWriter().write(jsonResponse);
     }
 
-    private boolean isSwaggerPath(String requestURI) {
-        return requestURI.startsWith("/v3/api-docs") ||
-            requestURI.startsWith("/swagger-ui") ||
-            requestURI.startsWith("/swagger-resources") ||
-            requestURI.startsWith("/webjars") ||
-            requestURI.equals("/swagger-ui.html") ||
-            requestURI.equals("/favicon.ico") ||
-            requestURI.equals("/error") ||
-            requestURI.equals("/") ||
-            requestURI.startsWith("/static/") ||
-            requestURI.startsWith("/css/") ||
-            requestURI.startsWith("/js/");
-    }
 }
