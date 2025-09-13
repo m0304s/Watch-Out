@@ -12,9 +12,6 @@ public interface AccidentService {
 
     AccidentDetailResponse getAccidentDetail(UUID accidentUuid);
 
-    List<AccidentDetailResponse> getAccidentsWithFilters(UUID areaUuid, AccidentType accidentType,
-        UUID userUuid);
-
     /**
      * 페이지네이션을 지원하는 사고 목록 조회 (관리자 권한 체크 포함)
      *
