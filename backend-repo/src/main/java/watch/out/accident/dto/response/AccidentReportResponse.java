@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record AccidentDetailResponse(
+/**
+ * 사고 신고 응답 DTO
+ */
+public record AccidentReportResponse(
     String accidentId,
     String accidentType,
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -13,21 +16,11 @@ public record AccidentDetailResponse(
     WorkerInfo workerInfo
 ) {
 
-    public static AccidentDetailResponse of(String accidentId, String accidentType,
+    public static AccidentReportResponse of(String accidentId, String accidentType,
         LocalDateTime timestamp,
         AreaInfo areaInfo, WorkerInfo workerInfo) {
-        return new AccidentDetailResponse(accidentId, accidentType, timestamp, areaInfo,
+        return new AccidentReportResponse(accidentId, accidentType, timestamp, areaInfo,
             workerInfo);
     }
 
-    public record WorkerInfo(
-        String workerId,
-        String workerName,
-        String companyName,
-        String contact,
-        String emergencyContact,
-        String bloodType
-    ) {
-
-    }
 }

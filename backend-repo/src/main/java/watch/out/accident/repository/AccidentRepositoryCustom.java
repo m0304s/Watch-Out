@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 import watch.out.accident.dto.response.AccidentDetailResponse;
 import watch.out.accident.dto.response.AccidentListResponse;
+import watch.out.accident.dto.response.UserWithAreaDto;
 import watch.out.accident.entity.AccidentType;
 import watch.out.common.dto.PageRequest;
 
@@ -75,4 +76,12 @@ public interface AccidentRepositoryCustom {
      */
     long countAccidentsForManager(UUID managerUuid, UUID areaUuid, AccidentType accidentType,
         UUID userUuid);
+
+    /**
+     * 사용자 정보와 배정 구역 정보를 함께 조회
+     *
+     * @param userUuid 사용자 UUID
+     * @return 사용자 정보 (구역 정보 포함)
+     */
+    Optional<UserWithAreaDto> findUserWithAreaById(UUID userUuid);
 }

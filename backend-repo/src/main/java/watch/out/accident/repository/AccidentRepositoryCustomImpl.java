@@ -13,6 +13,7 @@ import watch.out.accident.dto.response.AccidentDetailDto;
 import watch.out.accident.dto.response.AccidentDetailResponse;
 import watch.out.accident.dto.response.AccidentListDto;
 import watch.out.accident.dto.response.AccidentListResponse;
+import watch.out.accident.dto.response.UserWithAreaDto;
 import watch.out.accident.entity.AccidentType;
 import watch.out.common.dto.PageRequest;
 
@@ -221,5 +222,20 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
         query = applyFilters(query, areaUuid, accidentType, userUuid);
 
         return query.fetchOne();
+    }
+
+    @Override
+    public Optional<UserWithAreaDto> findUserWithAreaById(UUID userUuid) {
+        UserWithAreaDto result = queryFactory
+            .select(Projections.constructor(UserWithAreaDto.class,
+                user,
+                user.area
+            ))
+            .from(user)
+            .leftJoin(user.area, area)
+            .where(user.uuid.eq(userUuid))
+            .fetchOne();
+
+        return Optional.ofNullable(result);
     }
 }

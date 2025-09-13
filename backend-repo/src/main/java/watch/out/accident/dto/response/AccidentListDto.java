@@ -22,10 +22,8 @@ public record AccidentListDto(
      * AccidentListResponse로 변환
      */
     public AccidentListResponse toResponse() {
-        AccidentListResponse.AreaInfo areaInfo = new AccidentListResponse.AreaInfo(areaUuid,
-            areaName);
-        AccidentListResponse.WorkerInfo workerInfo = new AccidentListResponse.WorkerInfo(
-            workerId, workerName, companyName);
+        AreaInfo areaInfo = AreaInfo.of(areaUuid, areaName);
+        WorkerInfo workerInfo = WorkerInfo.of(workerId, workerName, companyName);
 
         return AccidentListResponse.of(
             accidentId.toString(),

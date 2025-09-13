@@ -6,11 +6,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import watch.out.accident.dto.request.AccidentReportRequest;
 import watch.out.accident.dto.response.AccidentDetailResponse;
 import watch.out.accident.dto.response.AccidentListResponse;
+import watch.out.accident.dto.response.AccidentReportResponse;
 import watch.out.accident.entity.AccidentType;
 import watch.out.accident.service.AccidentService;
 import watch.out.common.dto.PageRequest;
@@ -54,6 +59,17 @@ public class AccidentController {
         PageResponse<AccidentListResponse> response = accidentService.getAccidentList(
             pageRequest, areaUuid, accidentType, userUuid);
 
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 사고 신고
+     */
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'AREA_ADMIN', 'WORKER')")
+    public ResponseEntity<AccidentReportResponse> reportAccident(
+        @Valid @RequestBody AccidentReportRequest request) {
+        AccidentReportResponse response = accidentService.reportAccident(request);
         return ResponseEntity.ok(response);
     }
 }

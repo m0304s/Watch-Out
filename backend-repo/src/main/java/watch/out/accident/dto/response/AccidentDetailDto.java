@@ -29,8 +29,7 @@ public record AccidentDetailDto(
      * AccidentDetailResponse로 변환
      */
     public AccidentDetailResponse toResponse() {
-        AccidentDetailResponse.AreaInfo areaInfo = new AccidentDetailResponse.AreaInfo(areaUuid,
-            areaName);
+        AreaInfo areaInfo = AreaInfo.of(areaUuid, areaName);
         AccidentDetailResponse.WorkerInfo workerInfo = new AccidentDetailResponse.WorkerInfo(
             workerId, workerName, companyName, contact, emergencyContact,
             BloodTypeUtil.formatBloodType(bloodType, rhFactor));

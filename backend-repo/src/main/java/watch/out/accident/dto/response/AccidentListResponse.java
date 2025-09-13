@@ -22,18 +22,4 @@ public record AccidentListResponse(
         return new AccidentListResponse(accidentId, accidentType, timestamp, areaInfo, workerInfo);
     }
 
-    public record AreaInfo(
-        UUID areaUuid,
-        String areaName
-    ) {
-
-    }
-
-    public record WorkerInfo(
-        String workerId,
-        String workerName,
-        String companyName
-    ) {
-
-    }
 }

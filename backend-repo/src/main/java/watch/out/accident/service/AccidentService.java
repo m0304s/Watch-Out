@@ -2,8 +2,10 @@ package watch.out.accident.service;
 
 import java.util.List;
 import java.util.UUID;
+import watch.out.accident.dto.request.AccidentReportRequest;
 import watch.out.accident.dto.response.AccidentDetailResponse;
 import watch.out.accident.dto.response.AccidentListResponse;
+import watch.out.accident.dto.response.AccidentReportResponse;
 import watch.out.accident.entity.AccidentType;
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
@@ -36,4 +38,12 @@ public interface AccidentService {
     PageResponse<AccidentListResponse> getAccidentListForManager(PageRequest pageRequest,
         UUID areaUuid,
         AccidentType accidentType, UUID userUuid);
+
+    /**
+     * 사고 신고
+     *
+     * @param request 사고 신고 요청
+     * @return 사고 신고 응답
+     */
+    AccidentReportResponse reportAccident(AccidentReportRequest request);
 }
