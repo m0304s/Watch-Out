@@ -37,6 +37,7 @@ out/
 .vscode/
 
 src/main/resources
+src/test/resources
 
 ### QueryDSL generated Q-types ###
 src/main/generated/

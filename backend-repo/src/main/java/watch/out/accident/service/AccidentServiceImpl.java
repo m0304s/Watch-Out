@@ -37,8 +37,37 @@ public class AccidentServiceImpl implements AccidentService {
     @Override
     @Transactional(readOnly = true)
     public AccidentDetailResponse getAccidentDetail(UUID accidentUuid) {
-        return accidentRepository.findAccidentDetailById(accidentUuid)
+        // 현재 사용자 정보 조회
+        UUID currentUserUuid = SecurityUtil.getCurrentUserUuid()
+            .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+
+        // 사고 상세 정보 조회
+        AccidentDetailResponse accidentDetail = accidentRepository.findAccidentDetailById(accidentUuid)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        // 권한 검증
+        if (SecurityUtil.isAdmin()) {
+            // ADMIN은 모든 사고 조회 가능
+            return accidentDetail;
+        } else if (SecurityUtil.isAreaAdmin()) {
+            // AREA_ADMIN은 자신이 담당하는 구역의 사고만 조회 가능
+            UserWithAreaDto userWithArea = accidentRepository.findUserWithAreaById(currentUserUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+            if (!userWithArea.hasAssignedArea()) {
+                throw new BusinessException(ErrorCode.PERMISSION_DENIED);
+            }
+
+            // 사고가 발생한 구역이 현재 사용자가 담당하는 구역인지 확인
+            if (!accidentDetail.areaInfo().areaUuid().equals(userWithArea.areaUuid())) {
+                throw new BusinessException(ErrorCode.PERMISSION_DENIED);
+            }
+
+            return accidentDetail;
+        } else {
+            // WORKER는 사고 상세 조회 권한 없음
+            throw new BusinessException(ErrorCode.PERMISSION_DENIED);
+        }
     }
 
     @Override
@@ -46,6 +75,10 @@ public class AccidentServiceImpl implements AccidentService {
     public PageResponse<AccidentListResponse> getAccidentList(PageRequest pageRequest,
         UUID areaUuid,
         AccidentType accidentType, UUID userUuid) {
+        // 현재 사용자 정보 조회
+        UUID currentUserUuid = SecurityUtil.getCurrentUserUuid()
+            .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+
         // ADMIN은 모든 사고 조회 가능, AREA_ADMIN은 관리하는 구역의 사고만 조회
         if (SecurityUtil.isAdmin()) {
             List<AccidentListResponse> accidentList = accidentRepository.findAccidentList(
@@ -90,7 +123,7 @@ public class AccidentServiceImpl implements AccidentService {
 
         // 사용자가 배정받은 구역 확인
         if (!userWithArea.hasAssignedArea()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST);
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
 
         // 사고 엔티티 생성을 위해 엔티티 조회
