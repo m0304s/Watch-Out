@@ -90,8 +90,8 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
                 user.rhFactor.as("rhFactor")
             ))
             .from(accident)
-            .leftJoin(accident.area, area)
-            .leftJoin(accident.user, user)
-            .leftJoin(user.company, company);
+            .innerJoin(accident.area, area)
+            .innerJoin(accident.user, user)
+            .innerJoin(user.company, company);
     }
 }
