@@ -13,15 +13,19 @@ public record AccidentDetailResponse(
     WorkerInfo workerInfo
 ) {
 
-    public static AccidentDetailResponse of(String accidentId, String accidentType, LocalDateTime timestamp,
-                                          AreaInfo areaInfo, WorkerInfo workerInfo) {
-        return new AccidentDetailResponse(accidentId, accidentType, timestamp, areaInfo, workerInfo);
+    public static AccidentDetailResponse of(String accidentId, String accidentType,
+        LocalDateTime timestamp,
+        AreaInfo areaInfo, WorkerInfo workerInfo) {
+        return new AccidentDetailResponse(accidentId, accidentType, timestamp, areaInfo,
+            workerInfo);
     }
 
     public record AreaInfo(
         UUID areaUuid,
         String areaName
-    ) {}
+    ) {
+
+    }
 
     public record WorkerInfo(
         String workerId,
@@ -30,5 +34,7 @@ public record AccidentDetailResponse(
         String contact,
         String emergencyContact,
         String bloodType
-    ) {}
+    ) {
+
+    }
 }

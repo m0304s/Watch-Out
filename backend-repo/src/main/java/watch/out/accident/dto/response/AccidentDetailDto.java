@@ -23,17 +23,20 @@ public record AccidentDetailDto(
     BloodType bloodType,
     RhFactor rhFactor
 ) {
-    
+
     /**
      * AccidentDetailResponse로 변환
      */
     public AccidentDetailResponse toResponse() {
-        AccidentDetailResponse.AreaInfo areaInfo = new AccidentDetailResponse.AreaInfo(areaUuid, areaName);
-        AccidentDetailResponse.WorkerInfo workerInfo = new AccidentDetailResponse.WorkerInfo(workerId, workerName, companyName, contact, emergencyContact, formatBloodType());
-        
-        return AccidentDetailResponse.of(accidentId.toString(), accidentType.getDescription(), timestamp, areaInfo, workerInfo);
+        AccidentDetailResponse.AreaInfo areaInfo = new AccidentDetailResponse.AreaInfo(areaUuid,
+            areaName);
+        AccidentDetailResponse.WorkerInfo workerInfo = new AccidentDetailResponse.WorkerInfo(
+            workerId, workerName, companyName, contact, emergencyContact, formatBloodType());
+
+        return AccidentDetailResponse.of(accidentId.toString(), accidentType.getDescription(),
+            timestamp, areaInfo, workerInfo);
     }
-    
+
     /**
      * 혈액형을 표준 형식으로 포맷팅
      */
@@ -41,9 +44,9 @@ public record AccidentDetailDto(
         if (bloodType == null || rhFactor == null) {
             return "알 수 없음";
         }
-        
+
         String rhSymbol = (rhFactor == RhFactor.PLUS) ? "+" : "-";
         return bloodType.name() + rhSymbol;
     }
-    
+
 }

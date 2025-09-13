@@ -28,7 +28,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
         AccidentDetailDto dto = buildAccidentQuery()
             .where(accident.uuid.eq(accidentUuid))
             .fetchOne();
-            
+
         return dto != null ? Optional.of(dto.toResponse()) : Optional.empty();
     }
 
@@ -38,7 +38,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
             .where(accident.area.uuid.eq(areaUuid))
             .orderBy(accident.createdAt.desc())
             .fetch();
-            
+
         return dtoList.stream()
             .map(AccidentDetailDto::toResponse)
             .toList();
@@ -50,7 +50,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
             .where(accident.type.eq(accidentType))
             .orderBy(accident.createdAt.desc())
             .fetch();
-            
+
         return dtoList.stream()
             .map(AccidentDetailDto::toResponse)
             .toList();
@@ -62,7 +62,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
             .where(accident.user.uuid.eq(userUuid))
             .orderBy(accident.createdAt.desc())
             .fetch();
-            
+
         return dtoList.stream()
             .map(AccidentDetailDto::toResponse)
             .toList();
@@ -70,7 +70,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
 
     /**
      * 사고 조회를 위한 공통 QueryDSL 쿼리 빌더
-     * 
+     *
      * @return JPAQuery<AccidentDetailDto> 쿼리 빌더
      */
     private JPAQuery<AccidentDetailDto> buildAccidentQuery() {
