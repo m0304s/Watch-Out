@@ -33,33 +33,22 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
     }
 
     @Override
-    public List<AccidentDetailResponse> findAccidentsByArea(UUID areaUuid) {
-        List<AccidentDetailDto> dtoList = buildAccidentQuery()
-            .where(accident.area.uuid.eq(areaUuid))
-            .orderBy(accident.createdAt.desc())
-            .fetch();
+    public List<AccidentDetailResponse> findAccidentsWithFilters(UUID areaUuid,
+        AccidentType accidentType, UUID userUuid) {
+        JPAQuery<AccidentDetailDto> query = buildAccidentQuery();
 
-        return dtoList.stream()
-            .map(AccidentDetailDto::toResponse)
-            .toList();
-    }
+        // 동적 조건 추가
+        if (areaUuid != null) {
+            query = query.where(accident.area.uuid.eq(areaUuid));
+        }
+        if (accidentType != null) {
+            query = query.where(accident.type.eq(accidentType));
+        }
+        if (userUuid != null) {
+            query = query.where(accident.user.uuid.eq(userUuid));
+        }
 
-    @Override
-    public List<AccidentDetailResponse> findAccidentsByType(AccidentType accidentType) {
-        List<AccidentDetailDto> dtoList = buildAccidentQuery()
-            .where(accident.type.eq(accidentType))
-            .orderBy(accident.createdAt.desc())
-            .fetch();
-
-        return dtoList.stream()
-            .map(AccidentDetailDto::toResponse)
-            .toList();
-    }
-
-    @Override
-    public List<AccidentDetailResponse> findAccidentsByUser(UUID userUuid) {
-        List<AccidentDetailDto> dtoList = buildAccidentQuery()
-            .where(accident.user.uuid.eq(userUuid))
+        List<AccidentDetailDto> dtoList = query
             .orderBy(accident.createdAt.desc())
             .fetch();
 

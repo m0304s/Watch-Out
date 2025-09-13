@@ -17,26 +17,13 @@ public interface AccidentRepositoryCustom {
     Optional<AccidentDetailResponse> findAccidentDetailById(UUID accidentUuid);
 
     /**
-     * 특정 구역의 사고 목록을 조회
+     * 다중 필터 조건으로 사고 목록을 조회
      *
-     * @param areaUuid 구역 UUID
+     * @param areaUuid     구역 UUID (선택사항)
+     * @param accidentType 사고 유형 (선택사항)
+     * @param userUuid     사용자 UUID (선택사항)
      * @return 사고 목록 DTO
      */
-    List<AccidentDetailResponse> findAccidentsByArea(UUID areaUuid);
-
-    /**
-     * 특정 사고 유형의 사고 목록을 조회
-     *
-     * @param accidentType 사고 유형
-     * @return 사고 목록 DTO
-     */
-    List<AccidentDetailResponse> findAccidentsByType(AccidentType accidentType);
-
-    /**
-     * 특정 사용자의 사고 목록을 조회
-     *
-     * @param userUuid 사용자 UUID
-     * @return 사고 목록 DTO
-     */
-    List<AccidentDetailResponse> findAccidentsByUser(UUID userUuid);
+    List<AccidentDetailResponse> findAccidentsWithFilters(UUID areaUuid, AccidentType accidentType,
+        UUID userUuid);
 }

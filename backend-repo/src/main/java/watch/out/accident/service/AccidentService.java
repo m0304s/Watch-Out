@@ -9,9 +9,6 @@ public interface AccidentService {
 
     AccidentDetailResponse getAccidentDetail(UUID accidentUuid);
 
-    List<AccidentDetailResponse> getAccidentsByArea(UUID areaUuid);
-
-    List<AccidentDetailResponse> getAccidentsByType(AccidentType accidentType);
-
-    List<AccidentDetailResponse> getAccidentsByUser(UUID userUuid);
+    List<AccidentDetailResponse> getAccidentsWithFilters(UUID areaUuid, AccidentType accidentType,
+        UUID userUuid);
 }

@@ -27,19 +27,8 @@ public class AccidentServiceImpl implements AccidentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AccidentDetailResponse> getAccidentsByArea(UUID areaUuid) {
-        return accidentRepository.findAccidentsByArea(areaUuid);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<AccidentDetailResponse> getAccidentsByType(AccidentType accidentType) {
-        return accidentRepository.findAccidentsByType(accidentType);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<AccidentDetailResponse> getAccidentsByUser(UUID userUuid) {
-        return accidentRepository.findAccidentsByUser(userUuid);
+    public List<AccidentDetailResponse> getAccidentsWithFilters(UUID areaUuid,
+        AccidentType accidentType, UUID userUuid) {
+        return accidentRepository.findAccidentsWithFilters(areaUuid, accidentType, userUuid);
     }
 }
