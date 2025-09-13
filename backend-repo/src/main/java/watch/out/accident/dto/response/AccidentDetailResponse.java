@@ -26,7 +26,7 @@ public record AccidentDetailResponse(
     public record WorkerInfo(
         String workerId,
         String workerName,
-        String affiliation,
+        String companyName,
         String contact,
         String emergencyContact,
         String bloodType

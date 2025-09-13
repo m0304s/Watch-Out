@@ -17,7 +17,7 @@ public record AccidentDetailDto(
     String areaName,
     String workerId,
     String workerName,
-    String affiliation,
+    String companyName,
     String contact,
     String emergencyContact,
     BloodType bloodType,
@@ -29,7 +29,7 @@ public record AccidentDetailDto(
      */
     public AccidentDetailResponse toResponse() {
         AccidentDetailResponse.AreaInfo areaInfo = new AccidentDetailResponse.AreaInfo(areaUuid, areaName);
-        AccidentDetailResponse.WorkerInfo workerInfo = new AccidentDetailResponse.WorkerInfo(workerId, workerName, affiliation, contact, emergencyContact, formatBloodType());
+        AccidentDetailResponse.WorkerInfo workerInfo = new AccidentDetailResponse.WorkerInfo(workerId, workerName, companyName, contact, emergencyContact, formatBloodType());
         
         return AccidentDetailResponse.of(accidentId.toString(), accidentType.getDescription(), timestamp, areaInfo, workerInfo);
     }

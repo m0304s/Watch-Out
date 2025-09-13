@@ -33,7 +33,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
                 area.areaName.as("areaName"),
                 user.userId.as("workerId"),
                 user.userName.as("workerName"),
-                company.companyName.as("affiliation"),
+                company.companyName.as("companyName"),
                 user.contact.as("contact"),
                 user.emergencyContact.as("emergencyContact"),
                 user.bloodType.as("bloodType"),
