@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -28,7 +29,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorResponse.status()).body(errorResponse);
     }
 
-    /* 2) @Valid / @Validated 바인딩 오류 */
+    /* 2) 권한 거부 예외 */
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    protected ResponseEntity<ErrorResponse> handleAuthorizationDeniedException(
+        AuthorizationDeniedException e) {
+        ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.PERMISSION_DENIED);
+
+        log.warn("Authorization Denied: {}", e.getMessage());
+        return ResponseEntity.status(errorResponse.status()).body(errorResponse);
+    }
+
+    /* 3) @Valid / @Validated 바인딩 오류 */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<ErrorResponse> handleValidationException(
         MethodArgumentNotValidException e) {
@@ -41,7 +52,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorResponse.status()).body(errorResponse);
     }
 
-    /* 3) 파라미터 제약 조건(@Size 등) 위반 */
+    /* 4) 파라미터 제약 조건(@Size 등) 위반 */
     @ExceptionHandler(ConstraintViolationException.class)
     protected ResponseEntity<ErrorResponse> handleConstraintViolation(
         ConstraintViolationException e) {
@@ -57,7 +68,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorResponse.status()).body(errorResponse);
     }
 
-    /* 4) 그밖의 모든 예외 */
+    /* 5) 그밖의 모든 예외 */
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<ErrorResponse> handleException(Exception e) {
         ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.INTERNAL_SERVER_ERROR);

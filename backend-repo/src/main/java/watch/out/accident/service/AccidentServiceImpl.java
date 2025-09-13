@@ -52,6 +52,7 @@ public class AccidentServiceImpl implements AccidentService {
         } else if (SecurityUtil.isAreaAdmin()) {
             return getAccidentListForManager(pageRequest, areaUuid, accidentType, userUuid);
         } else {
+            // WORKER는 사고 목록 조회 권한 없음
             throw new BusinessException(ErrorCode.PERMISSION_DENIED);
         }
     }
