@@ -29,7 +29,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
             .where(accident.uuid.eq(accidentUuid))
             .fetchOne();
 
-        return dto != null ? Optional.of(dto.toResponse()) : Optional.empty();
+        return Optional.ofNullable(dto).map(AccidentDetailDto::toResponse);
     }
 
     @Override
