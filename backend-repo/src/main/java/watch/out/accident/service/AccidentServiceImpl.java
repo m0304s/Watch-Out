@@ -37,7 +37,6 @@ public class AccidentServiceImpl implements AccidentService {
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 
-
     @Override
     @Transactional(readOnly = true)
     public PageResponse<AccidentListResponse> getAccidentList(PageRequest pageRequest,
