@@ -10,24 +10,13 @@ public record AccidentDetailResponse(
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime timestamp,
     AreaInfo areaInfo,
-    WorkerInfo workerInfo
+    WorkerDetailInfo workerInfo
 ) {
 
     public static AccidentDetailResponse of(String accidentId, String accidentType,
         LocalDateTime timestamp,
-        AreaInfo areaInfo, WorkerInfo workerInfo) {
+        AreaInfo areaInfo, WorkerDetailInfo workerInfo) {
         return new AccidentDetailResponse(accidentId, accidentType, timestamp, areaInfo,
             workerInfo);
-    }
-
-    public record WorkerInfo(
-        String workerId,
-        String workerName,
-        String companyName,
-        String contact,
-        String emergencyContact,
-        String bloodType
-    ) {
-
     }
 }

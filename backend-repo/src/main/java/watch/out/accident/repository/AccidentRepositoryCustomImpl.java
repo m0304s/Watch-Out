@@ -143,11 +143,21 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
     public Optional<UserWithAreaDto> findUserWithAreaById(UUID userUuid) {
         UserWithAreaDto result = queryFactory
             .select(Projections.constructor(UserWithAreaDto.class,
-                user,
-                user.area
+                user.uuid.as("userUuid"),
+                user.userId.as("userId"),
+                user.userName.as("userName"),
+                user.contact.as("contact"),
+                user.emergencyContact.as("emergencyContact"),
+                user.bloodType.stringValue().as("bloodType"),
+                user.rhFactor.stringValue().as("rhFactor"),
+                company.companyName.as("companyName"),
+                area.uuid.as("areaUuid"),
+                area.areaName.as("areaName"),
+                area.areaAlias.as("areaAlias")
             ))
             .from(user)
             .leftJoin(user.area, area)
+            .leftJoin(user.company, company)
             .where(user.uuid.eq(userUuid))
             .fetchOne();
 
@@ -166,12 +176,8 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
                 accident.type.as("accidentType"),
                 accident.createdAt.as("timestamp"),
                 area.uuid.as("areaUuid"),
-                area.areaName.concat(
-                    Expressions.cases()
-                        .when(area.areaAlias.isNotNull())
-                        .then(Expressions.stringTemplate("' '").concat(area.areaAlias))
-                        .otherwise("")
-                ).as("areaName"),
+                area.areaName.as("areaName"),
+                area.areaAlias.as("areaAlias"),
                 user.userId.as("workerId"),
                 user.userName.as("workerName"),
                 company.companyName.as("companyName"),
@@ -198,12 +204,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
                 accident.type.as("accidentType"),
                 accident.createdAt.as("timestamp"),
                 area.uuid.as("areaUuid"),
-                area.areaName.concat(
-                    Expressions.cases()
-                        .when(area.areaAlias.isNotNull())
-                        .then(Expressions.stringTemplate("' '").concat(area.areaAlias))
-                        .otherwise("")
-                ).as("areaName"),
+                area.areaName.as("areaName"),
                 user.userId.as("workerId"),
                 user.userName.as("workerName"),
                 company.companyName.as("companyName")

@@ -1,31 +1,40 @@
 package watch.out.accident.dto.response;
 
 import java.util.UUID;
-import watch.out.area.entity.Area;
-import watch.out.user.entity.User;
+import watch.out.common.util.AreaNameUtil;
 
 /**
- * 사용자와 배정 구역 정보를 함께 조회하는 DTO
+ * 사용자와 배정 구역 정보를 함께 담는 DTO
  */
 public record UserWithAreaDto(
-    User user,
-    Area area
+    UUID userUuid,
+    String userId,
+    String userName,
+    String contact,
+    String emergencyContact,
+    String bloodType,
+    String rhFactor,
+    String companyName,
+    UUID areaUuid,
+    String areaName,
+    String areaAlias
 ) {
 
-    /**
-     * 사용자가 배정받은 구역이 있는지 확인
-     */
     public boolean hasAssignedArea() {
-        return area != null;
+        return areaUuid != null;
+    }
+
+    public String getFormattedAreaName() {
+        return AreaNameUtil.formatAreaName(areaName, areaAlias);
     }
 
     /**
-     * 구역명과 별칭을 조합하여 반환
+     * 사용자와 구역 정보 생성
      */
-    public String getFormattedAreaName() {
-        if (area == null) {
-            return null;
-        }
-        return area.getAreaName() + (area.getAreaAlias() != null ? " " + area.getAreaAlias() : "");
+    public static UserWithAreaDto of(UUID userUuid, String userId, String userName,
+        String contact, String emergencyContact, String bloodType, String rhFactor,
+        String companyName, UUID areaUuid, String areaName, String areaAlias) {
+        return new UserWithAreaDto(userUuid, userId, userName, contact, emergencyContact,
+            bloodType, rhFactor, companyName, areaUuid, areaName, areaAlias);
     }
 }

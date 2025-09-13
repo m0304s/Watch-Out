@@ -3,6 +3,7 @@ package watch.out.accident.dto.response;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import watch.out.accident.entity.AccidentType;
+import watch.out.common.util.AreaNameUtil;
 import watch.out.common.util.BloodTypeUtil;
 import watch.out.user.entity.BloodType;
 import watch.out.user.entity.RhFactor;
@@ -16,6 +17,7 @@ public record AccidentDetailDto(
     LocalDateTime timestamp,
     UUID areaUuid,
     String areaName,
+    String areaAlias,
     String workerId,
     String workerName,
     String companyName,
@@ -29,8 +31,8 @@ public record AccidentDetailDto(
      * AccidentDetailResponse로 변환
      */
     public AccidentDetailResponse toResponse() {
-        AreaInfo areaInfo = AreaInfo.of(areaUuid, areaName);
-        AccidentDetailResponse.WorkerInfo workerInfo = new AccidentDetailResponse.WorkerInfo(
+        AreaInfo areaInfo = AreaInfo.of(areaUuid, AreaNameUtil.formatAreaName(areaName, areaAlias));
+        WorkerDetailInfo workerInfo = WorkerDetailInfo.of(
             workerId, workerName, companyName, contact, emergencyContact,
             BloodTypeUtil.formatBloodType(bloodType, rhFactor));
 

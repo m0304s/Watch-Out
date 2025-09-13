@@ -17,18 +17,22 @@ import watch.out.accident.entity.Accident;
 import watch.out.accident.entity.AccidentType;
 import watch.out.accident.repository.AccidentRepository;
 import watch.out.area.entity.Area;
+import watch.out.area.repository.AreaRepository;
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.SecurityUtil;
 import watch.out.user.entity.User;
+import watch.out.user.repository.UserRepository;
 
 @Service
 @RequiredArgsConstructor
 public class AccidentServiceImpl implements AccidentService {
 
     private final AccidentRepository accidentRepository;
+    private final UserRepository userRepository;
+    private final AreaRepository areaRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -89,8 +93,11 @@ public class AccidentServiceImpl implements AccidentService {
             throw new BusinessException(ErrorCode.BAD_REQUEST);
         }
 
-        User currentUser = userWithArea.user();
-        Area area = userWithArea.area();
+        // 사고 엔티티 생성을 위해 엔티티 조회
+        User currentUser = userRepository.findById(userWithArea.userUuid())
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        Area area = areaRepository.findById(userWithArea.areaUuid())
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         // 사고 엔티티 생성 및 저장
         Accident accident = Accident.builder()
@@ -103,14 +110,14 @@ public class AccidentServiceImpl implements AccidentService {
 
         // 응답 DTO 생성
         AreaInfo areaInfo = AreaInfo.of(
-            area.getUuid(),
+            userWithArea.areaUuid(),
             userWithArea.getFormattedAreaName()
         );
 
         WorkerInfo workerInfo = WorkerInfo.of(
-            currentUser.getUserId(),
-            currentUser.getUserName(),
-            currentUser.getCompany().getCompanyName()
+            userWithArea.userId(),
+            userWithArea.userName(),
+            userWithArea.companyName()
         );
 
         return AccidentReportResponse.of(
