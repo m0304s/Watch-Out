@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
+import watch.out.accident.dto.response.UserWithAreaDto;
 import watch.out.area.entity.Area;
 import watch.out.area.entity.EntryExit;
 import watch.out.common.dto.PageRequest;
@@ -22,10 +24,37 @@ import static watch.out.company.entity.QCompany.company;
 import static watch.out.area.entity.QArea.area;
 import static watch.out.area.entity.QEntryExitHistory.entryExitHistory;
 
+
+@Repository
 @RequiredArgsConstructor
 public class UserRepositoryCustomImpl implements UserRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
+
+    @Override
+    public Optional<UserWithAreaDto> findUserWithAreaById(UUID userUuid) {
+        UserWithAreaDto result = queryFactory
+            .select(Projections.constructor(UserWithAreaDto.class,
+                user.uuid.as("userUuid"),
+                user.userId.as("userId"),
+                user.userName.as("userName"),
+                user.contact.as("contact"),
+                user.emergencyContact.as("emergencyContact"),
+                user.bloodType.stringValue().as("bloodType"),
+                user.rhFactor.stringValue().as("rhFactor"),
+                company.companyName.as("companyName"),
+                area.uuid.as("areaUuid"),
+                area.areaName.as("areaName"),
+                area.areaAlias.as("areaAlias")
+            ))
+            .from(user)
+            .leftJoin(user.area, area)
+            .leftJoin(user.company, company)
+            .where(user.uuid.eq(userUuid))
+            .fetchOne();
+
+        return Optional.ofNullable(result);
+    }
 
     @Override
     public PageResponse<UsersResponse> findUsers(UUID areaUuid, TrainingStatus trainingStatus,
