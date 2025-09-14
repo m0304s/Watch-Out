@@ -18,10 +18,13 @@ import watch.out.company.repository.CompanyRepository;
 import watch.out.user.dto.request.AssignAreaRequest;
 import watch.out.user.dto.request.SignupRequest;
 import watch.out.user.dto.request.UpdateUserRequest;
+import watch.out.user.dto.request.UserRoleUpdateRequest;
 import watch.out.user.dto.response.UserResponse;
+import watch.out.user.dto.response.UserRoleUpdateResponse;
 import watch.out.user.dto.response.UsersResponse;
 import watch.out.user.entity.TrainingStatus;
 import watch.out.user.entity.User;
+import watch.out.user.entity.UserRole;
 import watch.out.user.repository.UserRepository;
 
 @Service
@@ -108,5 +111,53 @@ public class UserServiceImpl implements UserService {
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
+    public UserRoleUpdateResponse updateUserRole(UserRoleUpdateRequest request) {
+        // 활성 사용자 조회 (소프트 삭제된 사용자 제외)
+        User user = userRepository.findByUuidAndDeletedAtIsNull(request.userUuid())
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        // 현재 권한 저장 (변경 전)
+        UserRole currentRole = user.getRole();
+
+        // 현재 권한과 동일한 경우 예외 발생
+        if (currentRole == request.newRole()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 권한 변경 로직 검증
+        validateRoleChange(currentRole, request.newRole());
+
+        // 권한 변경
+        user.updateRole(request.newRole());
+
+        return UserRoleUpdateResponse.of(
+            user.getUuid(),
+            user.getUserId(),
+            user.getUserName(),
+            request.newRole()
+        );
+    }
+
+    /**
+     * 권한 변경 유효성 검증
+     *
+     * @param currentRole 현재 권한
+     * @param newRole     변경할 권한
+     * @throws BusinessException 유효하지 않은 권한 변경인 경우
+     */
+    private void validateRoleChange(UserRole currentRole, UserRole newRole) {
+        // ADMIN 권한은 변경할 수 없음
+        if (currentRole == UserRole.ADMIN) {
+            throw new BusinessException(ErrorCode.PERMISSION_DENIED);
+        }
+
+        // ADMIN으로 승격하는 것도 방지 (보안상 매우 민감한 작업)
+        if (newRole == UserRole.ADMIN) {
+            throw new BusinessException(ErrorCode.PERMISSION_DENIED);
+        }
     }
 }
