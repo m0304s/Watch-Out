@@ -98,4 +98,30 @@ public class User extends BaseSoftDeleteEntity {
             this.role = UserRole.WORKER;
         }
     }
+
+    public void updateUser(String userName, String contact, String emergencyContact,
+        BloodType bloodType,
+        RhFactor rhFactor, String photoKey, Company company) {
+        if (userName != null) {
+            this.userName = userName;
+        }
+        if (contact != null) {
+            this.contact = contact;
+        }
+        if (emergencyContact != null) {
+            this.emergencyContact = emergencyContact;
+        }
+        if (bloodType != null) {
+            this.bloodType = bloodType;
+        }
+        if (rhFactor != null) {
+            this.rhFactor = rhFactor;
+        }
+        if (photoKey != null) {
+            this.photoKey = photoKey;
+        }
+        if (company != null) {
+            this.company = company;
+        }
+    }
 }

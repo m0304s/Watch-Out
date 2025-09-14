@@ -7,9 +7,11 @@ import org.springframework.stereotype.Repository;
 import watch.out.user.entity.User;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>, UserRepositoryCustom {
 
     boolean existsByUserId(String userId);
 
     Optional<User> findByUserId(String userId);
+
+    Optional<User> findByUuidAndDeletedAtIsNull(UUID userUuid);
 }
