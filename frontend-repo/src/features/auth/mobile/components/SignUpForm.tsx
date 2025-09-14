@@ -1,21 +1,17 @@
 import { MdFileUpload } from "react-icons/md"
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { css } from '@emotion/react'
 import type { CompanyOption, FullBloodType, SignUpFormData } from '@/features/auth'
+import { getCompanies } from '@/features/auth/api/auth'
 
 interface SignUpFormProps {
   onSubmit?: (data: SignUpFormData) => void
+  loading?: boolean
 }
 
 const BLOOD_TYPES: FullBloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
-const MOCK_COMPANIES: CompanyOption[] = [
-  { companyUuid: 'c1a2b3c4-d5e6-f7a8-b9c0-d1e2f3a4b5c6', companyName: '동규와 아이들' },
-  { companyUuid: '11111111-2222-3333-4444-555555555555', companyName: '하하호호 즐거운 회사' },
-  { companyUuid: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', companyName: '삼성전자' }
-]
-
-export const MobileSignUpForm = ({ onSubmit }: SignUpFormProps) => {
+export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps) => {
   const [form, setForm] = useState<SignUpFormData>({
     userId: '',
     password: '',
@@ -24,17 +20,42 @@ export const MobileSignUpForm = ({ onSubmit }: SignUpFormProps) => {
     emergencyContact: '',
     fullBloodType: 'A+',
     photoUrl: '',
-    companyUuid: ''
+    companyUuid: '',
+    gender: 'MALE'
   })
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showCompanyModal, setShowCompanyModal] = useState(false)
   const [companyQuery, setCompanyQuery] = useState('')
+  const [companies, setCompanies] = useState<CompanyOption[]>([])
+  const [companiesLoading, setCompaniesLoading] = useState(false)
+  const [companiesError, setCompaniesError] = useState<string | null>(null)
+
+  // 회사 목록 조회 (모달 오픈 시에만)
+  const fetchCompanies = async () => {
+    setCompaniesLoading(true)
+    setCompaniesError(null)
+    try {
+      const list = await getCompanies()
+      setCompanies(list)
+    } catch (error) {
+      console.error('회사 목록 조회 실패:', error)
+      setCompaniesError('회사 목록을 불러오는 중 오류가 발생했습니다.')
+    } finally {
+      setCompaniesLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showCompanyModal && companies.length === 0 && !companiesLoading) {
+      void fetchCompanies()
+    }
+  }, [showCompanyModal])
 
   const filteredCompanies = useMemo(() => {
     const q = companyQuery.trim().toLowerCase()
-    if (!q) return MOCK_COMPANIES
-    return MOCK_COMPANIES.filter(c => c.companyName.toLowerCase().includes(q))
-  }, [companyQuery])
+    if (!q) return companies
+    return companies.filter(c => c.companyName.toLowerCase().includes(q))
+  }, [companyQuery, companies])
 
   const handleChange = (key: keyof SignUpFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(prev => ({ ...prev, [key]: e.target.value }))
@@ -63,9 +84,9 @@ export const MobileSignUpForm = ({ onSubmit }: SignUpFormProps) => {
   }
 
   const selectedCompanyName = useMemo(() => {
-    const found = MOCK_COMPANIES.find(c => c.companyUuid === form.companyUuid)
+    const found = companies.find((c: CompanyOption) => c.companyUuid === form.companyUuid)
     return found?.companyName ?? ''
-  }, [form.companyUuid])
+  }, [form.companyUuid, companies])
 
   return (
     <form onSubmit={handleSubmit} css={formStyles}>
@@ -137,6 +158,14 @@ export const MobileSignUpForm = ({ onSubmit }: SignUpFormProps) => {
         </select>
       </div>
 
+      <div css={fieldStyles}>
+        <label css={labelStyles} htmlFor="gender">성별</label>
+        <select id="gender" value={form.gender} onChange={handleChange('gender')} css={selectStyles}>
+          <option value="MALE">남자</option>
+          <option value="FEMALE">여자</option>
+        </select>
+      </div>
+
       <div css={photoFieldStyles}>
         <div css={photoBoxStyles} aria-hidden><MdFileUpload /></div>
         <span css={photoTextStyles}>사진 업로드</span>
@@ -150,8 +179,8 @@ export const MobileSignUpForm = ({ onSubmit }: SignUpFormProps) => {
         </div>
       </div>
 
-      <button type="submit" css={submitButtonStyles} disabled={Boolean(confirmPassword && form.password !== confirmPassword)}>
-        회원가입
+      <button type="submit" css={submitButtonStyles} disabled={loading || Boolean(confirmPassword && form.password !== confirmPassword)}>
+        {loading ? '회원가입 중...' : '회원가입'}
       </button>
 
       {showCompanyModal && (
@@ -163,13 +192,21 @@ export const MobileSignUpForm = ({ onSubmit }: SignUpFormProps) => {
             </div>
             <input autoFocus placeholder="회사명을 검색하세요" value={companyQuery} onChange={e => setCompanyQuery(e.target.value)} css={modalSearchInputStyles} />
             <div css={modalListStyles}>
-              {filteredCompanies.map(c => (
-                <button key={c.companyUuid} type="button" onClick={() => handleSelectCompany(c)} css={modalItemStyles}>
-                  {c.companyName}
-                </button>
-              ))}
-              {filteredCompanies.length === 0 && (
-                <div css={emptyStyles}>검색 결과가 없습니다</div>
+              {companiesLoading ? (
+                <div css={emptyStyles}>회사 목록을 불러오는 중...</div>
+              ) : companiesError ? (
+                <div css={errorStyles}>{companiesError}</div>
+              ) : (
+                <>
+                  {filteredCompanies.map(c => (
+                    <button key={c.companyUuid} type="button" onClick={() => handleSelectCompany(c)} css={modalItemStyles}>
+                      {c.companyName}
+                    </button>
+                  ))}
+                  {filteredCompanies.length === 0 && (
+                    <div css={emptyStyles}>검색 결과가 없습니다</div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -381,6 +418,13 @@ const emptyStyles = css`
   padding: 24px;
   text-align: center;
   color: var(--color-gray-600);
+  font-family: 'PretendardRegular', sans-serif;
+`
+
+const errorStyles = css`
+  padding: 24px;
+  text-align: center;
+  color: var(--color-red);
   font-family: 'PretendardRegular', sans-serif;
 `
 

@@ -1,25 +1,35 @@
 import { css } from '@emotion/react'
 import { useState } from 'react'
 
-import type { LoginFormData } from '@/features/auth/types'
+import type { LoginFormData, LoginRequest } from '@/features/auth/types'
 import { MobileAppHeader } from '@/features/auth/mobile/components/AppHeader'
 import { MobileLoginForm } from '@/features/auth/mobile/components/LoginForm'
+import { login } from '@/features/auth/api/auth'
 
 export const MobileLoginPage = () => {
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async (formData: LoginFormData) => {
     setLoading(true)
+    
     try {
-      // 실제 API 연결 전까지 임시 동작
-      // eslint-disable-next-line no-console
-      console.log('Mobile Login attempt:', formData)
-      await new Promise((resolve) => setTimeout(resolve, 800))
-      // eslint-disable-next-line no-console
-      console.log('Mobile Login successful')
+      const loginRequest: LoginRequest = {
+        userId: formData.id,
+        password: formData.password,
+      }
+      
+      const response = await login(loginRequest)
+      
+      if (response.success && response.result) {
+        alert('로그인 성공!')
+        console.log('모바일 로그인 성공:', response.result)
+        // TODO: 대시보드나 메인 페이지로 리다이렉트
+      } else {
+        alert(response.message || '로그인에 실패했습니다.')
+      }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Mobile Login failed:', error)
+      console.error('모바일 로그인 실패:', error)
+      alert('로그인 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }

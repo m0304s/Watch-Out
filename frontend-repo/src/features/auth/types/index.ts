@@ -1,5 +1,5 @@
 export interface LoginRequest {
-  id: string
+  userId: string
   password: string
 }
 
@@ -25,8 +25,9 @@ export interface AuthError {
 
 // Signup types
 export type ABOType = 'A' | 'B' | 'AB' | 'O'
-export type RhFactor = '+' | '-'
+export type RhFactor = 'PLUS' | 'MINUS'
 export type FullBloodType = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
+export type Gender = 'MALE' | 'FEMALE'
 
 export interface SignUpFormData {
   userId: string
@@ -37,6 +38,7 @@ export interface SignUpFormData {
   fullBloodType: FullBloodType
   photoUrl?: string
   companyUuid: string
+  gender: Gender
 }
 
 export interface SignUpRequest {
@@ -49,6 +51,7 @@ export interface SignUpRequest {
   rhFactor: RhFactor
   photoUrl?: string
   companyUuid: string
+  gender: Gender
 }
 
 export interface CompanyOption {

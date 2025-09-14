@@ -1,9 +1,10 @@
 import { css } from '@emotion/react'
 import { useState } from 'react'
 
-import type { LoginFormData } from '@/features/auth/types'
+import type { LoginFormData, LoginRequest } from '@/features/auth/types'
 import { AppHeader } from '@/features/auth/web/components/AppHeader'
 import { LoginForm } from '@/features/auth/web/components/LoginForm'
+import { login } from '@/features/auth/api/auth'
 
 export const LoginPage = () => {
   const [loading, setLoading] = useState(false)
@@ -12,20 +13,23 @@ export const LoginPage = () => {
     setLoading(true)
     
     try {
-      // TODO: 실제 API 호출 구현
-      // eslint-disable-next-line no-console
-      console.log('Login attempt:', formData)
+      const loginRequest: LoginRequest = {
+        userId: formData.id,
+        password: formData.password,
+      }
       
-      // 임시 지연 시뮬레이션
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await login(loginRequest)
       
-      // 성공 시 리다이렉트 로직 추가 예정
-      // eslint-disable-next-line no-console
-      console.log('Login successful')
+      if (response.success && response.result) {
+        alert('로그인 성공!')
+        console.log('로그인 성공:', response.result)
+        // TODO: 대시보드나 메인 페이지로 리다이렉트
+      } else {
+        alert(response.message || '로그인에 실패했습니다.')
+      }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Login failed:', error)
-      // 에러 처리 로직 추가 예정
+      console.error('로그인 실패:', error)
+      alert('로그인 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }

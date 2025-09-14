@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { LoginPage } from '@/features/auth'
+import { LoginPage, MobileSignUpPage } from '@/features/auth'
 import { SelectedWorkersPage } from '@/features/worker'
 
 const RouterWeb = () => {
@@ -10,6 +10,9 @@ const RouterWeb = () => {
       
       {/* Worker Management Routes */}
       <Route path="/worker" element={<SelectedWorkersPage />} />
+
+      {/* 회원가입 테스트 */}
+      <Route path="/signup" element={<MobileSignUpPage />} />
       
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/login" replace />} />
