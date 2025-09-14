@@ -1,9 +1,12 @@
 import os, uuid, boto3
 from functools import lru_cache
+from botocore.config import Config
 
 @lru_cache
 def _s3():
-    return boto3.client("s3", region_name=os.getenv("AWS_REGION", "ap-northeast-2"))
+    region = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "ap-northeast-2"
+    cfg = Config(signature_version="s3v4", retries={"max_attempts": 5, "mode": "standard"})
+    return boto3.client("s3", region_name=region, config=cfg)
 
 def _bucket():
     return os.environ["S3_BUCKET"]

@@ -17,9 +17,12 @@ FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 RUN useradd -m -u 1001 appuser
-USER appuser
 
 COPY --from=builder /workspace/build/libs/*.jar /app/app.jar
+
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8080
 

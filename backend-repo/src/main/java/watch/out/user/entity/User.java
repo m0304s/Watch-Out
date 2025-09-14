@@ -78,6 +78,9 @@ public class User extends BaseSoftDeleteEntity {
     @Column(name = "avg_embedding")
     private byte[] avgEmbedding;
 
+    @Column(name = "is_approved")
+    private boolean isApproved;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_uuid", nullable = false)
     private Company company;
@@ -88,7 +91,11 @@ public class User extends BaseSoftDeleteEntity {
 
     @PrePersist
     void applyDefaults() {
-        if (this.trainingStatus == null) this.trainingStatus = TrainingStatus.NOT_COMPLETED;
-        if (this.role == null) this.role = UserRole.WORKER;
+        if (this.trainingStatus == null) {
+            this.trainingStatus = TrainingStatus.NOT_COMPLETED;
+        }
+        if (this.role == null) {
+            this.role = UserRole.WORKER;
+        }
     }
 }

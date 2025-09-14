@@ -9,7 +9,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:android": "cross-env pnpm cap run android --live-reload"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",

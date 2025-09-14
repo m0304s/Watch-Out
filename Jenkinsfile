@@ -1,6 +1,13 @@
 pipeline {
     agent any
 
+    parameters {
+        booleanParam(name: 'BUILD_BACKEND', defaultValue: false, description: '백엔드를 수동으로 빌드하고 배포하려면 체크하세요.')
+        booleanParam(name: 'BUILD_FRONTEND', defaultValue: false, description: '프론트엔드를 수동으로 빌드하고 배포하려면 체크하세요.')
+        booleanParam(name: 'BUILD_EDGE_PROXY', defaultValue: false, description: '엣지 프록시를 수동으로 빌드하고 배포하려면 체크하세요.')
+        string(name: 'BRANCH_TO_BUILD', defaultValue: 'develop', description: '수동 빌드 시 기준 브랜치를 선택하세요 (develop 또는 master).')
+    }
+
     /********************  환경 변수  ********************/
     environment {
         // --- 공통 ---
@@ -129,7 +136,14 @@ pipeline {
 
         /********************  네트워크 준비  ********************/
         stage('Prepare Networks') {
-            when { expression { (env.MR_STATE ?: '') == 'merged' } }
+            when {
+                anyOf {
+                    expression { (env.MR_STATE ?: '') == 'merged' }
+                    expression { params.BUILD_BACKEND == true }
+                    expression { params.BUILD_FRONTEND == true }
+                    expression { params.BUILD_EDGE_PROXY == true }
+                }
+            }
             steps {
                 sh "docker network create ${TEST_NETWORK} || true && docker network create ${PROD_NETWORK} || true"
             }
@@ -137,7 +151,14 @@ pipeline {
 
         /********************  Jenkins 컨테이너 네트워크 연결  ********************/
         stage('Connect Jenkins to Networks') {
-            when { expression { (env.MR_STATE ?: '') == 'merged' } }
+            when {
+                anyOf {
+                    expression { (env.MR_STATE ?: '') == 'merged' }
+                    expression { params.BUILD_BACKEND == true }
+                    expression { params.BUILD_FRONTEND == true }
+                    expression { params.BUILD_EDGE_PROXY == true }
+                }
+            }
             steps {
                 sh "docker network connect ${TEST_NETWORK} ${JENKINS_CONTAINER} || true && docker network connect ${PROD_NETWORK} ${JENKINS_CONTAINER} || true"
             }
@@ -146,15 +167,19 @@ pipeline {
         /********************  엣지 프록시 배포/리로드  ********************/
         stage('Deploy or Reload Edge Proxy') {
             when {
-                allOf {
-                    expression { (env.MR_STATE ?: '') == 'merged' }
-                    expression { env.DO_EDGE_CONFIG_CHANGE == 'true' }
+                anyOf {
+                    allOf {
+                        expression { (env.MR_STATE ?: '') == 'merged' }
+                        expression { env.DO_EDGE_CONFIG_CHANGE == 'true' }
+                    }
+                    expression { params.BUILD_EDGE_PROXY == true }
                 }
             }
             steps {
                 dir('frontend-repo') {
                     script {
-                        def isProd   = (env.TARGET_BRANCH == 'master')
+                        def branch   = (env.MR_STATE == 'merged') ? (env.TARGET_BRANCH ?: '').trim() : (params.BRANCH_TO_BUILD ?: '').trim()
+                        def isProd   = (branch == 'master')
                         def tag      = isProd ? "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}" : "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
                         def envType  = isProd ? "prod" : "test"
                         def httpPort = isProd ? REVERSE_PROXY_PROD_PORT : REVERSE_PROXY_TEST_PORT
@@ -187,16 +212,17 @@ pipeline {
         /********************  백엔드 배포 (컨테이너 빌드/실행)  ********************/
         stage('Deploy Backend') {
             when {
-                allOf {
-                    expression { (env.MR_STATE ?: '') == 'merged' }
-                    expression { env.DO_BACKEND_BUILD == 'true' }
+                anyOf {
+                    expression { (env.MR_STATE ?: '') == 'merged' && env.DO_BACKEND_BUILD == 'true' }
+                    expression { params.BUILD_BACKEND == true }
                 }
             }
             steps {
                 dir('backend-repo') {
                     script {
-                        echo "[Deploy Backend] TARGET_BRANCH=${env.TARGET_BRANCH} | SOURCE_BRANCH=${env.SOURCE_BRANCH}"
-                        def branch = (env.TARGET_BRANCH ?: '').trim()
+                        def branch = (env.MR_STATE == 'merged') ? (env.TARGET_BRANCH ?: '').trim() : (params.BRANCH_TO_BUILD ?: '').trim()
+                        echo "[Deploy Backend] TARGET_BRANCH=${branch}"
+
                         if (!branch) {
                             error "[Deploy Backend] TARGET_BRANCH가 비어 있습니다."
                         }
@@ -229,15 +255,26 @@ pipeline {
                             sh "docker build -t ${tag} -f _docker_ctx/Dockerfile _docker_ctx"
 
                             sh """
+                              set -eux
+
+                              docker volume create watchout_be_test || true
+
+                              docker rm -f cfgseed || true
+                              docker run -d --name cfgseed -v watchout_be_test:/app/config alpine:3.20 sleep 300
+                              docker exec cfgseed sh -lc 'rm -rf /app/config/*'
+                              docker cp _run_config/. cfgseed:/app/config/
+                              docker exec cfgseed sh -lc 'chown -R 1000:1000 /app/config && find /app/config -type d -exec chmod 750 {} \\; && find /app/config -type f -exec chmod 640 {} \\;'
+                              docker rm -f cfgseed || true
+
                               docker rm -f ${BE_TEST_CONTAINER} || true
-                              docker run -d --name ${BE_TEST_CONTAINER} \\
-                                --network ${TEST_NETWORK} \\
-                                -v "\${PWD}/_run_config:/app/config:ro" \\
-                                -e SPRING_PROFILES_ACTIVE=docker,test \\
-                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \\
+                              docker run -d --name ${BE_TEST_CONTAINER} \
+                                --network ${TEST_NETWORK} \
+                                -v watchout_be_test:/app/config:ro \
+                                --user 1000:1000 \
+                                -e SPRING_PROFILES_ACTIVE=docker,test \
+                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
                                 ${tag}
                             """
-
                         } else if (branch == 'master') {
                             def tag = "${BE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
                             echo "[Deploy Backend] PROD 이미지 빌드 시작: ${tag}"
@@ -258,6 +295,8 @@ pipeline {
                             sh "docker build -t ${tag} -f _docker_ctx/Dockerfile _docker_ctx"
 
                             sh """
+                              set -eux
+
                               if docker ps -q --filter name=${BE_PROD_BLUE_CONTAINER} | grep -q . ; then
                                 ACTIVE=${BE_PROD_BLUE_CONTAINER}
                                 INACTIVE=${BE_PROD_GREEN_CONTAINER}
@@ -266,12 +305,22 @@ pipeline {
                                 INACTIVE=${BE_PROD_BLUE_CONTAINER}
                               fi
 
+                              docker volume create watchout_be_prod || true
+
+                              docker rm -f cfgseed-prod || true
+                              docker run -d --name cfgseed-prod -v watchout_be_prod:/app/config alpine:3.20 sleep 300
+                              docker exec cfgseed-prod sh -lc 'rm -rf /app/config/*'
+                              docker cp _run_config/. cfgseed-prod:/app/config/
+                              docker exec cfgseed-prod sh -lc 'chown -R 1000:1000 /app/config && find /app/config -type d -exec chmod 750 {} \\; && find /app/config -type f -exec chmod 640 {} \\;'
+                              docker rm -f cfgseed-prod || true
+
                               docker rm -f \$INACTIVE || true
-                              docker run -d --name \$INACTIVE \\
-                                --network ${PROD_NETWORK} \\
-                                -v "\${PWD}/_run_config:/app/config:ro" \\
-                                -e SPRING_PROFILES_ACTIVE=docker,prod \\
-                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \\
+                              docker run -d --name \$INACTIVE \
+                                --network ${PROD_NETWORK} \
+                                -v watchout_be_prod:/app/config:ro \
+                                --user 1000:1000 \
+                                -e SPRING_PROFILES_ACTIVE=docker,prod \
+                                -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
                                 ${tag}
 
                               sleep 30
@@ -288,9 +337,9 @@ pipeline {
         /********************  프론트엔드 배포  ********************/
         stage('Deploy Frontend') {
             when {
-                allOf {
-                    expression { (env.MR_STATE ?: '') == 'merged' }
-                    expression { env.DO_FRONTEND_BUILD == 'true' }
+                anyOf {
+                    expression { (env.MR_STATE ?: '') == 'merged' && env.DO_FRONTEND_BUILD == 'true' }
+                    expression { params.BUILD_FRONTEND == true }
                 }
             }
             steps {
@@ -299,7 +348,9 @@ pipeline {
                     string(credentialsId: 'VITE_API_BASE_URL_PROD', variable: 'API_URL_PROD')
                 ]) {
                     script {
-                        if (env.TARGET_BRANCH == 'develop') {
+                        def branch = (env.MR_STATE == 'merged') ? (env.TARGET_BRANCH ?: '').trim() : (params.BRANCH_TO_BUILD ?: '').trim()
+
+                        if (branch == 'develop') {
                             env.FINAL_API_URL = API_URL_TEST
                             def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
                             dir('frontend-repo') {
@@ -308,7 +359,7 @@ pipeline {
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
                             sh "docker run -d --name ${FE_TEST_CONTAINER} --network ${TEST_NETWORK} ${tag}"
 
-                        } else if (env.TARGET_BRANCH == 'master') {
+                        } else if (branch == 'master') {
                             env.FINAL_API_URL = API_URL_PROD
                             def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
                             dir('frontend-repo') {
