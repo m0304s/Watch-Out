@@ -22,7 +22,9 @@ import watch.out.common.dto.PageResponse;
 import watch.out.user.dto.request.AssignAreaRequest;
 import watch.out.user.dto.request.SignupRequest;
 import watch.out.user.dto.request.UpdateUserRequest;
+import watch.out.user.dto.request.UserRoleUpdateRequest;
 import watch.out.user.dto.response.UserResponse;
+import watch.out.user.dto.response.UserRoleUpdateResponse;
 import watch.out.user.dto.response.UsersResponse;
 import watch.out.user.entity.TrainingStatus;
 import watch.out.user.service.UserService;
@@ -82,5 +84,13 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable UUID userUuid) {
         userService.deleteUser(userUuid);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserRoleUpdateResponse> updateUserRole(
+        @Valid @RequestBody UserRoleUpdateRequest request) {
+        UserRoleUpdateResponse response = userService.updateUserRole(request);
+        return ResponseEntity.ok(response);
     }
 }

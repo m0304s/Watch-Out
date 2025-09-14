@@ -7,7 +7,9 @@ import watch.out.common.dto.PageResponse;
 import watch.out.user.dto.request.AssignAreaRequest;
 import watch.out.user.dto.request.SignupRequest;
 import watch.out.user.dto.request.UpdateUserRequest;
+import watch.out.user.dto.request.UserRoleUpdateRequest;
 import watch.out.user.dto.response.UserResponse;
+import watch.out.user.dto.response.UserRoleUpdateResponse;
 import watch.out.user.dto.response.UsersResponse;
 import watch.out.user.entity.TrainingStatus;
 
@@ -25,4 +27,6 @@ public interface UserService {
     UserResponse updateUser(UUID userUuid, UpdateUserRequest updateUserRequest);
 
     void deleteUser(UUID userUuid);
+
+    UserRoleUpdateResponse updateUserRole(UserRoleUpdateRequest request);
 }

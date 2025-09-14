@@ -124,4 +124,13 @@ public class User extends BaseSoftDeleteEntity {
             this.company = company;
         }
     }
+
+    /**
+     * 사용자 권한을 변경
+     *
+     * @param newRole 변경할 권한
+     */
+    public void updateRole(UserRole newRole) {
+        this.role = newRole;
+    }
 }
