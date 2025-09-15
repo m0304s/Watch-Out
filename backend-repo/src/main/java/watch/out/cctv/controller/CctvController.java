@@ -23,38 +23,38 @@ import java.util.UUID;
 @Validated
 public class CctvController {
 
-	private final CctvService cctvService;
+    private final CctvService cctvService;
 
-	@PostMapping
-	public ResponseEntity<Void> createCctv(@Valid @RequestBody CreateCctvRequest request) {
-		cctvService.createCctv(request);
-		return ResponseEntity.status(HttpStatus.CREATED).build();
-	}
+    @PostMapping
+    public ResponseEntity<Void> createCctv(@Valid @RequestBody CreateCctvRequest request) {
+        cctvService.createCctv(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
 
-	@GetMapping
-	public ResponseEntity<PageResponse<CctvResponse>> getCctv(
-		@RequestParam(defaultValue = "0") int pageNum,
-		@RequestParam(defaultValue = "10") int display,
-		@RequestParam(required = false) UUID areaUuid,
-		@RequestParam(required = false) Boolean isOnline,
-		@RequestParam(required = false) String search
-	) {
+    @GetMapping
+    public ResponseEntity<PageResponse<CctvResponse>> getCctv(
+        @RequestParam(defaultValue = "0") int pageNum,
+        @RequestParam(defaultValue = "10") int display,
+        @RequestParam(required = false) UUID areaUuid,
+        @RequestParam(required = false) Boolean isOnline,
+        @RequestParam(required = false) String search
+    ) {
 
-		PageResponse<CctvResponse> cctv = cctvService.getCctv(PageRequest.of(pageNum, display),
-			areaUuid, isOnline, search);
-		return ResponseEntity.ok(cctv);
-	}
+        PageResponse<CctvResponse> cctv = cctvService.getCctv(PageRequest.of(pageNum, display),
+            areaUuid, isOnline, search);
+        return ResponseEntity.ok(cctv);
+    }
 
-	@PutMapping("/{cctvUuid}")
-	public ResponseEntity<CctvResponse> updateCctv(@PathVariable UUID cctvUuid,
-		@RequestBody UpdateCctvRequest request) {
-		CctvResponse cctvResponse = cctvService.updateCctv(cctvUuid, request);
-		return ResponseEntity.ok(cctvResponse);
-	}
+    @PutMapping("/{cctvUuid}")
+    public ResponseEntity<CctvResponse> updateCctv(@PathVariable UUID cctvUuid,
+        @RequestBody UpdateCctvRequest request) {
+        CctvResponse cctvResponse = cctvService.updateCctv(cctvUuid, request);
+        return ResponseEntity.ok(cctvResponse);
+    }
 
-	@DeleteMapping("/{cctvUuid}")
-	public ResponseEntity<Void> deleteCctv(@PathVariable UUID cctvUuid) {
-		cctvService.deleteCctv(cctvUuid);
-		return ResponseEntity.noContent().build();
-	}
+    @DeleteMapping("/{cctvUuid}")
+    public ResponseEntity<Void> deleteCctv(@PathVariable UUID cctvUuid) {
+        cctvService.deleteCctv(cctvUuid);
+        return ResponseEntity.noContent().build();
+    }
 }

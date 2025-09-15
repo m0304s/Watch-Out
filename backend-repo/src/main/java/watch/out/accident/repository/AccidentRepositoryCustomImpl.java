@@ -1,12 +1,16 @@
 package watch.out.accident.repository;
 
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import watch.out.accident.dto.response.AccidentDto;
@@ -167,10 +171,35 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
             .innerJoin(user.company, company);
     }
 
+    @Override
+    public long countAccidentsByDate(LocalDate date) {
+        return queryFactory
+            .select(accident.count())
+            .from(accident)
+            .where(accident.createdAt.between(
+                date.atStartOfDay(),
+                date.atTime(23, 59, 59)
+            ))
+            .fetchOne();
+    }
+
+    @Override
+    public long countAccidentsByAreaAndDate(UUID areaUuid, LocalDate date) {
+        return queryFactory
+            .select(accident.count())
+            .from(accident)
+            .where(accident.area.uuid.eq(areaUuid)
+                .and(accident.createdAt.between(
+                    date.atStartOfDay(),
+                    date.atTime(23, 59, 59)
+                )))
+            .fetchOne();
+    }
+
     /**
      * 사고 목록 조회를 위한 공통 QueryDSL 쿼리 빌더
      *
-     * @return JPAQuery<AccidentListDto> 쿼리 빌더
+     * @return JPAQuery<AccidentsDto> 쿼리 빌더
      */
     private JPAQuery<AccidentsDto> buildAccidentListQuery() {
         return queryFactory
@@ -223,5 +252,34 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
         }
 
         return query;
+    }
+
+    @Override
+    public Map<UUID, Long> countAccidentsByAreasAndDate(List<UUID> areaUuids, LocalDate date) {
+        if (areaUuids == null || areaUuids.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Tuple> results = queryFactory
+            .select(
+                accident.area.uuid,
+                accident.count()
+            )
+            .from(accident)
+            .where(
+                accident.area.uuid.in(areaUuids),
+                accident.createdAt.between(
+                    date.atStartOfDay(),
+                    date.atTime(23, 59, 59)
+                )
+            )
+            .groupBy(accident.area.uuid)
+            .fetch();
+
+        return results.stream()
+            .collect(Collectors.toMap(
+                tuple -> tuple.get(accident.area.uuid),
+                tuple -> tuple.get(accident.count())
+            ));
     }
 }

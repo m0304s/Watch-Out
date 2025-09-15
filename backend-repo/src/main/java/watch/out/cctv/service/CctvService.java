@@ -10,12 +10,12 @@ import java.util.UUID;
 
 public interface CctvService {
 
-	void createCctv(CreateCctvRequest createCctvRequest);
+    void createCctv(CreateCctvRequest createCctvRequest);
 
-	PageResponse<CctvResponse> getCctv(PageRequest pageRequest, UUID areaUuid, Boolean isOnline,
-		String cctvName);
+    PageResponse<CctvResponse> getCctv(PageRequest pageRequest, UUID areaUuid, Boolean isOnline,
+        String cctvName);
 
-	CctvResponse updateCctv(UUID cctvUuid, UpdateCctvRequest updateCctvRequest);
+    CctvResponse updateCctv(UUID cctvUuid, UpdateCctvRequest updateCctvRequest);
 
-	void deleteCctv(UUID cctvUuid);
+    void deleteCctv(UUID cctvUuid);
 }
