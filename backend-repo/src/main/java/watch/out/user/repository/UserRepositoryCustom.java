@@ -7,9 +7,11 @@ import watch.out.accident.dto.response.UserWithAreaDto;
 import watch.out.area.entity.Area;
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
+import watch.out.user.dto.request.ApproveUsersRequest;
 import watch.out.user.dto.response.UserResponse;
 import watch.out.user.dto.response.UsersResponse;
 import watch.out.user.entity.TrainingStatus;
+import watch.out.user.entity.UserRole;
 
 public interface UserRepositoryCustom {
 
@@ -22,9 +24,13 @@ public interface UserRepositoryCustom {
     Optional<UserWithAreaDto> findUserWithAreaById(UUID userUuid);
 
     PageResponse<UsersResponse> findUsers(UUID areaUuid, TrainingStatus trainingStatus,
-        String search, PageRequest pageRequest);
+        String search, UserRole userRole, PageRequest pageRequest);
 
     Optional<UserResponse> findByUserIdAsDto(UUID userUuid);
 
     void updateAreaForUsers(List<UUID> uuids, Area area);
+
+    PageResponse<UsersResponse> findUsersWhereIsApprovedIsFalse(PageRequest pageRequest);
+
+    void updateIsApprovedForUsers(ApproveUsersRequest approveUsersRequest);
 }

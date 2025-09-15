@@ -8,13 +8,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import watch.out.area.entity.Area;
+import watch.out.area.entity.AreaManager;
+import watch.out.area.repository.AreaManagerRepository;
 import watch.out.area.repository.AreaRepository;
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
+import watch.out.common.util.SecurityUtil;
 import watch.out.company.entity.Company;
 import watch.out.company.repository.CompanyRepository;
+import watch.out.user.dto.request.ApproveUsersRequest;
+import watch.out.user.dto.request.AssignAreaAdminRequest;
 import watch.out.user.dto.request.AssignAreaRequest;
 import watch.out.user.dto.request.SignupRequest;
 import watch.out.user.dto.request.UpdateUserRequest;
@@ -34,6 +39,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
     private final AreaRepository areaRepository;
+    private final AreaManagerRepository areaManagerRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -54,9 +60,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResponse<UsersResponse> getUsers(UUID areaUuid, TrainingStatus trainingStatus,
-        String search, PageRequest pageRequest) {
+        String search, UserRole userRole, PageRequest pageRequest) {
         PageResponse<UsersResponse> usersResponse = userRepository.findUsers(areaUuid,
-            trainingStatus, search, pageRequest);
+            trainingStatus, search, userRole, pageRequest);
         return usersResponse;
     }
 
@@ -115,31 +121,66 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserRoleUpdateResponse updateUserRole(UserRoleUpdateRequest request) {
+    public UserRoleUpdateResponse updateUserRole(UserRoleUpdateRequest userRoleUpdateRequest) {
         // 활성 사용자 조회 (소프트 삭제된 사용자 제외)
-        User user = userRepository.findByUuidAndDeletedAtIsNull(request.userUuid())
+        User user = userRepository.findByUuidAndDeletedAtIsNull(userRoleUpdateRequest.userUuid())
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         // 현재 권한 저장 (변경 전)
         UserRole currentRole = user.getRole();
 
         // 현재 권한과 동일한 경우 예외 발생
-        if (currentRole == request.newRole()) {
+        if (currentRole == userRoleUpdateRequest.newRole()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
 
         // 권한 변경 로직 검증
-        validateRoleChange(currentRole, request.newRole());
+        validateRoleChange(currentRole, userRoleUpdateRequest.newRole());
 
         // 권한 변경
-        user.updateRole(request.newRole());
+        user.updateRole(userRoleUpdateRequest.newRole());
 
         return UserRoleUpdateResponse.of(
             user.getUuid(),
             user.getUserId(),
             user.getUserName(),
-            request.newRole()
+            userRoleUpdateRequest.newRole()
         );
+    }
+
+    @Override
+    public PageResponse<UsersResponse> getApprovalUsers(PageRequest pageRequest) {
+        PageResponse<UsersResponse> usersResponse = userRepository.findUsersWhereIsApprovedIsFalse(
+            pageRequest);
+        return usersResponse;
+    }
+
+    @Override
+    @Transactional
+    public void approveUsers(ApproveUsersRequest approveUsersRequest) {
+        userRepository.updateIsApprovedForUsers(approveUsersRequest);
+    }
+
+    @Override
+    @Transactional
+    public void assignAreaAdmin(AssignAreaAdminRequest assignAreaAdminRequest) {
+        User user = userRepository.findByUuidAndDeletedAtIsNull(assignAreaAdminRequest.userUuid())
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        Area area = areaRepository.findById(assignAreaAdminRequest.areaUuid())
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        user.updateArea(area);
+
+        if (areaManagerRepository.existsByUserUuid(assignAreaAdminRequest.userUuid())) {
+            areaManagerRepository.deleteByUser_Uuid(assignAreaAdminRequest.userUuid());
+        }
+
+        AreaManager areaManager = AreaManager.builder()
+            .area(area)
+            .user(user)
+            .build();
+
+        areaManagerRepository.save(areaManager);
     }
 
     /**

@@ -3,6 +3,7 @@ package watch.out.user.repository;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import java.util.Optional;
@@ -15,9 +16,11 @@ import watch.out.area.entity.Area;
 import watch.out.area.entity.EntryExit;
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
+import watch.out.user.dto.request.ApproveUsersRequest;
 import watch.out.user.dto.response.UserResponse;
 import watch.out.user.dto.response.UsersResponse;
 import watch.out.user.entity.TrainingStatus;
+import watch.out.user.entity.UserRole;
 
 import static watch.out.user.entity.QUser.user;
 import static watch.out.company.entity.QCompany.company;
@@ -58,53 +61,33 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
 
     @Override
     public PageResponse<UsersResponse> findUsers(UUID areaUuid, TrainingStatus trainingStatus,
-        String search, PageRequest pageRequest) {
+        String search, UserRole userRole, PageRequest pageRequest) {
         long offset = (long) pageRequest.pageNum() * pageRequest.display();
 
-        List<UsersResponse> usersResponse = queryFactory.select(
-                Projections.constructor(UsersResponse.class,
-                    user.uuid,
-                    user.userId,
-                    user.userName,
-                    user.company.companyName,
-                    user.area.areaName,
-                    user.trainingStatus,
-                    JPAExpressions
-                        .select(entryExitHistory.createdAt.max())
-                        .from(entryExitHistory)
-                        .where(entryExitHistory.user.uuid.eq(user.uuid)
-                            .and(entryExitHistory.type.eq(EntryExit.ENTRY))),
-                    user.role,
-                    user.photoKey
-                )
-            )
-            .from(user)
-            .join(user.company, company)
-            .leftJoin(user.area, area)
+        List<UsersResponse> usersResponse = createBaseUserQuery()
             .where(
                 user.deletedAt.isNull(),
+                user.isApproved.isTrue(),
                 areaUuidEq(areaUuid),
                 trainingStatusEq(trainingStatus),
-                searchContains(search)
+                searchContains(search),
+                userRoleEq(userRole)
             )
             .offset(offset)
             .limit(pageRequest.display())
             .orderBy(user.createdAt.desc())
             .fetch();
 
-        Long count = queryFactory
-            .select(user.count())
-            .from(user)
-            .where(
-                user.deletedAt.isNull(),
-                areaUuidEq(areaUuid),
-                trainingStatusEq(trainingStatus),
-                searchContains(search)
-            )
-            .fetchOne();
+        Long count = fetchUserCount(
+            user.deletedAt.isNull(),
+            user.isApproved.isTrue(),
+            areaUuidEq(areaUuid),
+            trainingStatusEq(trainingStatus),
+            searchContains(search),
+            userRoleEq(userRole)
+        );
 
-        return PageResponse.of(usersResponse, pageRequest.pageNum(), pageRequest.display(),
-            count != null ? count : 0L);
+        return PageResponse.of(usersResponse, pageRequest.pageNum(), pageRequest.display(), count);
     }
 
     @Override
@@ -153,6 +136,70 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             .execute();
     }
 
+    @Override
+    public PageResponse<UsersResponse> findUsersWhereIsApprovedIsFalse(PageRequest pageRequest) {
+        long offset = (long) pageRequest.pageNum() * pageRequest.display();
+
+        List<UsersResponse> usersResponse = createBaseUserQuery()
+            .where(
+                user.deletedAt.isNull(),
+                user.isApproved.isFalse()
+            )
+            .offset(offset)
+            .limit(pageRequest.display())
+            .orderBy(user.createdAt.desc())
+            .fetch();
+
+        Long count = fetchUserCount(
+            user.deletedAt.isNull(),
+            user.isApproved.isFalse()
+        );
+
+        return PageResponse.of(usersResponse, pageRequest.pageNum(), pageRequest.display(), count);
+    }
+
+    @Override
+    public void updateIsApprovedForUsers(ApproveUsersRequest approveUsersRequest) {
+        queryFactory
+            .update(user)
+            .set(user.isApproved, true)
+            .where(user.uuid.in(approveUsersRequest.userUuids()))
+            .execute();
+    }
+
+    private JPAQuery<UsersResponse> createBaseUserQuery() {
+        return queryFactory.select(
+                Projections.constructor(UsersResponse.class,
+                    user.uuid,
+                    user.userId,
+                    user.userName,
+                    user.company.companyName,
+                    user.area.areaName,
+                    user.trainingStatus,
+                    JPAExpressions
+                        .select(entryExitHistory.createdAt.max())
+                        .from(entryExitHistory)
+                        .where(entryExitHistory.user.uuid.eq(user.uuid)
+                            .and(entryExitHistory.type.eq(EntryExit.ENTRY))),
+                    user.role,
+                    user.photoKey
+                )
+            )
+            .from(user)
+            .join(user.company, company)
+            .leftJoin(user.area, area);
+    }
+
+    private Long fetchUserCount(BooleanExpression... conditions) {
+        Long count = queryFactory
+            .select(user.count())
+            .from(user)
+            .leftJoin(user.area, area)
+            .where(conditions)
+            .fetchOne();
+        return count != null ? count : 0L;
+    }
+
     private BooleanExpression areaUuidEq(UUID areaUuid) {
         return areaUuid != null ? user.area.uuid.eq(areaUuid) : null;
     }
@@ -164,5 +211,9 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
     private BooleanExpression searchContains(String search) {
         return StringUtils.hasText(search) ? user.userName.contains(search)
             .or(user.userId.contains(search)) : null;
+    }
+
+    private BooleanExpression userRoleEq(UserRole userRole) {
+        return userRole != null ? user.role.eq(userRole) : null;
     }
 }
