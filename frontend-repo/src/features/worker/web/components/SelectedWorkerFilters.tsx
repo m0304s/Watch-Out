@@ -86,7 +86,7 @@ export const SelectedWorkerFilters = ({
       <div css={section.row}>
         <span css={section.label}>검색</span>
         <input
-          placeholder="이름/사번/회사 검색"
+          placeholder="이름으로 검색"
           value={state.search}
           onChange={(e) => onChange({ search: e.target.value })}
           onKeyPress={handleSearchKeyPress}
