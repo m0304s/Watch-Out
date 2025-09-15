@@ -10,4 +10,6 @@ public interface AreaManagerRepository extends JpaRepository<AreaManager, UUID> 
     List<AreaManager> findByAreaUuid(UUID areaUuid);
 
     List<AreaManager> findByUserUuid(UUID userUuid);
+
+    long countByUserUuid(UUID userUuid);
 }
