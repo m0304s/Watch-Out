@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import watch.out.area.dto.request.AreaRequest;
+import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
 import watch.out.area.dto.response.AreaDetailItemResponse;
@@ -225,5 +226,29 @@ public class AreaServiceImpl implements AreaService {
 
         // Area 엔티티 삭제
         areaRepository.delete(area);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AreaCountResponse getMyAreaCount() {
+        // 현재 사용자 정보 조회
+        UUID currentUserUuid = SecurityUtil.getCurrentUserUuid()
+            .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+
+        UserRole currentUserRole = SecurityUtil.getCurrentUserRole()
+            .orElseThrow(() -> new BusinessException(ErrorCode.PERMISSION_DENIED));
+
+        Long count;
+        if (currentUserRole == UserRole.ADMIN) {
+            // ADMIN은 모든 구역 개수 반환
+            count = areaRepository.count();
+        } else if (currentUserRole == UserRole.AREA_ADMIN) {
+            // AREA_ADMIN은 자신이 관리하는 구역 개수만 반환
+            count = areaManagerRepository.countByUserUuid(currentUserUuid);
+        } else {
+            throw new BusinessException(ErrorCode.PERMISSION_DENIED);
+        }
+
+        return AreaCountResponse.of(count);
     }
 }

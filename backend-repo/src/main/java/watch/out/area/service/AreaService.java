@@ -2,6 +2,7 @@ package watch.out.area.service;
 
 import java.util.UUID;
 import watch.out.area.dto.request.AreaRequest;
+import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
 import watch.out.common.dto.PageResponse;
@@ -18,4 +19,6 @@ public interface AreaService {
     void updateArea(UUID areaUuid, AreaRequest areaRequest);
 
     void deleteArea(UUID areaUuid);
+
+    AreaCountResponse getMyAreaCount();
 }
