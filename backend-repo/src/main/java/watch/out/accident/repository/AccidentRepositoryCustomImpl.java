@@ -6,6 +6,7 @@ import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -98,7 +99,8 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
         // 필터링 조건 적용
         query = applyFilters(query, areaUuid, accidentType, userUuid, startDate, endDate);
 
-        return query.fetchOne();
+        Long result = query.fetchOne();
+        return result != null ? result : 0L;
     }
 
     @Override
@@ -140,7 +142,8 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
         // 필터링 조건 적용
         query = applyFilters(query, areaUuid, accidentType, userUuid, startDate, endDate);
 
-        return query.fetchOne();
+        Long result = query.fetchOne();
+        return result != null ? result : 0L;
     }
 
     /**
@@ -173,7 +176,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
 
     @Override
     public long countAccidentsByDate(LocalDate date) {
-        return queryFactory
+        Long result = queryFactory
             .select(accident.count())
             .from(accident)
             .where(accident.createdAt.between(
@@ -181,11 +184,12 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
                 date.atTime(23, 59, 59)
             ))
             .fetchOne();
+        return result != null ? result : 0L;
     }
 
     @Override
     public long countAccidentsByAreaAndDate(UUID areaUuid, LocalDate date) {
-        return queryFactory
+        Long result = queryFactory
             .select(accident.count())
             .from(accident)
             .where(accident.area.uuid.eq(areaUuid)
@@ -194,6 +198,7 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
                     date.atTime(23, 59, 59)
                 )))
             .fetchOne();
+        return result != null ? result : 0L;
     }
 
     /**
@@ -246,7 +251,6 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
             query = query.where(accident.createdAt.goe(startDate));
         }
         if (endDate != null) {
-            // endDate가 날짜만 입력된 경우 해당 날짜의 23:59:59까지 포함하도록 조정
             LocalDateTime adjustedEndDate = endDate.toLocalDate().atTime(23, 59, 59);
             query = query.where(accident.createdAt.loe(adjustedEndDate));
         }
@@ -282,4 +286,103 @@ public class AccidentRepositoryCustomImpl implements AccidentRepositoryCustom {
                 tuple -> tuple.get(accident.count())
             ));
     }
+
+    @Override
+    public long countAccidentsByTimeRange(List<UUID> areaUuids, LocalDateTime startTime,
+        LocalDateTime endTime) {
+        JPAQuery<Long> query = queryFactory
+            .select(accident.count())
+            .from(accident);
+
+        if (areaUuids != null && !areaUuids.isEmpty()) {
+            query = query.where(accident.area.uuid.in(areaUuids));
+        }
+
+        Long result = query
+            .where(accident.createdAt.between(startTime, endTime))
+            .fetchOne();
+
+        return result != null ? result : 0L;
+    }
+
+    @Override
+    public long countAccidentsLast7Days(List<UUID> areaUuids) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime sevenDaysAgo = now.minusDays(7);
+
+        JPAQuery<Long> query = queryFactory
+            .select(accident.count())
+            .from(accident);
+
+        if (areaUuids != null && !areaUuids.isEmpty()) {
+            query = query.where(accident.area.uuid.in(areaUuids));
+        }
+
+        Long result = query
+            .where(accident.createdAt.between(sevenDaysAgo, now))
+            .fetchOne();
+
+        return result != null ? result : 0L;
+    }
+
+
+    @Override
+    public Map<Integer, Long> getHourlyAccidentStatsOptimized(List<UUID> areaUuids,
+        LocalDateTime startTime, LocalDateTime endTime) {
+
+        List<LocalDateTime> accidentTimes = queryFactory
+            .select(accident.createdAt)
+            .from(accident)
+            .where(accident.createdAt.between(startTime, endTime)
+                .and(areaUuids != null && !areaUuids.isEmpty() ?
+                    accident.area.uuid.in(areaUuids) : null))
+            .fetch();
+
+        Map<String, Long> dateHourStats = new HashMap<>();
+        for (LocalDateTime accidentTime : accidentTimes) {
+            String key = accidentTime.toLocalDate() + "_" + accidentTime.getHour();
+            dateHourStats.put(key, dateHourStats.getOrDefault(key, 0L) + 1);
+        }
+
+        // 시간대별로 매핑 (0-6: current, 7-13: previous)
+        Map<Integer, Long> stats = new HashMap<>();
+        LocalDateTime now = endTime; // endTime을 기준으로 사용
+
+        for (int i = 7; i >= 1; i--) {
+            LocalDateTime hourStart = now.minusHours(i);
+            LocalDateTime hourEnd = now.minusHours(i - 1).minusMinutes(1).minusSeconds(59);
+
+            long current = getHourlyCountOptimized(dateHourStats, hourStart, hourEnd, 0, 7);
+            long previous = getHourlyCountOptimized(dateHourStats, hourStart, hourEnd, 7, 7);
+
+            int timeIndex = 7 - i;
+            stats.put(timeIndex, current);           // current
+            stats.put(timeIndex + 7, previous);      // previous
+        }
+
+        return stats;
+    }
+
+    /**
+     * 특정 시간대의 N일간 사고 건수 합산
+     */
+    private long getHourlyCountOptimized(Map<String, Long> dateHourStats, LocalDateTime hourStart,
+        LocalDateTime hourEnd, int dayOffset, int days) {
+        long total = 0;
+
+        for (int day = 0; day < days; day++) {
+            LocalDateTime dayStart = hourStart.minusDays(dayOffset + day);
+            LocalDateTime dayEnd = hourEnd.minusDays(dayOffset + day);
+
+            LocalDateTime currentTime = dayStart;
+            while (!currentTime.isAfter(dayEnd)) {
+                String key = currentTime.toLocalDate() + "_" + currentTime.getHour();
+                total += dateHourStats.getOrDefault(key, 0L);
+                currentTime = currentTime.plusHours(1);
+            }
+        }
+
+        return total;
+    }
+
 }
