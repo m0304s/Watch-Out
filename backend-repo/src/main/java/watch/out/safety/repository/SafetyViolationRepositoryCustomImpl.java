@@ -14,10 +14,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import watch.out.area.entity.QArea;
 import watch.out.area.entity.QAreaManager;
+import watch.out.cctv.entity.QCctv;
 import watch.out.common.dto.PageRequest;
 import watch.out.safety.entity.QSafetyViolation;
+import watch.out.safety.entity.QSafetyViolationDetail;
 import watch.out.safety.entity.SafetyViolation;
 import watch.out.safety.entity.SafetyViolationType;
+import watch.out.user.entity.QUser;
 
 @Repository
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
     private final JPAQueryFactory queryFactory;
 
     private final QSafetyViolation safetyViolation = QSafetyViolation.safetyViolation;
+    private final QSafetyViolationDetail violationDetail = QSafetyViolationDetail.safetyViolationDetail;
     private final QArea area = QArea.area;
     private final QAreaManager areaManager = QAreaManager.areaManager;
 
@@ -120,17 +124,18 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
     public List<Object[]> getViolationStatisticsByType(LocalDate startDate, LocalDate endDate) {
         List<Tuple> results = queryFactory
             .select(
-                safetyViolation.type,
-                safetyViolation.type.count()
+                violationDetail.violationType,
+                violationDetail.violationType.count()
             )
-            .from(safetyViolation)
+            .from(violationDetail)
+            .join(violationDetail.safetyViolation, safetyViolation)
             .where(createdAtBetween(startDate.atStartOfDay(), endDate.atTime(23, 59, 59)))
-            .groupBy(safetyViolation.type)
+            .groupBy(violationDetail.violationType)
             .fetch();
 
         return results.stream()
-            .map(tuple -> new Object[]{tuple.get(safetyViolation.type),
-                tuple.get(safetyViolation.type.count())})
+            .map(tuple -> new Object[]{tuple.get(violationDetail.violationType),
+                tuple.get(violationDetail.violationType.count())})
             .toList();
     }
 
@@ -140,23 +145,24 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
         List<Tuple> results = queryFactory
             .select(
                 area.areaName,
-                safetyViolation.type,
-                safetyViolation.type.count()
+                violationDetail.violationType,
+                violationDetail.violationType.count()
             )
-            .from(safetyViolation)
+            .from(violationDetail)
+            .join(violationDetail.safetyViolation, safetyViolation)
             .leftJoin(safetyViolation.area, area)
             .where(
                 areaUuidEq(areaUuid),
                 createdAtBetween(startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
             )
-            .groupBy(area.areaName, safetyViolation.type)
+            .groupBy(area.areaName, violationDetail.violationType)
             .fetch();
 
         return results.stream()
             .map(tuple -> new Object[]{
                 tuple.get(area.areaName),
-                tuple.get(safetyViolation.type),
-                tuple.get(safetyViolation.type.count())
+                tuple.get(violationDetail.violationType),
+                tuple.get(violationDetail.violationType.count())
             })
             .toList();
     }
@@ -167,7 +173,15 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
     }
 
     private BooleanExpression violationTypeEq(SafetyViolationType violationType) {
-        return violationType != null ? safetyViolation.type.eq(violationType) : null;
+        if (violationType == null) {
+            return null;
+        }
+        // SafetyViolationDetail을 통한 위반 유형 필터링
+        return queryFactory
+            .selectFrom(safetyViolation)
+            .join(safetyViolation.violationDetails, violationDetail)
+            .where(violationDetail.violationType.eq(violationType))
+            .exists();
     }
 
     private BooleanExpression createdAtBetween(LocalDateTime startDate, LocalDateTime endDate) {
@@ -187,12 +201,14 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
             return Map.of();
         }
 
+        // SafetyViolationDetail 기준으로 카운트 (개별 위반 유형별로 계산)
         List<Tuple> results = queryFactory
             .select(
                 safetyViolation.area.uuid,
-                safetyViolation.count()
+                violationDetail.count()
             )
-            .from(safetyViolation)
+            .from(violationDetail)
+            .join(violationDetail.safetyViolation, safetyViolation)
             .where(
                 safetyViolation.area.uuid.in(areaUuids),
                 safetyViolation.createdAt.between(
@@ -206,7 +222,91 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
         return results.stream()
             .collect(Collectors.toMap(
                 tuple -> tuple.get(safetyViolation.area.uuid),
-                tuple -> tuple.get(safetyViolation.count())
+                tuple -> tuple.get(violationDetail.count())
             ));
     }
+
+    @Override
+    public Map<UUID, List<SafetyViolation>> findViolationsByAreasAndDate(List<UUID> areaUuids,
+        LocalDate date) {
+        if (areaUuids == null || areaUuids.isEmpty()) {
+            return Map.of();
+        }
+
+        List<SafetyViolation> violations = queryFactory
+            .selectFrom(safetyViolation)
+            .leftJoin(safetyViolation.area, area).fetchJoin()
+            .leftJoin(safetyViolation.cctv, QCctv.cctv).fetchJoin()
+            .leftJoin(safetyViolation.violationDetails, violationDetail).fetchJoin()
+            .where(
+                safetyViolation.area.uuid.in(areaUuids),
+                safetyViolation.createdAt.between(
+                    date.atStartOfDay(),
+                    date.atTime(23, 59, 59)
+                )
+            )
+            .orderBy(safetyViolation.createdAt.desc())
+            .fetch();
+
+        return violations.stream()
+            .collect(Collectors.groupingBy(
+                violation -> violation.getArea().getUuid()
+            ));
+    }
+
+    @Override
+    public Map<String, Long> getViolationTypeStatisticsByAreas(List<UUID> areaUuids,
+        LocalDate date) {
+        if (areaUuids == null || areaUuids.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Tuple> results = queryFactory
+            .select(
+                violationDetail.violationType,
+                violationDetail.violationType.count()
+            )
+            .from(violationDetail)
+            .join(violationDetail.safetyViolation, safetyViolation)
+            .where(
+                safetyViolation.area.uuid.in(areaUuids),
+                safetyViolation.createdAt.between(
+                    date.atStartOfDay(),
+                    date.atTime(23, 59, 59)
+                )
+            )
+            .groupBy(violationDetail.violationType)
+            .fetch();
+
+        return results.stream()
+            .collect(Collectors.toMap(
+                tuple -> tuple.get(violationDetail.violationType).name(),
+                tuple -> tuple.get(violationDetail.violationType.count())
+            ));
+    }
+
+    @Override
+    public List<SafetyViolation> findViolationsByIndividualType(List<UUID> areaUuids,
+        LocalDate date, String individualViolationType) {
+        if (areaUuids == null || areaUuids.isEmpty()) {
+            return List.of();
+        }
+
+        return queryFactory
+            .selectFrom(safetyViolation)
+            .leftJoin(safetyViolation.area, area).fetchJoin()
+            .leftJoin(safetyViolation.cctv, QCctv.cctv).fetchJoin()
+            .leftJoin(safetyViolation.violationDetails, violationDetail).fetchJoin()
+            .where(
+                safetyViolation.area.uuid.in(areaUuids),
+                safetyViolation.createdAt.between(
+                    date.atStartOfDay(),
+                    date.atTime(23, 59, 59)
+                ),
+                violationDetail.violationType.stringValue().eq(individualViolationType)
+            )
+            .orderBy(safetyViolation.createdAt.desc())
+            .fetch();
+    }
+
 }
