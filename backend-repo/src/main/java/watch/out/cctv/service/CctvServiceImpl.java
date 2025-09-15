@@ -23,52 +23,52 @@ import watch.out.common.exception.ErrorCode;
 @Transactional(readOnly = true)
 public class CctvServiceImpl implements CctvService {
 
-	private final CctvRepository cctvRepository;
-	private final AreaRepository areaRepository;
+    private final CctvRepository cctvRepository;
+    private final AreaRepository areaRepository;
 
-	@Override
-	@Transactional
-	public void createCctv(CreateCctvRequest createCctvRequest) {
-		Area area = null;
-		if (createCctvRequest.areaUuid() != null) {
-			area = areaRepository.findById(createCctvRequest.areaUuid())
-				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-		}
-		cctvRepository.save(createCctvRequest.toEntity(area));
-	}
+    @Override
+    @Transactional
+    public void createCctv(CreateCctvRequest createCctvRequest) {
+        Area area = null;
+        if (createCctvRequest.areaUuid() != null) {
+            area = areaRepository.findById(createCctvRequest.areaUuid())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        }
+        cctvRepository.save(createCctvRequest.toEntity(area));
+    }
 
-	@Override
-	public PageResponse<CctvResponse> getCctv(PageRequest pageRequest, UUID areaUuid,
-		Boolean isOnline, String cctvName) {
-		List<CctvResponse> cctvResponseList = cctvRepository.findCctvsAsDto(areaUuid, isOnline,
-			cctvName, pageRequest);
-		long total = cctvRepository.countCctv(areaUuid, isOnline, cctvName);
-		return PageResponse.of(cctvResponseList, pageRequest.pageNum(), pageRequest.display(),
-			total);
-	}
+    @Override
+    public PageResponse<CctvResponse> getCctv(PageRequest pageRequest, UUID areaUuid,
+        Boolean isOnline, String cctvName) {
+        List<CctvResponse> cctvResponseList = cctvRepository.findCctvsAsDto(areaUuid, isOnline,
+            cctvName, pageRequest);
+        long total = cctvRepository.countCctv(areaUuid, isOnline, cctvName);
+        return PageResponse.of(cctvResponseList, pageRequest.pageNum(), pageRequest.display(),
+            total);
+    }
 
-	@Override
-	@Transactional
-	public void deleteCctv(UUID cctvUuid) {
-		if (!cctvRepository.existsById(cctvUuid)) {
-			throw new BusinessException(ErrorCode.NOT_FOUND);
-		}
-		cctvRepository.deleteById(cctvUuid);
-	}
+    @Override
+    @Transactional
+    public void deleteCctv(UUID cctvUuid) {
+        if (!cctvRepository.existsById(cctvUuid)) {
+            throw new BusinessException(ErrorCode.NOT_FOUND);
+        }
+        cctvRepository.deleteById(cctvUuid);
+    }
 
-	@Override
-	@Transactional
-	public CctvResponse updateCctv(UUID cctvUuid, UpdateCctvRequest updateCctvRequest) {
-		Cctv cctv = cctvRepository.findById(cctvUuid)
-			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-		Area area = null;
-		if (updateCctvRequest.areaUuid() != null) {
-			area = areaRepository.findById(updateCctvRequest.areaUuid())
-				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-		}
+    @Override
+    @Transactional
+    public CctvResponse updateCctv(UUID cctvUuid, UpdateCctvRequest updateCctvRequest) {
+        Cctv cctv = cctvRepository.findById(cctvUuid)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        Area area = null;
+        if (updateCctvRequest.areaUuid() != null) {
+            area = areaRepository.findById(updateCctvRequest.areaUuid())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        }
 
-		cctv.update(updateCctvRequest.cctvName(), updateCctvRequest.cctvUrl(),
-			updateCctvRequest.type(), area, updateCctvRequest.isOnline());
-		return CctvResponse.fromEntity(cctv);
-	}
+        cctv.update(updateCctvRequest.cctvName(), updateCctvRequest.cctvUrl(),
+            updateCctvRequest.type(), area, updateCctvRequest.isOnline());
+        return CctvResponse.fromEntity(cctv);
+    }
 }

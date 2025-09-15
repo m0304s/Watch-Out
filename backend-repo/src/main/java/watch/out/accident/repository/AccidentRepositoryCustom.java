@@ -1,7 +1,9 @@
 package watch.out.accident.repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import watch.out.accident.dto.response.AccidentResponse;
@@ -29,6 +31,23 @@ public interface AccidentRepositoryCustom {
      */
     List<AccidentResponse> findAccidentsWithFilters(UUID areaUuid, AccidentType accidentType,
         UUID userUuid);
+
+    /**
+     * 특정 날짜의 사고 발생 횟수를 조회
+     *
+     * @param date 조회 날짜
+     * @return 사고 발생 횟수
+     */
+    long countAccidentsByDate(LocalDate date);
+
+    /**
+     * 특정 구역의 특정 날짜 사고 발생 횟수를 조회
+     *
+     * @param areaUuid 구역 UUID
+     * @param date     조회 날짜
+     * @return 사고 발생 횟수
+     */
+    long countAccidentsByAreaAndDate(UUID areaUuid, LocalDate date);
 
     /**
      * 페이지네이션을 지원하는 사고 목록 조회
@@ -87,4 +106,13 @@ public interface AccidentRepositoryCustom {
     long countAccidentsForManager(UUID managerUuid, UUID areaUuid, AccidentType accidentType,
         UUID userUuid, LocalDateTime startDate, LocalDateTime endDate);
 
+    /**
+     * 여러 구역의 특정 날짜 사고 발생 횟수를 한 번에 조회
+     *
+     * @param areaUuids 구역 UUID 리스트
+     * @param date      조회 날짜
+     * @return 구역별 사고 발생 횟수 (Map<areaUuid, count>)
+     */
+    Map<UUID, Long> countAccidentsByAreasAndDate(List<UUID> areaUuids, LocalDate date);
 }
+

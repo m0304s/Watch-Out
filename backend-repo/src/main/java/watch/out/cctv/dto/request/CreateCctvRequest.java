@@ -10,30 +10,30 @@ import java.util.UUID;
 import watch.out.area.entity.Area;
 
 public record CreateCctvRequest(
-	@Size(min = 1, max = 50, message = "cctvName은 1~50자여야 합니다")
-	String cctvName,
+    @Size(min = 1, max = 50, message = "cctvName은 1~50자여야 합니다")
+    String cctvName,
 
-	@NotBlank(message = "CCTV URL은 필수입니다")
-	@Size(max = 100, message = "cctvUrl은 100자 이하여야 합니다")
-	String cctvUrl,
+    @NotBlank(message = "CCTV URL은 필수입니다")
+    @Size(max = 100, message = "cctvUrl은 100자 이하여야 합니다")
+    String cctvUrl,
 
-	@NotNull
-	boolean isOnline,
+    @NotNull
+    boolean isOnline,
 
-	@NotNull
-	Type type,
+    @NotNull
+    Type type,
 
-	@NotNull
-	UUID areaUuid
+    @NotNull
+    UUID areaUuid
 ) {
 
-	public Cctv toEntity(Area area) {
-		return Cctv.builder()
-			.cctvName(cctvName)
-			.cctvUrl(cctvUrl)
-			.isOnline(isOnline)
-			.type(type)
-			.area(area)
-			.build();
-	}
+    public Cctv toEntity(Area area) {
+        return Cctv.builder()
+            .cctvName(cctvName)
+            .cctvUrl(cctvUrl)
+            .isOnline(isOnline)
+            .type(type)
+            .area(area)
+            .build();
+    }
 }

@@ -26,32 +26,32 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class Cctv extends BaseTimeEntity {
 
-	@Column(name = "cctv_name", length = 50, nullable = false)
-	private String cctvName;
+    @Column(name = "cctv_name", length = 50, nullable = false)
+    private String cctvName;
 
-	@Column(name = "is_online", nullable = false)
-	private boolean isOnline;
+    @Column(name = "is_online", nullable = false)
+    private boolean isOnline;
 
-	@Column(name = "cctv_url", length = 100, nullable = false)
-	private String cctvUrl;
+    @Column(name = "cctv_url", length = 100, nullable = false)
+    private String cctvUrl;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "type", nullable = false)
-	private Type type;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private Type type;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "area_uuid", nullable = false) // 컬럼명 그대로 사용
-	private Area area;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "area_uuid", nullable = false) // 컬럼명 그대로 사용
+    private Area area;
 
-	public void changeOnline(boolean value) {
-		this.isOnline = value;
-	}
+    public void changeOnline(boolean value) {
+        this.isOnline = value;
+    }
 
-	public void update(String name, String url, Type type, Area area, Boolean isOnline) {
-		this.cctvName = name;
-		this.cctvUrl = url;
-		this.type = type;
-		this.area = area;
-		this.isOnline = isOnline;
-	}
+    public void update(String name, String url, Type type, Area area, Boolean isOnline) {
+        this.cctvName = name;
+        this.cctvUrl = url;
+        this.type = type;
+        this.area = area;
+        this.isOnline = isOnline;
+    }
 }

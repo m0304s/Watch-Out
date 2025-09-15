@@ -10,21 +10,21 @@ import watch.out.cctv.entity.Type;
 
 public record UpdateCctvRequest(
 
-	@Size(min = 1, max = 50, message = "cctvName은 1~50자여야 합니다")
-	String cctvName,
+    @Size(min = 1, max = 50, message = "cctvName은 1~50자여야 합니다")
+    String cctvName,
 
-	@NotBlank(message = "CCTV URL은 필수입니다")
-	@Size(max = 100, message = "cctvUrl은 100자 이하여야 합니다")
-	String cctvUrl,
+    @NotBlank(message = "CCTV URL은 필수입니다")
+    @Size(max = 100, message = "cctvUrl은 100자 이하여야 합니다")
+    String cctvUrl,
 
-	@NotNull
-	Boolean isOnline,
+    @NotNull
+    Boolean isOnline,
 
-	@NotNull
-	Type type,
+    @NotNull
+    Type type,
 
-	@NotNull
-	UUID areaUuid
+    @NotNull
+    UUID areaUuid
 ) {
 
 }
