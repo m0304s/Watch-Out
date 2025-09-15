@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
+import watch.out.common.util.S3Util;
 import watch.out.s3.dto.request.FacesPresignedUrlRequest;
 import watch.out.s3.dto.request.ProfilePresignedUrlRequest;
 import watch.out.s3.dto.response.PresignedUrlResponse;
@@ -25,7 +26,7 @@ import java.util.stream.Collectors;
 public class S3ServiceImpl implements S3Service {
 
     private final S3Presigner s3Presigner;
-    private final S3Client s3Client;
+    private final S3Util s3Util;
 
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
@@ -73,10 +74,7 @@ public class S3ServiceImpl implements S3Service {
 
         String uploadUrl = s3Presigner.presignPutObject(presignRequest).url().toString();
 
-        String fileUrl = s3Client.utilities().getUrl(GetUrlRequest.builder()
-            .bucket(bucketName)
-            .key(s3Key)
-            .build()).toExternalForm();
+        String fileUrl = s3Util.keyToUrl(s3Key);
 
         return new PresignedUrlResponse(uploadUrl, fileUrl);
     }

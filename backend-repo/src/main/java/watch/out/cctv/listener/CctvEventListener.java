@@ -149,13 +149,10 @@ public class CctvEventListener {
         Set<SafetyViolationType> uniqueViolationTypes = new HashSet<>(violationTypes);
         List<SafetyViolationType> finalViolationTypes = new ArrayList<>(uniqueViolationTypes);
 
-        SafetyViolationType combinedType = SafetyViolationMapper.mapViolationTypesToCombined(
-            finalViolationTypes);
+        log.info("안전장비 위반 감지: classes={}, violationTypes={}",
+            safetyEquipmentClasses, finalViolationTypes);
 
-        log.info("안전장비 위반 감지: classes={}, violationTypes={}, combinedType={}",
-            safetyEquipmentClasses, finalViolationTypes, combinedType);
-
-        processSafetyEquipmentViolation(cctv, combinedType, snapshot, areaName);
+        processSafetyEquipmentViolation(cctv, finalViolationTypes, snapshot, areaName);
     }
 
     /**
@@ -190,21 +187,23 @@ public class CctvEventListener {
     /**
      * 안전장비 위반 처리
      */
-    private void processSafetyEquipmentViolation(Cctv cctv, SafetyViolationType violationType,
+    private void processSafetyEquipmentViolation(Cctv cctv,
+        List<SafetyViolationType> violationTypes,
         String snapshot, String areaName) {
-        if (violationType != null) {
+        if (violationTypes != null && !violationTypes.isEmpty()) {
             try {
                 safetyViolationService.saveViolation(
                     cctv.getUuid(),
                     cctv.getArea().getUuid(),
-                    violationType,
+                    violationTypes,
                     snapshot
                 );
 
-                log.info("안전장비 위반 내역 저장 완료: cctv={}, area={}, type={}, image={}",
-                    cctv.getCctvName(), areaName, violationType, snapshot);
+                log.info("안전장비 위반 내역 저장 완료: cctv={}, area={}, types={}, image={}",
+                    cctv.getCctvName(), areaName, violationTypes, snapshot);
             } catch (Exception e) {
-                log.error("안전장비 위반 내역 저장 실패: type={}, error={}", violationType, e.getMessage(), e);
+                log.error("안전장비 위반 내역 저장 실패: types={}, error={}", violationTypes, e.getMessage(),
+                    e);
             }
         }
     }
