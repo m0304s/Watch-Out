@@ -1,8 +1,8 @@
-import { MdFileUpload } from "react-icons/md"
-import { useEffect, useMemo, useState } from 'react'
+import { MdFileUpload, MdPhoto } from "react-icons/md"
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { css } from '@emotion/react'
 import type { CompanyOption, FullBloodType, SignUpFormData } from '@/features/auth'
-import { getCompanies } from '@/features/auth/api/auth'
+import { getCompanies, uploadProfileImage } from '@/features/auth/api/auth'
 
 interface SignUpFormProps {
   onSubmit?: (data: SignUpFormData) => void
@@ -29,6 +29,12 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
   const [companies, setCompanies] = useState<CompanyOption[]>([])
   const [companiesLoading, setCompaniesLoading] = useState(false)
   const [companiesError, setCompaniesError] = useState<string | null>(null)
+  
+  // 이미지 업로드 관련 상태
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageUploading, setImageUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 회사 목록 조회 (모달 오픈 시에만)
   const fetchCompanies = async () => {
@@ -75,12 +81,71 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
     setShowCompanyModal(false)
   }
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // 이미지 선택 핸들러
+  const handleImageSelect = () => {
+    fileInputRef.current?.click()
+  }
+
+  // 파일 변경 핸들러
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // 이미지 파일 타입 검증
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+
+    // 파일 크기 검증 (10MB 제한)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('파일 크기는 10MB 이하여야 합니다.')
+      return
+    }
+
+    setSelectedImage(file)
+
+    // 이미지 미리보기 생성
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // 이미지 제거 핸들러
+  const handleImageRemove = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+    setForm(prev => ({ ...prev, photoUrl: '' }))
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (form.password !== confirmPassword) {
       return
     }
-    onSubmit?.(form)
+
+    // 이미지가 선택되었지만 아직 업로드되지 않은 경우
+    if (selectedImage && !form.photoUrl) {
+      setImageUploading(true)
+      try {
+        const uploadedImageUrl = await uploadProfileImage(selectedImage)
+        const updatedForm = { ...form, photoUrl: uploadedImageUrl }
+        onSubmit?.(updatedForm)
+      } catch (error) {
+        console.error('이미지 업로드 실패:', error)
+        alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.')
+      } finally {
+        setImageUploading(false)
+      }
+    } else {
+      // 이미지가 없거나 이미 업로드된 경우
+      onSubmit?.(form)
+    }
   }
 
   const selectedCompanyName = useMemo(() => {
@@ -167,8 +232,34 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
       </div>
 
       <div css={photoFieldStyles}>
-        <div css={photoBoxStyles} aria-hidden><MdFileUpload /></div>
-        <span css={photoTextStyles}>사진 업로드</span>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
+        
+        {imagePreview ? (
+          <div css={photoPreviewContainerStyles}>
+            <img src={imagePreview} alt="프로필 미리보기" css={photoPreviewStyles} />
+            <div css={photoActionsStyles}>
+              <button type="button" onClick={handleImageSelect} css={photoChangeButtonStyles}>
+                변경
+              </button>
+              <button type="button" onClick={handleImageRemove} css={photoRemoveButtonStyles}>
+                제거
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div css={photoUploadAreaStyles} onClick={handleImageSelect}>
+            <div css={photoBoxStyles}>
+              <MdFileUpload />
+            </div>
+            <span css={photoTextStyles}>사진 업로드</span>
+          </div>
+        )}
       </div>
 
       <div css={fieldStyles}>
@@ -179,8 +270,8 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
         </div>
       </div>
 
-      <button type="submit" css={submitButtonStyles} disabled={loading || Boolean(confirmPassword && form.password !== confirmPassword)}>
-        {loading ? '회원가입 중...' : '회원가입'}
+      <button type="submit" css={submitButtonStyles} disabled={loading || imageUploading || Boolean(confirmPassword && form.password !== confirmPassword)}>
+        {imageUploading ? '이미지 업로드 중...' : loading ? '회원가입 중...' : '회원가입'}
       </button>
 
       {showCompanyModal && (
@@ -284,13 +375,21 @@ const rowBetweenStyles = css`
 `
 
 const photoFieldStyles = css`
-  display: flex;
-  align-items: center;
-  gap: 12px;
   padding: 12px 0;
   border-top: 1px solid var(--color-gray-200);
   border-bottom: 1px solid var(--color-gray-200);
   margin: 12px 0;
+`
+
+const photoUploadAreaStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  
+  &:hover {
+    opacity: 0.8;
+  }
 `
 
 const photoBoxStyles = css`
@@ -308,6 +407,55 @@ const photoTextStyles = css`
   font-family: 'PretendardMedium', sans-serif;
   color: var(--color-gray-700);
   font-size: 16px;
+`
+
+const photoPreviewContainerStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`
+
+const photoPreviewStyles = css`
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--color-gray-300);
+`
+
+const photoActionsStyles = css`
+  display: flex;
+  gap: 8px;
+`
+
+const photoChangeButtonStyles = css`
+  padding: 8px 12px;
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
+  background-color: transparent;
+  color: var(--color-primary);
+  font-family: 'PretendardMedium', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: var(--color-primary-light);
+  }
+`
+
+const photoRemoveButtonStyles = css`
+  padding: 8px 12px;
+  border: 1px solid var(--color-gray-400);
+  border-radius: 6px;
+  background-color: transparent;
+  color: var(--color-gray-600);
+  font-family: 'PretendardMedium', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: var(--color-gray-100);
+  }
 `
 
 const companyRowStyles = css`

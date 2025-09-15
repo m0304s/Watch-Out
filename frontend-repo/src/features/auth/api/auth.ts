@@ -13,6 +13,7 @@ const AUTH_ENDPOINTS = {
   REISSUE: '/auth/reissue',
   SIGNUP: '/user/signup',
   COMPANIES: '/company', // 회사 목록 조회용 (회원가입 시 필요)
+  PRESIGNED_URL: '/s3/photo/presigned-url', // S3 presigned URL 요청
 } as const
 
 // API 응답 타입 정의
@@ -25,6 +26,16 @@ interface ApiResponse<T> {
 
 interface RefreshTokenResponse {
   accessToken: string
+}
+
+// S3 관련 타입 정의
+interface PresignedUrlRequest {
+  fileName: string
+}
+
+interface PresignedUrlResponse {
+  uploadUrl: string
+  fileUrl: string
 }
 
 // 로그인 API
@@ -106,6 +117,46 @@ export const getStoredToken = (): string | null => {
   return localStorage.getItem('accessToken')
 }
 
+// S3 presigned URL 요청 API
+export const getPresignedUrl = async (fileName: string): Promise<PresignedUrlResponse> => {
+  const request: PresignedUrlRequest = { fileName }
+  const response = await api.post<PresignedUrlResponse>(AUTH_ENDPOINTS.PRESIGNED_URL, request)
+  return response.data
+}
+
+// S3에 이미지 업로드 함수
+export const uploadImageToS3 = async (uploadUrl: string, file: File): Promise<void> => {
+  // S3에 직접 업로드하므로 axios 인스턴스 대신 fetch 사용
+  const response = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: {
+      'Content-Type': file.type,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`S3 업로드 실패: ${response.status} ${response.statusText}`)
+  }
+}
+
+// 이미지 업로드 전체 프로세스 (presigned URL 요청 + S3 업로드)
+export const uploadProfileImage = async (file: File): Promise<string> => {
+  try {
+    // 1. presigned URL 요청
+    const { uploadUrl, fileUrl } = await getPresignedUrl(file.name)
+    
+    // 2. S3에 이미지 업로드
+    await uploadImageToS3(uploadUrl, file)
+    
+    // 3. 업로드된 파일의 URL 반환
+    return fileUrl
+  } catch (error) {
+    console.error('이미지 업로드 실패:', error)
+    throw error
+  }
+}
+
 // Auth API 객체로 내보내기 (기존 코드와의 호환성을 위해)
 export const authAPI = {
   login,
@@ -115,6 +166,9 @@ export const authAPI = {
   getCompanies,
   isAuthenticated,
   getStoredToken,
+  getPresignedUrl,
+  uploadImageToS3,
+  uploadProfileImage,
 }
 
 export default authAPI

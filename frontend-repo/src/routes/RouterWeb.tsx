@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LayoutPage from '@/layouts/web/pages/LayoutPage'
-import { LoginPage } from '@/features/auth'
+import { LoginPage, MobileSignUpPage } from '@/features/auth'
 import { SelectedWorkersPage } from '@/features/worker'
 
 const RouterWeb = () => {
@@ -9,6 +9,7 @@ const RouterWeb = () => {
   return (
     <>
       <Routes>
+        <Route path="/signup" element={<MobileSignUpPage />} />
         <Route
           path="/"
           element={

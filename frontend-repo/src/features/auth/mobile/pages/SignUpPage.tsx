@@ -30,7 +30,7 @@ export const MobileSignUpPage = () => {
         emergencyContact: data.emergencyContact,
         bloodType,
         rhFactor,
-        photoUrl: 'string', // 임의로 입력한 정보
+        photoUrl: data.photoUrl, // 실제 업로드된 이미지 URL 사용
         companyUuid: data.companyUuid,
         gender: data.gender,
       }
