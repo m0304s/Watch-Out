@@ -9,10 +9,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import watch.out.dashboard.dto.request.AccidentStatusRequest;
 import watch.out.dashboard.dto.request.SafetyScoreRequest;
 import watch.out.dashboard.dto.request.SafetyViolationStatusRequest;
+import watch.out.dashboard.dto.response.AccidentStatusResponse;
 import watch.out.dashboard.dto.response.SafetyScoreResponse;
 import watch.out.dashboard.dto.response.SafetyViolationStatusResponse;
+import watch.out.dashboard.service.AccidentStatusService;
 import watch.out.dashboard.service.SafetyScoreService;
 import java.util.List;
 import java.util.UUID;
@@ -27,6 +30,7 @@ public class DashboardController {
 
     private final SafetyScoreService safetyScoreService;
     private final SafetyViolationService safetyViolationService;
+    private final AccidentStatusService accidentStatusService;
 
     /**
      * 구역 UUID 리스트에 해당하는 오늘 날짜 안전지수 평균을 조회 areaUuids가 없으면 모든 구역의 안전지수 평균을 조회
@@ -56,5 +60,20 @@ public class DashboardController {
         SafetyViolationStatusResponse safetyViolationStatusResponse = safetyViolationService.getSafetyViolationStatus(
             safetyViolationStatusRequest.areaUuids());
         return ResponseEntity.ok(safetyViolationStatusResponse);
+    }
+
+    /**
+     * 사고 발생 현황을 조회
+     *
+     * @param request 사고 발생 현황 조회 요청 (areaUuids)
+     * @return 사고 발생 현황 (오늘 현재, 지난 7일, 시간별 추이)
+     */
+    @PostMapping("/accident-status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AREA_ADMIN')")
+    public ResponseEntity<AccidentStatusResponse> getAccidentStatus(
+        @RequestBody AccidentStatusRequest accidentStatusRequest) {
+        AccidentStatusResponse accidentStatusResponse = accidentStatusService.getAccidentStatus(
+            accidentStatusRequest);
+        return ResponseEntity.ok(accidentStatusResponse);
     }
 }
