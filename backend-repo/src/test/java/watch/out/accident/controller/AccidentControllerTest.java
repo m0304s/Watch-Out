@@ -42,10 +42,10 @@ class AccidentControllerTest {
         UUID accidentUuid = UUID.randomUUID();
         AccidentResponse expectedResponse = createAccidentDetailResponse(accidentUuid);
 
-        when(accidentService.getAccidentDetail(accidentUuid)).thenReturn(expectedResponse);
+        when(accidentService.getAccident(accidentUuid)).thenReturn(expectedResponse);
 
         // when
-        ResponseEntity<AccidentResponse> response = accidentController.getAccidentDetail(
+        ResponseEntity<AccidentResponse> response = accidentController.getAccident(
             accidentUuid);
         AccidentResponse result = response.getBody();
 
@@ -65,11 +65,11 @@ class AccidentControllerTest {
     void getAccidentList_Success() {
         // given
         PageResponse<AccidentsResponse> expectedResponse = createAccidentListResponse();
-        when(accidentService.getAccidentList(any(), any(), any(), any(), any(), any())).thenReturn(
+        when(accidentService.getAccidents(any(), any(), any(), any(), any(), any())).thenReturn(
             expectedResponse);
 
         // when
-        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidentList(
+        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidents(
             0, 10, null, null, null, null, null);
         PageResponse<AccidentsResponse> result = response.getBody();
 
@@ -171,11 +171,11 @@ class AccidentControllerTest {
         // given
         UUID areaUuid = UUID.randomUUID();
         PageResponse<AccidentsResponse> expectedResponse = createAccidentListResponse();
-        when(accidentService.getAccidentList(any(), any(), any(), any(), any(), any())).thenReturn(
+        when(accidentService.getAccidents(any(), any(), any(), any(), any(), any())).thenReturn(
             expectedResponse);
 
         // when
-        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidentList(
+        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidents(
             0, 10, areaUuid, null, null, null, null);
         PageResponse<AccidentsResponse> result = response.getBody();
 
@@ -191,11 +191,11 @@ class AccidentControllerTest {
         // given
         AccidentType accidentType = AccidentType.MANUAL_SOS;
         PageResponse<AccidentsResponse> expectedResponse = createAccidentListResponse();
-        when(accidentService.getAccidentList(any(), any(), any(), any(), any(), any())).thenReturn(
+        when(accidentService.getAccidents(any(), any(), any(), any(), any(), any())).thenReturn(
             expectedResponse);
 
         // when
-        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidentList(
+        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidents(
             0, 10, null, accidentType, null, null, null);
         PageResponse<AccidentsResponse> result = response.getBody();
 
@@ -211,11 +211,11 @@ class AccidentControllerTest {
         // given
         UUID userUuid = UUID.randomUUID();
         PageResponse<AccidentsResponse> expectedResponse = createAccidentListResponse();
-        when(accidentService.getAccidentList(any(), any(), any(), any(), any(), any())).thenReturn(
+        when(accidentService.getAccidents(any(), any(), any(), any(), any(), any())).thenReturn(
             expectedResponse);
 
         // when
-        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidentList(
+        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidents(
             0, 10, null, null, userUuid, null, null);
         PageResponse<AccidentsResponse> result = response.getBody();
 
@@ -233,11 +233,11 @@ class AccidentControllerTest {
         AccidentType accidentType = AccidentType.AUTO_SOS;
         UUID userUuid = UUID.randomUUID();
         PageResponse<AccidentsResponse> expectedResponse = createAccidentListResponse();
-        when(accidentService.getAccidentList(any(), any(), any(), any(), any(), any())).thenReturn(
+        when(accidentService.getAccidents(any(), any(), any(), any(), any(), any())).thenReturn(
             expectedResponse);
 
         // when
-        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidentList(
+        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidents(
             0, 10, areaUuid, accidentType, userUuid, null, null);
         PageResponse<AccidentsResponse> result = response.getBody();
 
@@ -254,11 +254,11 @@ class AccidentControllerTest {
     void getAccidentList_FirstPage() {
         // given
         PageResponse<AccidentsResponse> expectedResponse = createAccidentListResponse();
-        when(accidentService.getAccidentList(any(), any(), any(), any(), any(), any())).thenReturn(
+        when(accidentService.getAccidents(any(), any(), any(), any(), any(), any())).thenReturn(
             expectedResponse);
 
         // when
-        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidentList(
+        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidents(
             0, 5, null, null, null, null, null);
         PageResponse<AccidentsResponse> result = response.getBody();
 
@@ -273,11 +273,11 @@ class AccidentControllerTest {
     void getAccidentList_SecondPage() {
         // given
         PageResponse<AccidentsResponse> expectedResponse = createAccidentListResponse();
-        when(accidentService.getAccidentList(any(), any(), any(), any(), any(), any())).thenReturn(
+        when(accidentService.getAccidents(any(), any(), any(), any(), any(), any())).thenReturn(
             expectedResponse);
 
         // when
-        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidentList(
+        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidents(
             1, 5, null, null, null, null, null);
         PageResponse<AccidentsResponse> result = response.getBody();
 
@@ -294,11 +294,11 @@ class AccidentControllerTest {
     void getAccidentList_EmptyResult() {
         // given
         PageResponse<AccidentsResponse> expectedResponse = PageResponse.of(List.of(), 0, 10, 0);
-        when(accidentService.getAccidentList(any(), any(), any(), any(), any(), any())).thenReturn(
+        when(accidentService.getAccidents(any(), any(), any(), any(), any(), any())).thenReturn(
             expectedResponse);
 
         // when
-        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidentList(
+        ResponseEntity<PageResponse<AccidentsResponse>> response = accidentController.getAccidents(
             0, 10, null, null, null, null, null);
         PageResponse<AccidentsResponse> result = response.getBody();
 
