@@ -1,3 +1,3 @@
-export { MobileWorkerListPage } from './pages/WorkerListPage'
+export { MobileWorkerListPage } from '@/features/worker/mobile/pages/WorkerListPage'
 
 

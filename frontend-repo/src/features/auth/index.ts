@@ -1,8 +1,8 @@
 // Web exports
-export { LoginPage, LoginForm, AppHeader } from './web'
+export { LoginPage, LoginForm, AppHeader } from '@/features/auth/web'
 
 // Mobile exports
-export { MobileLoginPage, MobileLoginForm, MobileAppHeader, MobileSignUpPage } from './mobile'
+export { MobileLoginPage, MobileLoginForm, MobileAppHeader, MobileSignUpPage } from '@/features/auth/mobile'
 
 // Types exports
 export type {
@@ -16,4 +16,4 @@ export type {
   ABOType,
   RhFactor,
   FullBloodType,
-} from './types'
+} from '@/features/auth/types'
