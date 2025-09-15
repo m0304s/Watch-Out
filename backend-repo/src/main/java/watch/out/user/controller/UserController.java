@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
+import watch.out.user.dto.request.ApproveUsersRequest;
+import watch.out.user.dto.request.AssignAreaAdminRequest;
 import watch.out.user.dto.request.AssignAreaRequest;
 import watch.out.user.dto.request.SignupRequest;
 import watch.out.user.dto.request.UpdateUserRequest;
@@ -27,6 +29,7 @@ import watch.out.user.dto.response.UserResponse;
 import watch.out.user.dto.response.UserRoleUpdateResponse;
 import watch.out.user.dto.response.UsersResponse;
 import watch.out.user.entity.TrainingStatus;
+import watch.out.user.entity.UserRole;
 import watch.out.user.service.UserService;
 
 @RestController
@@ -48,11 +51,12 @@ public class UserController {
         @RequestParam(required = false) UUID areaUuid,
         @RequestParam(required = false) TrainingStatus trainingStatus,
         @RequestParam(required = false) String search,
+        @RequestParam(required = false) UserRole userRole,
         @RequestParam(defaultValue = "0") int pageNum,
         @RequestParam(defaultValue = "10") int display) {
         PageRequest pageRequest = PageRequest.of(pageNum, display);
         PageResponse<UsersResponse> usersResponse = userService.getUsers(areaUuid,
-            trainingStatus, search, pageRequest);
+            trainingStatus, search, userRole, pageRequest);
         return ResponseEntity.ok(usersResponse);
     }
 
@@ -89,8 +93,34 @@ public class UserController {
     @PatchMapping("/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserRoleUpdateResponse> updateUserRole(
-        @Valid @RequestBody UserRoleUpdateRequest request) {
-        UserRoleUpdateResponse response = userService.updateUserRole(request);
+        @Valid @RequestBody UserRoleUpdateRequest userRoleUpdateRequest) {
+        UserRoleUpdateResponse response = userService.updateUserRole(userRoleUpdateRequest);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/approval")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PageResponse<UsersResponse>> getApprovalUsers(
+        @RequestParam(defaultValue = "0") Integer pageNum,
+        @RequestParam(defaultValue = "10") Integer display) {
+        PageRequest pageRequest = PageRequest.of(pageNum, display);
+        PageResponse<UsersResponse> usersResponse = userService.getApprovalUsers(pageRequest);
+        return ResponseEntity.ok(usersResponse);
+    }
+
+    @PatchMapping("/approval")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> approveUsers(
+        @Valid @RequestBody ApproveUsersRequest approveUsersRequest) {
+        userService.approveUsers(approveUsersRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/area/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> assignAreaAdmin(
+        @Valid @RequestBody AssignAreaAdminRequest assignAreaAdminRequest) {
+        userService.assignAreaAdmin(assignAreaAdminRequest);
+        return ResponseEntity.noContent().build();
     }
 }
