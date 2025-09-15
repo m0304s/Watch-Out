@@ -36,7 +36,7 @@ const Header: React.FC = () => {
   return (
     <div css={container}>
       <div css={leftBox}>
-        <button onClick={toggleNav}>
+        <button onClick={toggleNav} css={toggleButton}>
           {isNavOpen ? <GoSidebarExpand /> : <GoSidebarCollapse />}
         </button>
         <p css={headerText}>{currentPage}</p>
@@ -62,6 +62,14 @@ const leftBox = css`
   justify-content: space-evenly;
   align-items: center;
   padding: 0 2rem;
+`
+
+const toggleButton = css`
+  border: none;
+  outline: none;
+  background-color: inherit;
+  cursor: pointer;
+  padding-top: 2px;
 `
 
 const headerText = css`
