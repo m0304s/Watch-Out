@@ -11,82 +11,6 @@ interface SelectedWorkerTableProps {
   onPageChange: (page: number) => void
 }
 
-const styles = {
-  container: css`
-    background-color: var(--color-bg-white);
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    overflow: hidden;
-  `,
-  table: css`
-    width: 100%;
-    border-collapse: collapse;
-  `,
-  th: css`
-    text-align: left;
-    padding: 12px 16px;
-    background-color: var(--color-gray-100);
-    color: var(--color-gray-800);
-    font-family: 'PretendardSemiBold', sans-serif;
-    font-size: 14px;
-  `,
-  td: css`
-    padding: 12px 16px;
-    border-top: 1px solid var(--color-gray-200);
-    font-size: 14px;
-    color: var(--color-gray-800);
-  `,
-  badge: (status: Employee['trainingStatus']) => css`
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 999px;
-    font-size: 12px;
-    ${status === 'COMPLETED' &&
-    css`
-      background-color: var(--color-green);
-      color: var(--color-text-white);
-    `}
-    ${status === 'EXPIRED' &&
-    css`
-      background-color: var(--color-red);
-      color: var(--color-text-white);
-    `}
-  `,
-  checkboxContainer: css`
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-left: 15px;
-  `,
-  checkboxCompleted: css`
-    color: var(--color-primary);
-    font-size: 18px;
-  `,
-  checkboxEmpty: css`
-    color: var(--color-gray-400);
-    font-size: 18px;
-  `,
-  footer: css`
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background-color: var(--color-gray-50);
-  `,
-  pagerBtn: css`
-    padding: 8px 12px;
-    border-radius: 8px;
-    background-color: var(--color-gray-100);
-    border: 1px solid var(--color-gray-300);
-    color: var(--color-gray-800);
-    font-size: 13px;
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  `,
-}
-
 const formatDate = (iso: string): string => {
   const d = new Date(iso)
   const y = d.getFullYear()
@@ -166,4 +90,80 @@ export const SelectedWorkerTable = ({
       </div>
     </div>
   )
+}
+
+const styles = {
+  container: css`
+    background-color: var(--color-bg-white);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+  `,
+  table: css`
+    width: 100%;
+    border-collapse: collapse;
+  `,
+  th: css`
+    text-align: left;
+    padding: 12px 16px;
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-800);
+    font-family: 'PretendardSemiBold', sans-serif;
+    font-size: 14px;
+  `,
+  td: css`
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 14px;
+    color: var(--color-gray-800);
+  `,
+  badge: (status: Employee['trainingStatus']) => css`
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    ${status === 'COMPLETED' &&
+    css`
+      background-color: var(--color-green);
+      color: var(--color-text-white);
+    `}
+    ${status === 'EXPIRED' &&
+    css`
+      background-color: var(--color-red);
+      color: var(--color-text-white);
+    `}
+  `,
+  checkboxContainer: css`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 15px;
+  `,
+  checkboxCompleted: css`
+    color: var(--color-primary);
+    font-size: 18px;
+  `,
+  checkboxEmpty: css`
+    color: var(--color-gray-400);
+    font-size: 18px;
+  `,
+  footer: css`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: var(--color-gray-50);
+  `,
+  pagerBtn: css`
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: var(--color-gray-100);
+    border: 1px solid var(--color-gray-300);
+    color: var(--color-gray-800);
+    font-size: 13px;
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  `,
 }

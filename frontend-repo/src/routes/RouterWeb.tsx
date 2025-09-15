@@ -19,8 +19,8 @@ const RouterWeb = () => {
           <Route path="/worker1" element={<SelectedWorkersPage />} />
         </Route>
         <Route path="/worker2" element={<MobileWorkerListPage />} />
-        {/* <Route path="*" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} /> */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
       </Routes>
     </>
   )

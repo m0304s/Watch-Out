@@ -9,6 +9,7 @@ import type {
 import { SelectedWorkerFilters } from '@/features/worker/web/components/SelectedWorkerFilters'
 import { SelectedWorkerTable } from '@/features/worker/web/components/SelectedWorkerTable'
 import { getAreas, getEmployees } from '@/features/worker/api/workerApi'
+import { useUserRole } from '@/stores/authStore'
 
 const DISPLAY = 10
 
@@ -29,6 +30,9 @@ export const SelectedWorkersPage = () => {
   const [rows, setRows] = useState<Employee[]>([])
   const [totalItems, setTotalItems] = useState<number>(0)
   const [areas, setAreas] = useState<AreaOption[]>([])
+
+  // 사용자 권한 확인
+  const userRole = useUserRole()
 
   // areaAlias 또는 areaName으로 표시용 라벨 구성
   const areaLabels = useMemo(() => {
@@ -106,12 +110,15 @@ export const SelectedWorkersPage = () => {
 
   return (
     <div css={pageStyles.container}>
-      <SelectedWorkerFilters
-        state={filters}
-        onChange={handleChangeFilters}
-        areaOptions={areaLabels}
-        onSearch={handleSearch}
-      />
+      {/* ADMIN인 경우에만 필터링 컴포넌트 표시 */}
+      {userRole === 'ADMIN' && (
+        <SelectedWorkerFilters
+          state={filters}
+          onChange={handleChangeFilters}
+          areaOptions={areaLabels}
+          onSearch={handleSearch}
+        />
+      )}
 
       <SelectedWorkerTable
         rows={rows}

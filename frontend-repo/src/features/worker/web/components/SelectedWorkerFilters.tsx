@@ -9,64 +9,6 @@ interface SelectedWorkerFiltersProps {
   onSearch?: () => void
 }
 
-const section = {
-  container: css`
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    background-color: var(--color-bg-white);
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  `,
-  row: css`
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-  `,
-  label: css`
-    font-family: 'PretendardSemiBold', sans-serif;
-    color: var(--color-gray-800);
-    font-size: 14px;
-    min-width: 64px;
-  `,
-  input: css`
-    width: 240px;
-    padding: 10px 12px;
-    border: 1px solid var(--color-gray-300);
-    border-radius: 8px;
-    font-size: 14px;
-
-    &:focus {
-      outline: none;
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px var(--color-primary-light);
-    }
-  `,
-  chip: (active: boolean) => css`
-    padding: 8px 12px;
-    border-radius: 999px;
-    background-color: ${active
-      ? 'var(--color-primary)'
-      : 'var(--color-gray-100)'};
-    color: ${active ? 'var(--color-text-white)' : 'var(--color-gray-800)'};
-    border: 1px solid ${active ? 'transparent' : 'var(--color-gray-300)'};
-    font-size: 13px;
-    cursor: pointer;
-    user-select: none;
-
-    &:hover {
-      opacity: 0.9;
-    }
-  `,
-  divider: css`
-    height: 1px;
-    background-color: var(--color-gray-200);
-    margin: 8px 0;
-  `,
-}
-
 const trainingStatusOptions: { label: string; value: TrainingStatus }[] = [
   { label: '교육완료', value: 'COMPLETED' },
   { label: '만료', value: 'EXPIRED' },
@@ -150,23 +92,79 @@ export const SelectedWorkerFilters = ({
           onKeyPress={handleSearchKeyPress}
           css={section.input}
         />
-        <button
-          type="button"
-          onClick={onSearch}
-          css={css`
-            padding: 10px 12px;
-            border: none;
-            border-radius: 8px;
-            background-color: var(--color-primary);
-            color: var(--color-text-white);
-            font-size: 14px;
-            font-family: 'PretendardSemiBold', sans-serif;
-            cursor: pointer;
-          `}
-        >
+        <button type="button" onClick={onSearch} css={searchButtonStyles}>
           검색
         </button>
       </div>
     </div>
   )
 }
+
+const section = {
+  container: css`
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background-color: var(--color-bg-white);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  `,
+  row: css`
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  `,
+  label: css`
+    font-family: 'PretendardSemiBold', sans-serif;
+    color: var(--color-gray-800);
+    font-size: 14px;
+    min-width: 64px;
+  `,
+  input: css`
+    width: 240px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 8px;
+    font-size: 14px;
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+  `,
+  chip: (active: boolean) => css`
+    padding: 8px 12px;
+    border-radius: 999px;
+    background-color: ${active
+      ? 'var(--color-primary)'
+      : 'var(--color-gray-100)'};
+    color: ${active ? 'var(--color-text-white)' : 'var(--color-gray-800)'};
+    border: 1px solid ${active ? 'transparent' : 'var(--color-gray-300)'};
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      opacity: 0.9;
+    }
+  `,
+  divider: css`
+    height: 1px;
+    background-color: var(--color-gray-200);
+    margin: 8px 0;
+  `,
+}
+
+const searchButtonStyles = css`
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--color-primary);
+  color: var(--color-text-white);
+  font-size: 14px;
+  font-family: 'PretendardSemiBold', sans-serif;
+  cursor: pointer;
+`

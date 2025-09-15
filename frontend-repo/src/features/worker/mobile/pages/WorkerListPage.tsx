@@ -1,10 +1,5 @@
 import { useState, useEffect } from 'react'
 import { css } from '@emotion/react'
-import {
-  MdOutlineCheckBox,
-  MdOutlineCheckBoxOutlineBlank,
-} from 'react-icons/md'
-
 import { MobileLayout } from '@/components/mobile/MobileLayout'
 import { getEmployees, getAreas } from '@/features/worker/api/workerApi'
 import type {
@@ -14,6 +9,7 @@ import type {
   GetEmployeesParams,
   AreaOption,
 } from '@/features/worker/types'
+import { useUserRole } from '@/stores/authStore'
 
 // 교육상태 라벨 매핑
 const trainingStatusLabels: Record<TrainingStatus, string> = {
@@ -26,6 +22,9 @@ const roleLabel = (role: UserRole): string =>
   role === 'AREA_ADMIN' ? '현장 관리자' : '작업자'
 
 export const MobileWorkerListPage = () => {
+  // 사용자 권한 확인
+  const userRole = useUserRole()
+
   // 상태 관리
   const [searchInput, setSearchInput] = useState<string>('')
   const [selectedArea, setSelectedArea] = useState<string>('')
@@ -119,51 +118,53 @@ export const MobileWorkerListPage = () => {
 
   return (
     <MobileLayout title="작업자 관리">
-      {/* 검색 */}
-      <section css={ui.section}>
-        <div css={ui.searchRow}>
-          <input
-            css={ui.searchInput}
-            placeholder="🔍 작업자 검색..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyPress={handleSearchKeyPress}
-            aria-label="작업자 검색"
-          />
-          <button
-            css={ui.searchButton}
-            onClick={handleSearch}
-            disabled={loading}
-          >
-            검색
-          </button>
-        </div>
-
-        {/* 구역 필터 */}
-        <div css={ui.chipRow}>
-          {areaOptions.map((area) => (
+      {/* ADMIN인 경우에만 검색 및 필터링 표시 */}
+      {userRole === 'ADMIN' && (
+        <section css={ui.section}>
+          <div css={ui.searchRow}>
+            <input
+              css={ui.searchInput}
+              placeholder="🔍 작업자 검색..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyPress={handleSearchKeyPress}
+              aria-label="작업자 검색"
+            />
             <button
-              key={area.areaUuid}
-              css={ui.chip(selectedArea === area.areaUuid)}
-              onClick={() => handleAreaChange(area.areaUuid)}
+              css={ui.searchButton}
+              onClick={handleSearch}
               disabled={loading}
             >
-              {area.areaAlias ?? area.areaName}
+              검색
             </button>
-          ))}
-        </div>
+          </div>
 
-        {/* 교육상태 필터 */}
-        <div css={ui.chipRow}>
-          <button
-            css={ui.chip(selectedStatus === '')}
-            onClick={() => handleStatusChange('')}
-            disabled={loading}
-          >
-            전체
-          </button>
-          {(['COMPLETED', 'EXPIRED', 'NOT_COMPLETED'] as TrainingStatus[]).map(
-            (status) => (
+          {/* 구역 필터 */}
+          <div css={ui.chipRow}>
+            {areaOptions.map((area) => (
+              <button
+                key={area.areaUuid}
+                css={ui.chip(selectedArea === area.areaUuid)}
+                onClick={() => handleAreaChange(area.areaUuid)}
+                disabled={loading}
+              >
+                {area.areaAlias ?? area.areaName}
+              </button>
+            ))}
+          </div>
+
+          {/* 교육상태 필터 */}
+          <div css={ui.chipRow}>
+            <button
+              css={ui.chip(selectedStatus === '')}
+              onClick={() => handleStatusChange('')}
+              disabled={loading}
+            >
+              전체
+            </button>
+            {(
+              ['COMPLETED', 'EXPIRED', 'NOT_COMPLETED'] as TrainingStatus[]
+            ).map((status) => (
               <button
                 key={status}
                 css={ui.chip(selectedStatus === status)}
@@ -172,10 +173,10 @@ export const MobileWorkerListPage = () => {
               >
                 {trainingStatusLabels[status]}
               </button>
-            ),
-          )}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 로딩 상태 */}
       {loading && (
