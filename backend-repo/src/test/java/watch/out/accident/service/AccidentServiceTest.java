@@ -74,7 +74,7 @@ class AccidentServiceTest {
                 .thenReturn(Optional.of(expectedResponse));
 
             // when
-            AccidentResponse result = accidentService.getAccidentDetail(accidentUuid);
+            AccidentResponse result = accidentService.getAccident(accidentUuid);
 
             // then
             assertThat(result).isNotNull();
@@ -102,7 +102,7 @@ class AccidentServiceTest {
             mockedSecurityUtil.when(SecurityUtil::getCurrentUserUuid)
                 .thenReturn(Optional.of(UUID.randomUUID()));
 
-            assertThatThrownBy(() -> accidentService.getAccidentDetail(accidentUuid))
+            assertThatThrownBy(() -> accidentService.getAccident(accidentUuid))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOT_FOUND);
         }
@@ -126,7 +126,7 @@ class AccidentServiceTest {
                 1L);
 
             // when
-            PageResponse<AccidentsResponse> result = accidentService.getAccidentList(
+            PageResponse<AccidentsResponse> result = accidentService.getAccidents(
                 pageRequest, null, null, null, null, null);
 
             // then
@@ -158,7 +158,7 @@ class AccidentServiceTest {
                 .thenReturn(1L);
 
             // when
-            PageResponse<AccidentsResponse> result = accidentService.getAccidentList(
+            PageResponse<AccidentsResponse> result = accidentService.getAccidents(
                 pageRequest, null, null, null, null, null);
 
             // then
@@ -183,7 +183,7 @@ class AccidentServiceTest {
 
             // when & then
             assertThatThrownBy(
-                () -> accidentService.getAccidentList(pageRequest, null, null, null, null, null))
+                () -> accidentService.getAccidents(pageRequest, null, null, null, null, null))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PERMISSION_DENIED);
         }
@@ -203,7 +203,7 @@ class AccidentServiceTest {
             mockedSecurityUtil.when(SecurityUtil::getCurrentUserUuid)
                 .thenReturn(Optional.of(currentUserUuid));
 
-            when(accidentRepository.findUserWithAreaById(currentUserUuid))
+            when(userRepository.findUserWithAreaById(currentUserUuid))
                 .thenReturn(Optional.of(userWithArea));
             when(userRepository.findById(currentUserUuid))
                 .thenReturn(Optional.of(user));
@@ -235,7 +235,7 @@ class AccidentServiceTest {
             mockedSecurityUtil.when(SecurityUtil::getCurrentUserUuid)
                 .thenReturn(Optional.of(currentUserUuid));
 
-            when(accidentRepository.findUserWithAreaById(currentUserUuid))
+            when(userRepository.findUserWithAreaById(currentUserUuid))
                 .thenReturn(Optional.of(userWithArea));
 
             // when & then
@@ -259,7 +259,7 @@ class AccidentServiceTest {
 
             // when & then
             assertThatThrownBy(
-                () -> accidentService.getAccidentList(pageRequest, null, null, null, null, null))
+                () -> accidentService.getAccidents(pageRequest, null, null, null, null, null))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_TOKEN);
         }
@@ -302,7 +302,7 @@ class AccidentServiceTest {
                 1L);
 
             // when
-            PageResponse<AccidentsResponse> result = accidentService.getAccidentList(
+            PageResponse<AccidentsResponse> result = accidentService.getAccidents(
                 pageRequest, areaUuid, null, null, null, null);
 
             // then
@@ -330,7 +330,7 @@ class AccidentServiceTest {
                 1L);
 
             // when
-            PageResponse<AccidentsResponse> result = accidentService.getAccidentList(
+            PageResponse<AccidentsResponse> result = accidentService.getAccidents(
                 pageRequest, null, AccidentType.MANUAL_SOS, null, null, null);
 
             // then
@@ -358,7 +358,7 @@ class AccidentServiceTest {
                 1L);
 
             // when
-            PageResponse<AccidentsResponse> result = accidentService.getAccidentList(
+            PageResponse<AccidentsResponse> result = accidentService.getAccidents(
                 pageRequest, null, null, userUuid, null, null);
 
             // then
@@ -387,7 +387,7 @@ class AccidentServiceTest {
                 1L);
 
             // when
-            PageResponse<AccidentsResponse> result = accidentService.getAccidentList(
+            PageResponse<AccidentsResponse> result = accidentService.getAccidents(
                 pageRequest, areaUuid, AccidentType.AUTO_SOS, userUuid, null, null);
 
             // then
@@ -421,7 +421,7 @@ class AccidentServiceTest {
                 .thenReturn(1L);
 
             // when
-            PageResponse<AccidentsResponse> result = accidentService.getAccidentList(
+            PageResponse<AccidentsResponse> result = accidentService.getAccidents(
                 pageRequest, null, null, null, null, null);
 
             // then
@@ -453,7 +453,7 @@ class AccidentServiceTest {
                 .thenReturn(1L);
 
             // when
-            PageResponse<AccidentsResponse> result = accidentService.getAccidentList(
+            PageResponse<AccidentsResponse> result = accidentService.getAccidents(
                 pageRequest, areaUuid, null, null, null, null);
 
             // then
@@ -479,7 +479,7 @@ class AccidentServiceTest {
             mockedSecurityUtil.when(SecurityUtil::getCurrentUserUuid)
                 .thenReturn(Optional.of(currentUserUuid));
 
-            when(accidentRepository.findUserWithAreaById(currentUserUuid))
+            when(userRepository.findUserWithAreaById(currentUserUuid))
                 .thenReturn(Optional.of(userWithArea));
             when(userRepository.findById(currentUserUuid))
                 .thenReturn(Optional.of(user));
@@ -513,7 +513,7 @@ class AccidentServiceTest {
             mockedSecurityUtil.when(SecurityUtil::getCurrentUserUuid)
                 .thenReturn(Optional.of(currentUserUuid));
 
-            when(accidentRepository.findUserWithAreaById(currentUserUuid))
+            when(userRepository.findUserWithAreaById(currentUserUuid))
                 .thenReturn(Optional.of(userWithArea));
             when(userRepository.findById(currentUserUuid))
                 .thenReturn(Optional.of(user));
@@ -549,7 +549,7 @@ class AccidentServiceTest {
                 .thenReturn(Optional.of(expectedResponse));
 
             // when
-            AccidentResponse result = accidentService.getAccidentDetail(accidentUuid);
+            AccidentResponse result = accidentService.getAccident(accidentUuid);
 
             // then
             assertThat(result).isNotNull();
@@ -576,11 +576,11 @@ class AccidentServiceTest {
 
             when(accidentRepository.findAccidentDetailById(accidentUuid))
                 .thenReturn(Optional.of(expectedResponse));
-            when(accidentRepository.findUserWithAreaById(currentUserUuid))
+            when(userRepository.findUserWithAreaById(currentUserUuid))
                 .thenReturn(Optional.of(userWithArea));
 
             // when
-            AccidentResponse result = accidentService.getAccidentDetail(accidentUuid);
+            AccidentResponse result = accidentService.getAccident(accidentUuid);
 
             // then
             assertThat(result).isNotNull();
@@ -608,11 +608,11 @@ class AccidentServiceTest {
 
             when(accidentRepository.findAccidentDetailById(accidentUuid))
                 .thenReturn(Optional.of(expectedResponse));
-            when(accidentRepository.findUserWithAreaById(currentUserUuid))
+            when(userRepository.findUserWithAreaById(currentUserUuid))
                 .thenReturn(Optional.of(userWithArea));
 
             // when & then
-            assertThatThrownBy(() -> accidentService.getAccidentDetail(accidentUuid))
+            assertThatThrownBy(() -> accidentService.getAccident(accidentUuid))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PERMISSION_DENIED);
         }
@@ -636,7 +636,7 @@ class AccidentServiceTest {
                 .thenReturn(Optional.of(expectedResponse));
 
             // when & then
-            assertThatThrownBy(() -> accidentService.getAccidentDetail(accidentUuid))
+            assertThatThrownBy(() -> accidentService.getAccident(accidentUuid))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PERMISSION_DENIED);
         }
@@ -655,7 +655,7 @@ class AccidentServiceTest {
             mockedSecurityUtil.when(SecurityUtil::getCurrentUserUuid)
                 .thenReturn(Optional.of(currentUserUuid));
 
-            when(accidentRepository.findUserWithAreaById(currentUserUuid))
+            when(userRepository.findUserWithAreaById(currentUserUuid))
                 .thenReturn(Optional.empty());
 
             // when & then
@@ -678,7 +678,7 @@ class AccidentServiceTest {
             mockedSecurityUtil.when(SecurityUtil::getCurrentUserUuid)
                 .thenReturn(Optional.of(currentUserUuid));
 
-            when(accidentRepository.findUserWithAreaById(currentUserUuid))
+            when(userRepository.findUserWithAreaById(currentUserUuid))
                 .thenReturn(Optional.of(userWithArea));
             when(userRepository.findById(currentUserUuid))
                 .thenReturn(Optional.of(user));
@@ -704,7 +704,7 @@ class AccidentServiceTest {
             mockedSecurityUtil.when(SecurityUtil::getCurrentUserUuid)
                 .thenReturn(Optional.of(currentUserUuid));
 
-            when(accidentRepository.findUserWithAreaById(currentUserUuid))
+            when(userRepository.findUserWithAreaById(currentUserUuid))
                 .thenReturn(Optional.of(userWithArea));
             when(userRepository.findById(currentUserUuid))
                 .thenReturn(Optional.empty());
