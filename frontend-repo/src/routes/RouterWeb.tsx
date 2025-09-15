@@ -1,23 +1,26 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { LoginPage, MobileSignUpPage } from '@/features/auth'
+import LayoutPage from '@/layouts/web/pages/LayoutPage'
+import { LoginPage } from '@/features/auth'
 import { SelectedWorkersPage } from '@/features/worker'
 
 const RouterWeb = () => {
-  return (
-    <Routes>
-      {/* Authentication Routes */}
-      <Route path="/login" element={<LoginPage />} />
-      
-      {/* Worker Management Routes */}
-      <Route path="/worker" element={<SelectedWorkersPage />} />
+  const isLoggedIn: boolean = true // 개발용
 
-      {/* 회원가입 테스트 */}
-      <Route path="/signup" element={<MobileSignUpPage />} />
-      
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+  return (
+    <>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            isLoggedIn ? <LayoutPage /> : <Navigate to="/login" replace />
+          }
+        >
+          <Route path="/worker" element={<SelectedWorkersPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+      </Routes>
+    </>
   )
 }
 
