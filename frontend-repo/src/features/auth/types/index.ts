@@ -58,3 +58,26 @@ export interface CompanyOption {
   companyUuid: string
   companyName: string
 }
+
+// API Response 타입 정의
+export interface ApiResponse<T = unknown> {
+  success: boolean
+  result?: T
+  message?: string
+  code?: string
+}
+
+// 토큰 재발급 응답 타입
+export interface RefreshTokenResponse {
+  accessToken: string
+}
+
+// S3 관련 타입 정의
+export interface PresignedUrlRequest {
+  fileName: string
+}
+
+export interface PresignedUrlResponse {
+  uploadUrl: string
+  fileUrl: string
+}

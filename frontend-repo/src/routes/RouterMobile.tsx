@@ -13,8 +13,8 @@ const RouterMobile = () => {
       <Route path="/worker" element={<MobileWorkerListPage />} />
       
       {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/worker" replace />} />
+      <Route path="*" element={<Navigate to="/worker" replace />} />
     </Routes>
   )
 }

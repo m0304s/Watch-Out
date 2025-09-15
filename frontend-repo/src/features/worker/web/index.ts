@@ -1,3 +1,1 @@
-export { SelectedWorkersPage } from '@/features/worker/web/pages/SelectedWorkersPage'
-
-
+export { SelectedWorkersPage } from '@/features/worker/web/pages/WorkerListPage'

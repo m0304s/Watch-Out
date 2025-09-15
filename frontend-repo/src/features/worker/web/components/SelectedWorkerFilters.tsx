@@ -6,6 +6,7 @@ interface SelectedWorkerFiltersProps {
   state: WorkerFilterState
   onChange: (next: Partial<WorkerFilterState>) => void
   areaOptions: string[]
+  onSearch?: () => void
 }
 
 const section = {
@@ -50,9 +51,7 @@ const section = {
       ? 'var(--color-primary)'
       : 'var(--color-gray-100)'};
     color: ${active ? 'var(--color-text-white)' : 'var(--color-gray-800)'};
-    border: 1px solid ${active
-      ? 'transparent'
-      : 'var(--color-gray-300)'};
+    border: 1px solid ${active ? 'transparent' : 'var(--color-gray-300)'};
     font-size: 13px;
     cursor: pointer;
     user-select: none;
@@ -71,45 +70,43 @@ const section = {
 const trainingStatusOptions: { label: string; value: TrainingStatus }[] = [
   { label: '교육완료', value: 'COMPLETED' },
   { label: '만료', value: 'EXPIRED' },
+  { label: '미이수', value: 'NOT_COMPLETED' },
 ]
 
-const sortOptions: { key: WorkerFilterState['sortKey']; label: string }[] = [
-  { key: 'lastEntryTime', label: '최근 출입시간' },
-  { key: 'userName', label: '이름' },
-]
+// 정렬 옵션은 현재 UI에서 미사용 (서버 정렬로 이전 예정)
 
 export const SelectedWorkerFilters = ({
   state,
   onChange,
   areaOptions,
+  onSearch,
 }: SelectedWorkerFiltersProps) => {
-  const toggleArrayValue = (
-    list: string[],
-    value: string,
-  ): string[] => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value])
+  // 단일 선택으로 변경 (같은 값 클릭 시 해제)
+  const toggleArrayValue = (list: string[], value: string): string[] =>
+    list.includes(value) ? [] : [value]
 
   const toggleStatus = (
     list: TrainingStatus[],
     value: TrainingStatus,
-  ): TrainingStatus[] => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value])
+  ): TrainingStatus[] => (list.includes(value) ? [] : [value])
 
-  const derivedChips = useMemo(() => ({
-    areas: areaOptions,
-    statuses: trainingStatusOptions,
-  }), [areaOptions])
+  // 엔터키 검색 핸들러
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && onSearch) {
+      onSearch()
+    }
+  }
+
+  const derivedChips = useMemo(
+    () => ({
+      areas: areaOptions,
+      statuses: trainingStatusOptions,
+    }),
+    [areaOptions],
+  )
 
   return (
     <div css={section.container}>
-      <div css={section.row}>
-        <span css={section.label}>검색</span>
-        <input
-          placeholder="이름/사번/회사 검색"
-          value={state.search}
-          onChange={(e) => onChange({ search: e.target.value })}
-          css={section.input}
-        />
-      </div>
-
       {/* 회사 필터 제거 */}
 
       <div css={section.row}>
@@ -118,7 +115,9 @@ export const SelectedWorkerFilters = ({
           <button
             key={a}
             css={section.chip(state.areas.includes(a))}
-            onClick={() => onChange({ areas: toggleArrayValue(state.areas, a) })}
+            onClick={() =>
+              onChange({ areas: toggleArrayValue(state.areas, a) })
+            }
           >
             {a}
           </button>
@@ -131,7 +130,9 @@ export const SelectedWorkerFilters = ({
           <button
             key={value}
             css={section.chip(state.statuses.includes(value))}
-            onClick={() => onChange({ statuses: toggleStatus(state.statuses, value) })}
+            onClick={() =>
+              onChange({ statuses: toggleStatus(state.statuses, value) })
+            }
           >
             {label}
           </button>
@@ -141,26 +142,31 @@ export const SelectedWorkerFilters = ({
       <div css={section.divider} />
 
       <div css={section.row}>
-        <span css={section.label}>정렬</span>
-        {sortOptions.map(({ key, label }) => (
-          <button
-            key={key}
-            css={section.chip(state.sortKey === key)}
-            onClick={() => onChange({ sortKey: key })}
-          >
-            {label}
-          </button>
-        ))}
-
+        <span css={section.label}>검색</span>
+        <input
+          placeholder="이름/사번/회사 검색"
+          value={state.search}
+          onChange={(e) => onChange({ search: e.target.value })}
+          onKeyPress={handleSearchKeyPress}
+          css={section.input}
+        />
         <button
-          css={section.chip(state.sortOrder === 'asc')}
-          onClick={() => onChange({ sortOrder: state.sortOrder === 'asc' ? 'desc' : 'asc' })}
+          type="button"
+          onClick={onSearch}
+          css={css`
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--color-primary);
+            color: var(--color-text-white);
+            font-size: 14px;
+            font-family: 'PretendardSemiBold', sans-serif;
+            cursor: pointer;
+          `}
         >
-          {state.sortOrder === 'asc' ? '오름차순' : '내림차순'}
+          검색
         </button>
       </div>
     </div>
   )
 }
-
-

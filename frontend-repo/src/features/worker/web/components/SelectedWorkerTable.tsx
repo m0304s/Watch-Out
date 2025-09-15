@@ -1,4 +1,6 @@
 import { css } from '@emotion/react'
+import { MdOutlineCheckBoxOutlineBlank } from 'react-icons/md'
+import { IoCheckbox } from 'react-icons/io5'
 import type { Employee } from '@/features/worker/types'
 
 interface SelectedWorkerTableProps {
@@ -39,14 +41,30 @@ const styles = {
     padding: 4px 8px;
     border-radius: 999px;
     font-size: 12px;
-    ${status === 'COMPLETED' && css`
+    ${status === 'COMPLETED' &&
+    css`
       background-color: var(--color-green);
       color: var(--color-text-white);
     `}
-    ${status === 'EXPIRED' && css`
+    ${status === 'EXPIRED' &&
+    css`
       background-color: var(--color-red);
       color: var(--color-text-white);
     `}
+  `,
+  checkboxContainer: css`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 15px;
+  `,
+  checkboxCompleted: css`
+    color: var(--color-primary);
+    font-size: 18px;
+  `,
+  checkboxEmpty: css`
+    color: var(--color-gray-400);
+    font-size: 18px;
   `,
   footer: css`
     display: flex;
@@ -79,7 +97,13 @@ const formatDate = (iso: string): string => {
   return `${y}-${m}-${day} ${hh}:${mm}`
 }
 
-export const SelectedWorkerTable = ({ rows, pageNum, display, totalItems, onPageChange }: SelectedWorkerTableProps) => {
+export const SelectedWorkerTable = ({
+  rows,
+  pageNum,
+  display,
+  totalItems,
+  onPageChange,
+}: SelectedWorkerTableProps) => {
   const totalPages = Math.max(1, Math.ceil(totalItems / display))
 
   return (
@@ -100,7 +124,15 @@ export const SelectedWorkerTable = ({ rows, pageNum, display, totalItems, onPage
               <td css={styles.td}>{r.userName}</td>
               <td css={styles.td}>{r.userId}</td>
               <td css={styles.td}>{r.areaName}</td>
-              <td css={styles.td}><span css={styles.badge(r.trainingStatus)}>{r.trainingStatus === 'COMPLETED' ? '교육완료' : '만료'}</span></td>
+              <td css={styles.td}>
+                <div css={styles.checkboxContainer}>
+                  {r.trainingStatus === 'COMPLETED' ? (
+                    <IoCheckbox css={styles.checkboxCompleted} />
+                  ) : (
+                    <MdOutlineCheckBoxOutlineBlank css={styles.checkboxEmpty} />
+                  )}
+                </div>
+              </td>
               <td css={styles.td}>{formatDate(r.lastEntryTime)}</td>
             </tr>
           ))}
@@ -109,13 +141,29 @@ export const SelectedWorkerTable = ({ rows, pageNum, display, totalItems, onPage
       <div css={styles.footer}>
         <span>총 {totalItems}명</span>
         <div>
-          <button css={styles.pagerBtn} onClick={() => onPageChange(pageNum - 1)} disabled={pageNum <= 1}>이전</button>
-          <span css={css`margin: 0 8px;`}>{pageNum} / {totalPages}</span>
-          <button css={styles.pagerBtn} onClick={() => onPageChange(pageNum + 1)} disabled={pageNum >= totalPages}>다음</button>
+          <button
+            css={styles.pagerBtn}
+            onClick={() => onPageChange(pageNum - 1)}
+            disabled={pageNum <= 0}
+          >
+            이전
+          </button>
+          <span
+            css={css`
+              margin: 0 8px;
+            `}
+          >
+            {pageNum + 1} / {totalPages}
+          </span>
+          <button
+            css={styles.pagerBtn}
+            onClick={() => onPageChange(pageNum + 1)}
+            disabled={pageNum >= totalPages - 1}
+          >
+            다음
+          </button>
         </div>
       </div>
     </div>
   )
 }
-
-

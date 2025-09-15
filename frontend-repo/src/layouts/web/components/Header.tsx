@@ -65,7 +65,9 @@ const leftBox = css`
 `
 
 const headerText = css`
-  padding: 0 0.5rem;
+  padding: 0 1rem;
+  font-weight: 600;
+  font-size: 18px;
 `
 
 const weatherBox = css`

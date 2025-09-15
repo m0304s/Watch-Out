@@ -4,6 +4,10 @@ import type {
   LoginResponse,
   SignUpRequest,
   CompanyOption,
+  ApiResponse,
+  PresignedUrlRequest,
+  PresignedUrlResponse,
+  RefreshTokenResponse,
 } from '@/features/auth/types'
 
 // Auth API 엔드포인트 상수 관리
@@ -16,27 +20,6 @@ const AUTH_ENDPOINTS = {
   PRESIGNED_URL: '/s3/photo/presigned-url', // S3 presigned URL 요청
 } as const
 
-// API 응답 타입 정의
-interface ApiResponse<T> {
-  success: boolean
-  result?: T
-  message?: string
-  code?: string
-}
-
-interface RefreshTokenResponse {
-  accessToken: string
-}
-
-// S3 관련 타입 정의
-interface PresignedUrlRequest {
-  fileName: string
-}
-
-interface PresignedUrlResponse {
-  uploadUrl: string
-  fileUrl: string
-}
 
 // 로그인 API
 export const login = async (loginData: LoginRequest): Promise<ApiResponse<LoginResponse>> => {
