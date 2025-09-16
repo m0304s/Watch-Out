@@ -275,6 +275,7 @@ pipeline {
                                 --user 1000:1000 \
                                 -e SPRING_PROFILES_ACTIVE=docker,test \
                                 -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
+                                -e FIREBASE_SERVICE_ACCOUNT_FILE=/app/config/watchout-firebase-key.json \
                                 ${tag}
                             """
                         } else if (branch == 'master') {
@@ -325,6 +326,7 @@ pipeline {
                                 --user 1000:1000 \
                                 -e SPRING_PROFILES_ACTIVE=docker,prod \
                                 -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
+                                -e FIREBASE_SERVICE_ACCOUNT_FILE=/app/config/watchout-firebase-key.json \
                                 ${tag}
 
                               sleep 30
