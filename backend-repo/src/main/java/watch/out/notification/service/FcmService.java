@@ -15,7 +15,6 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import watch.out.area.entity.AreaManager;
 import watch.out.area.repository.AreaManagerRepository;
 import watch.out.notification.dto.FcmMessage;
@@ -211,7 +210,6 @@ public class FcmService {
     /**
      * 사용자 로그아웃 시 FCM 토큰을 null로 설정
      */
-    @Transactional
     public void clearUserFcmToken(UUID userUuid) {
         try {
             fcmTokenRepository.clearFcmTokenByUserUuid(userUuid);
@@ -224,7 +222,6 @@ public class FcmService {
     /**
      * 특정 FCM 토큰을 null로 설정
      */
-    @Transactional
     public void clearFcmToken(String fcmToken) {
         try {
             fcmTokenRepository.clearFcmTokenByToken(fcmToken);
