@@ -3,11 +3,12 @@ import type { AxiosInstance, AxiosRequestConfig } from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const isDevelopment = import.meta.env.DEV
+const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT)
 
 // axios 인스턴스 생성 (기본 설정 포함)
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL, // 절대 경로로 명시
-  timeout: 30000,
+  timeout: API_TIMEOUT,
   withCredentials: true, // 쿠키 자동 전송을 위해 true로 설정
   headers: {
     'Content-Type': 'application/json',

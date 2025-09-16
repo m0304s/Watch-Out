@@ -17,6 +17,9 @@ import watch.out.area.repository.AreaManagerRepository;
 import watch.out.notification.dto.FcmMessage;
 import watch.out.notification.entity.FcmToken;
 import watch.out.notification.repository.FcmTokenRepository;
+import watch.out.user.entity.User;
+import watch.out.user.entity.UserRole;
+import watch.out.user.repository.UserRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class FcmService {
     private final FirebaseMessaging firebaseMessaging;
     private final FcmTokenRepository fcmTokenRepository;
     private final AreaManagerRepository areaManagerRepository;
+    private final UserRepository userRepository;
 
     /**
      * 구역별 담당자에게 안전장비 위반 알림 전송
@@ -33,20 +37,33 @@ public class FcmService {
     public void sendSafetyViolationNotification(UUID areaUuid, String areaName, String cctvName,
         List<String> violationTypes, String imageUrl) {
         try {
-            // 해당 구역의 담당자들 조회
+            // 1. 해당 구역의 AREA_ADMIN 담당자들 조회
             List<AreaManager> areaManagers = areaManagerRepository.findByAreaUuid(areaUuid);
-
-            if (areaManagers.isEmpty()) {
-                log.warn("구역 {}의 담당자가 없습니다.", areaName);
-                return;
-            }
-
-            // 담당자들의 FCM 토큰 조회
-            List<UUID> managerUuids = areaManagers.stream()
+            List<UUID> areaManagerUuids = areaManagers.stream()
                 .map(areaManager -> areaManager.getUser().getUuid())
                 .toList();
 
-            List<FcmToken> tokens = fcmTokenRepository.findByUserUuidIn(managerUuids);
+            // 2. 전체 ADMIN 사용자들 조회
+            List<User> adminUsers = userRepository.findByRoleInAndDeletedAtIsNull(
+                List.of(UserRole.ADMIN, UserRole.AREA_ADMIN));
+            List<UUID> adminUuids = adminUsers.stream()
+                .map(User::getUuid)
+                .toList();
+
+            // 3. 모든 담당자 UUID 합치기 (중복 제거)
+            List<UUID> allManagerUuids = List.of(areaManagerUuids, adminUuids)
+                .stream()
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
+
+            if (allManagerUuids.isEmpty()) {
+                log.warn("구역 {}의 담당자나 ADMIN이 없습니다.", areaName);
+                return;
+            }
+
+            // 4. 담당자들의 FCM 토큰 조회
+            List<FcmToken> tokens = fcmTokenRepository.findByUserUuidIn(allManagerUuids);
 
             if (tokens.isEmpty()) {
                 log.warn("구역 {} 담당자들의 FCM 토큰이 없습니다.", areaName);
@@ -57,11 +74,11 @@ public class FcmService {
             String body = String.format("[%s] %s에서 %s 미착용이 감지되었습니다.",
                 areaName, cctvName, String.join(", ", violationTypes));
 
-            // 담당자들에게만 알림 전송
+            // 5. 담당자들에게 알림 전송
             sendNotification(tokens, title, body, areaName, cctvName, violationTypes, imageUrl);
 
-            log.info("안전장비 위반 알림 전송 완료: area={}, cctv={}, managers={}, tokens={}",
-                areaName, cctvName, areaManagers.size(), tokens.size());
+            log.info("안전장비 위반 알림 전송 완료: area={}, cctv={}, areaManagers={}, admins={}, tokens={}",
+                areaName, cctvName, areaManagerUuids.size(), adminUuids.size(), tokens.size());
 
         } catch (Exception e) {
             log.error("안전장비 위반 알림 전송 실패: area={}, cctv={}", areaName, cctvName, e);

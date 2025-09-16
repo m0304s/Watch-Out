@@ -5,11 +5,13 @@ import { SelectedWorkersPage, MobileWorkerListPage } from '@/features/worker'
 import { AreaManagementPage } from '@/features/cctv'
 
 const RouterWeb = () => {
-  const isLoggedIn: boolean = true // 개발용
+  // localStorage에서 토큰 확인
+  const isLoggedIn = !!localStorage.getItem('accessToken')
 
   return (
     <>
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<MobileSignUpPage />} />
         <Route
           path="/"
@@ -19,10 +21,10 @@ const RouterWeb = () => {
         >
           <Route path="/worker1" element={<SelectedWorkersPage />} />
           <Route path="/area" element={<AreaManagementPage />} />
+          <Route path="/dashboard" element={<div>대시보드</div>} />
         </Route>
         <Route path="/worker2" element={<MobileWorkerListPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} />
       </Routes>
     </>
   )

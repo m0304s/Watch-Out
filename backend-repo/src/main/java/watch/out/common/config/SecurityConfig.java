@@ -46,7 +46,8 @@ public class SecurityConfig {
                     "/swagger-ui.html",
                     "/user/signup",
                     "/auth/**",
-                    "/company"
+                    "/company",
+                    "/api/fcm/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.POST, "/area").hasRole("ADMIN")
                 .anyRequest().authenticated()

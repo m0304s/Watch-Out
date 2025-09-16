@@ -16,7 +16,7 @@ import watch.out.notification.repository.FcmTokenRepository;
 import watch.out.notification.service.FcmTokenService;
 
 @RestController
-@RequestMapping("/api/fcm")
+@RequestMapping("/fcm")
 @RequiredArgsConstructor
 public class FcmController {
 

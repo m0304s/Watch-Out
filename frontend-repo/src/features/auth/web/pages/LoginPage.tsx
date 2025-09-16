@@ -31,8 +31,8 @@ export const LoginPage = () => {
         alert('로그인 성공!')
         console.log('로그인 성공:', response.result)
 
-        // 대시보드로 리다이렉트
-        navigate('/dashboard')
+        // 홈으로 리다이렉트
+        navigate('/')
       } else {
         const errorMessage = response.message || '로그인에 실패했습니다.'
         setError(errorMessage)
