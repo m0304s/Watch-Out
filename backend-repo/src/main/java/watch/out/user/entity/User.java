@@ -62,7 +62,7 @@ public class User extends BaseSoftDeleteEntity {
     @Column(name = "training_completed_at")
     private LocalDateTime trainingCompletedAt;
 
-    @Column(name = "photo_key", nullable = false, length = 100)
+    @Column(name = "photo_key", length = 100)
     private String photoKey;
 
     @Enumerated(EnumType.STRING)
@@ -132,5 +132,9 @@ public class User extends BaseSoftDeleteEntity {
      */
     public void updateRole(UserRole newRole) {
         this.role = newRole;
+    }
+
+    public void updateArea(Area newArea) {
+        this.area = newArea;
     }
 }

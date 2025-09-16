@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import watch.out.area.dto.request.AreaRequest;
+import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
 import watch.out.common.dto.PageResponse;
@@ -72,5 +73,17 @@ public class AreaController {
     public ResponseEntity<Void> deleteArea(@PathVariable UUID areaUuid) {
         areaService.deleteArea(areaUuid);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 자신이 관리하는 구역 개수 조회
+     *
+     * @return 자신이 관리하는 구역 개수
+     */
+    @GetMapping("/my-area-count")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AREA_ADMIN')")
+    public ResponseEntity<AreaCountResponse> getMyAreaCount() {
+        AreaCountResponse myAreaCountResponse = areaService.getMyAreaCount();
+        return ResponseEntity.ok(myAreaCountResponse);
     }
 }

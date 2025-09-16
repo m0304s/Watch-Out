@@ -114,5 +114,37 @@ public interface AccidentRepositoryCustom {
      * @return 구역별 사고 발생 횟수 (Map<areaUuid, count>)
      */
     Map<UUID, Long> countAccidentsByAreasAndDate(List<UUID> areaUuids, LocalDate date);
+
+    /**
+     * 특정 시간 범위의 사고 발생 횟수를 조회 (시간별 통계용)
+     *
+     * @param areaUuids 구역 UUID 리스트 (null이면 모든 구역)
+     * @param startTime 시작 시간
+     * @param endTime   종료 시간
+     * @return 사고 발생 횟수
+     */
+    long countAccidentsByTimeRange(List<UUID> areaUuids, LocalDateTime startTime,
+        LocalDateTime endTime);
+
+    /**
+     * 지난 7일간의 사고 발생 횟수를 조회
+     *
+     * @param areaUuids 구역 UUID 리스트 (null이면 모든 구역)
+     * @return 사고 발생 횟수
+     */
+    long countAccidentsLast7Days(List<UUID> areaUuids);
+
+
+    /**
+     * 시간별 사고 발생 통계를 단일 쿼리로 조회 (최고 성능)
+     *
+     * @param areaUuids 구역 UUID 리스트 (null이면 모든 구역)
+     * @param startTime 전체 조회 시작 시간
+     * @param endTime   전체 조회 종료 시간
+     * @return 시간대별 사고 발생 횟수 (Map<시간대인덱스, 건수>)
+     */
+    Map<Integer, Long> getHourlyAccidentStatsOptimized(List<UUID> areaUuids,
+        LocalDateTime startTime, LocalDateTime endTime);
+
 }
 

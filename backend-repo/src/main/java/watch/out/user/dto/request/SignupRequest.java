@@ -39,7 +39,6 @@ public record SignupRequest(
 
     Gender gender,
 
-    @NotBlank
     @Size(max = 100)
     String photoUrl,
 
