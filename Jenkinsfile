@@ -242,13 +242,15 @@ pipeline {
                             withCredentials([
                                 file(credentialsId: 'APP_YML',        variable: 'APP_YML'),
                                 file(credentialsId: 'APP_YML_DOCKER', variable: 'APP_YML_DOCKER'),
-                                file(credentialsId: 'APP_YML_TEST',   variable: 'APP_YML_TEST')
+                                file(credentialsId: 'APP_YML_TEST',   variable: 'APP_YML_TEST'),
+                                file(credentialsId: 'watchout-firebase-key', variable: 'FIREBASE_KEY')
                             ]) {
                                 sh '''
                                   set -eux
                                   cp "$APP_YML"        _run_config/application.yml
                                   cp "$APP_YML_DOCKER" _run_config/application-docker.yml
                                   cp "$APP_YML_TEST"   _run_config/application-test.yml
+                                  cp "$FIREBASE_KEY"   _run_config/watchout-firebase-key.json
                                 '''
                             }
 
@@ -282,13 +284,15 @@ pipeline {
                             withCredentials([
                                 file(credentialsId: 'APP_YML',        variable: 'APP_YML'),
                                 file(credentialsId: 'APP_YML_DOCKER', variable: 'APP_YML_DOCKER'),
-                                file(credentialsId: 'APP_YML_PROD',   variable: 'APP_YML_PROD')
+                                file(credentialsId: 'APP_YML_PROD',   variable: 'APP_YML_PROD'),
+                                file(credentialsId: 'watchout-firebase-key', variable: 'FIREBASE_KEY')
                             ]) {
                                 sh '''
                                   set -eux
                                   cp "$APP_YML"        _run_config/application.yml
                                   cp "$APP_YML_DOCKER" _run_config/application-docker.yml
                                   cp "$APP_YML_PROD"   _run_config/application-prod.yml
+                                  cp "$FIREBASE_KEY"   _run_config/watchout-firebase-key.json
                                 '''
                             }
 
