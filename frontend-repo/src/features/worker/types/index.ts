@@ -1,4 +1,5 @@
-export type TrainingStatus = 'COMPLETED' | 'EXPIRED'
+export type TrainingStatus = 'COMPLETED' | 'EXPIRED' | 'NOT_COMPLETED'
+export type UserRole = 'WORKER' | 'AREA_ADMIN'
 
 export interface Employee {
   userUuid: string
@@ -8,6 +9,8 @@ export interface Employee {
   areaName: string
   trainingStatus: TrainingStatus
   lastEntryTime: string
+  userRole: UserRole
+  photoUrl: string
 }
 
 export interface Pagination {
@@ -15,6 +18,8 @@ export interface Pagination {
   display: number
   totalItems: number
   totalPages: number
+  first: boolean
+  last: boolean
 }
 
 export interface PaginatedResponse<T> {
@@ -31,4 +36,19 @@ export interface WorkerFilterState {
   sortOrder: 'asc' | 'desc'
 }
 
+// API 요청 파라미터 타입
+export interface GetEmployeesParams {
+  areaUuid?: string
+  trainingStatus?: TrainingStatus
+  search?: string
+  userRole?: UserRole
+  pageNum?: number
+  display?: number
+}
 
+// 구역(Area) 타입
+export interface AreaOption {
+  areaUuid: string
+  areaName: string
+  areaAlias?: string | null
+}
