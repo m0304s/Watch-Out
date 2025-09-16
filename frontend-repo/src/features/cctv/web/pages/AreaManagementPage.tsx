@@ -27,7 +27,11 @@ export const AreaManagementPage = () => {
   const fetchList = async (opts?: { page?: number; search?: string }) => {
     const page = opts?.page ?? pageNum
     const s = opts?.search ?? search.trim()
-    const res: PaginatedResponse<AreaItem> = await getAreas({ pageNum: page, display: DISPLAY, search: s })
+    const res: PaginatedResponse<AreaItem> = await getAreas({
+      pageNum: page,
+      display: DISPLAY,
+      search: s,
+    })
     setRows(res.data)
     setTotalItems(res.pagination.totalItems)
   }
@@ -64,18 +68,28 @@ export const AreaManagementPage = () => {
             placeholder="구역 이름으로 검색"
             css={pageStyles.input}
           />
-          <button type="button" onClick={handleSearch} css={pageStyles.searchBtn}>
+          <button
+            type="button"
+            onClick={handleSearch}
+            css={pageStyles.searchBtn}
+          >
             검색
           </button>
         </div>
         <div>
           <button type="button" css={pageStyles.primaryBtn}>
-            추가
+            + 추가
           </button>
         </div>
       </div>
 
-      <AreaTable rows={rows} pageNum={pageNum} display={DISPLAY} totalItems={totalItems} onPageChange={handlePageChange} />
+      <AreaTable
+        rows={rows}
+        pageNum={pageNum}
+        display={DISPLAY}
+        totalItems={totalItems}
+        onPageChange={handlePageChange}
+      />
     </div>
   )
 }
@@ -147,5 +161,3 @@ const pageStyles = {
     font-size: 14px;
   `,
 }
-
-

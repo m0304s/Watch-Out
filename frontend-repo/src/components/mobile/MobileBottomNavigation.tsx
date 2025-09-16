@@ -17,7 +17,9 @@ const DEFAULT_ITEMS: NavItem[] = [
   { label: '내 정보', to: '/mypage' },
 ]
 
-export const MobileBottomNavigation = ({ items = DEFAULT_ITEMS }: MobileBottomNavigationProps) => {
+export const MobileBottomNavigation = ({
+  items = DEFAULT_ITEMS,
+}: MobileBottomNavigationProps) => {
   return (
     <nav css={navStyles}>
       <ul css={navListStyles}>
@@ -25,7 +27,9 @@ export const MobileBottomNavigation = ({ items = DEFAULT_ITEMS }: MobileBottomNa
           <li key={item.to} css={navItemStyles}>
             <NavLink to={item.to} css={linkStyles} end>
               {({ isActive }) => (
-                <span css={[innerContainerStyles, isActive && activeColorStyles]}>
+                <span
+                  css={[innerContainerStyles, isActive && activeColorStyles]}
+                >
                   <span css={labelStyles}>{item.label}</span>
                 </span>
               )}
@@ -84,7 +88,3 @@ const activeColorStyles = css`
 const labelStyles = css`
   line-height: 1;
 `
-
-/* Active styling handled via children render function */
-
-

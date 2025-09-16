@@ -1,7 +1,6 @@
 import { css } from '@emotion/react'
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
 import type { LoginFormData } from '@/features/auth/types'
 
 interface MobileLoginFormProps {
@@ -9,7 +8,10 @@ interface MobileLoginFormProps {
   loading?: boolean
 }
 
-export const MobileLoginForm = ({ onSubmit, loading = false }: MobileLoginFormProps) => {
+export const MobileLoginForm = ({
+  onSubmit,
+  loading = false,
+}: MobileLoginFormProps) => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState<LoginFormData>({
     id: '',
@@ -88,7 +90,7 @@ export const MobileLoginForm = ({ onSubmit, loading = false }: MobileLoginFormPr
           {loading ? '로그인 중...' : '로그인'}
         </button>
       </form>
-      
+
       <div css={signUpSectionStyles}>
         <button
           type="button"
@@ -179,7 +181,9 @@ const submitButtonStyles = css`
   border-radius: 10px;
   font-family: 'PretendardSemiBold', sans-serif;
   font-size: 18px;
-  transition: opacity 0.2s ease, transform 0.05s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.05s ease;
 
   &:hover {
     opacity: 0.9;
@@ -223,5 +227,3 @@ const signUpButtonStyles = css`
     cursor: not-allowed;
   }
 `
-
-

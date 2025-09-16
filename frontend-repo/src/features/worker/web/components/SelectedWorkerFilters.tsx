@@ -53,15 +53,15 @@ export const SelectedWorkerFilters = ({
 
       <div css={section.row}>
         <span css={section.label}>구역</span>
-        {derivedChips.areas.map((a) => (
+        {derivedChips.areas.map((area) => (
           <button
-            key={a}
-            css={section.chip(state.areas.includes(a))}
+            key={area}
+            css={section.chip(state.areas.includes(area))}
             onClick={() =>
-              onChange({ areas: toggleArrayValue(state.areas, a) })
+              onChange({ areas: toggleArrayValue(state.areas, area) })
             }
           >
-            {a}
+            {area}
           </button>
         ))}
       </div>

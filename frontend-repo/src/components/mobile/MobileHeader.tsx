@@ -8,7 +8,12 @@ interface MobileHeaderProps {
   rightSlot?: React.ReactNode
 }
 
-export const MobileHeader = ({ title, showBack = false, backTo = '/dashboard', rightSlot }: MobileHeaderProps) => {
+export const MobileHeader = ({
+  title,
+  showBack = false,
+  backTo = '/dashboard',
+  rightSlot,
+}: MobileHeaderProps) => {
   return (
     <header css={headerStyles}>
       <div css={headerInnerStyles}>
@@ -82,5 +87,3 @@ const rightAreaStyles = css`
   justify-content: flex-end;
   color: var(--color-text-white);
 `
-
-

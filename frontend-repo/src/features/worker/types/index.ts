@@ -41,6 +41,7 @@ export interface GetEmployeesParams {
   areaUuid?: string
   trainingStatus?: TrainingStatus
   search?: string
+  userRole?: UserRole
   pageNum?: number
   display?: number
 }
@@ -51,5 +52,3 @@ export interface AreaOption {
   areaName: string
   areaAlias?: string | null
 }
-
-

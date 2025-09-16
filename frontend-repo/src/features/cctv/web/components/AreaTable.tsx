@@ -18,7 +18,10 @@ export const AreaTable = ({
   totalItems,
   onPageChange,
 }: AreaTableProps) => {
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalItems / display)), [totalItems, display])
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(totalItems / display)),
+    [totalItems, display],
+  )
   const [selected, setSelected] = useState<Record<string, boolean>>({})
 
   const toggle = (id: string) => {
@@ -55,7 +58,11 @@ export const AreaTable = ({
       <div css={styles.footer}>
         <span>총 {totalItems}개</span>
         <div>
-          <button css={styles.pagerBtn} onClick={() => onPageChange(pageNum - 1)} disabled={pageNum <= 0}>
+          <button
+            css={styles.pagerBtn}
+            onClick={() => onPageChange(pageNum - 1)}
+            disabled={pageNum <= 0}
+          >
             이전
           </button>
           <span
@@ -65,7 +72,11 @@ export const AreaTable = ({
           >
             {pageNum + 1} / {totalPages}
           </span>
-          <button css={styles.pagerBtn} onClick={() => onPageChange(pageNum + 1)} disabled={pageNum >= totalPages - 1}>
+          <button
+            css={styles.pagerBtn}
+            onClick={() => onPageChange(pageNum + 1)}
+            disabled={pageNum >= totalPages - 1}
+          >
             다음
           </button>
         </div>
@@ -124,5 +135,3 @@ const styles = {
     }
   `,
 }
-
-

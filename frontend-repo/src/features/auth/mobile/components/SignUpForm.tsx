@@ -1,7 +1,11 @@
-import { MdFileUpload, MdPhoto } from "react-icons/md"
-import { useEffect, useMemo, useState, useRef } from 'react'
 import { css } from '@emotion/react'
-import type { CompanyOption, FullBloodType, SignUpFormData } from '@/features/auth'
+import { useEffect, useMemo, useState, useRef } from 'react'
+import { MdFileUpload } from 'react-icons/md'
+import type {
+  CompanyOption,
+  FullBloodType,
+  SignUpFormData,
+} from '@/features/auth'
 import { getCompanies, uploadProfileImage } from '@/features/auth/api/auth'
 
 interface SignUpFormProps {
@@ -9,9 +13,21 @@ interface SignUpFormProps {
   loading?: boolean
 }
 
-const BLOOD_TYPES: FullBloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+const BLOOD_TYPES: FullBloodType[] = [
+  'A+',
+  'A-',
+  'B+',
+  'B-',
+  'AB+',
+  'AB-',
+  'O+',
+  'O-',
+]
 
-export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps) => {
+export const MobileSignUpForm = ({
+  onSubmit,
+  loading = false,
+}: SignUpFormProps) => {
   const [form, setForm] = useState<SignUpFormData>({
     userId: '',
     password: '',
@@ -21,7 +37,7 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
     fullBloodType: 'A+',
     photoUrl: '',
     companyUuid: '',
-    gender: 'MALE'
+    gender: 'MALE',
   })
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showCompanyModal, setShowCompanyModal] = useState(false)
@@ -29,7 +45,7 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
   const [companies, setCompanies] = useState<CompanyOption[]>([])
   const [companiesLoading, setCompaniesLoading] = useState(false)
   const [companiesError, setCompaniesError] = useState<string | null>(null)
-  
+
   // 이미지 업로드 관련 상태
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -60,24 +76,28 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
   const filteredCompanies = useMemo(() => {
     const q = companyQuery.trim().toLowerCase()
     if (!q) return companies
-    return companies.filter(c => c.companyName.toLowerCase().includes(q))
+    return companies.filter((c) => c.companyName.toLowerCase().includes(q))
   }, [companyQuery, companies])
 
-  const handleChange = (key: keyof SignUpFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm(prev => ({ ...prev, [key]: e.target.value }))
-  }
+  const handleChange =
+    (key: keyof SignUpFormData) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setForm((prev) => ({ ...prev, [key]: e.target.value }))
+    }
 
-  const handlePhoneChange = (key: 'contact' | 'emergencyContact') => (e: React.ChangeEvent<HTMLInputElement>) => {
-    // 숫자만 허용, 최대 11자리. 한글 IME 합성 입력은 숫자필드라 영향 없음
-    const raw = e.target.value
-    const digits = raw.replace(/\D/g, '').slice(0, 11)
-    setForm(prev => ({ ...prev, [key]: digits }))
-  }
+  const handlePhoneChange =
+    (key: 'contact' | 'emergencyContact') =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      // 숫자만 허용, 최대 11자리. 한글 IME 합성 입력은 숫자필드라 영향 없음
+      const raw = e.target.value
+      const digits = raw.replace(/\D/g, '').slice(0, 11)
+      setForm((prev) => ({ ...prev, [key]: digits }))
+    }
 
   const handleOpenCompanyModal = () => setShowCompanyModal(true)
   const handleCloseCompanyModal = () => setShowCompanyModal(false)
   const handleSelectCompany = (company: CompanyOption) => {
-    setForm(prev => ({ ...prev, companyUuid: company.companyUuid }))
+    setForm((prev) => ({ ...prev, companyUuid: company.companyUuid }))
     setShowCompanyModal(false)
   }
 
@@ -117,7 +137,7 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
   const handleImageRemove = () => {
     setSelectedImage(null)
     setImagePreview(null)
-    setForm(prev => ({ ...prev, photoUrl: '' }))
+    setForm((prev) => ({ ...prev, photoUrl: '' }))
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -149,26 +169,47 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
   }
 
   const selectedCompanyName = useMemo(() => {
-    const found = companies.find((c: CompanyOption) => c.companyUuid === form.companyUuid)
+    const found = companies.find(
+      (c: CompanyOption) => c.companyUuid === form.companyUuid,
+    )
     return found?.companyName ?? ''
   }, [form.companyUuid, companies])
 
   return (
     <form onSubmit={handleSubmit} css={formStyles}>
       <div css={fieldStyles}>
-        <label css={labelStyles} htmlFor="userId">ID</label>
-        <input id="userId" placeholder="사용자 ID를 입력하세요" value={form.userId} onChange={handleChange('userId')} css={inputStyles} />
+        <label css={labelStyles} htmlFor="userId">
+          ID
+        </label>
+        <input
+          id="userId"
+          placeholder="사용자 ID를 입력하세요"
+          value={form.userId}
+          onChange={handleChange('userId')}
+          css={inputStyles}
+        />
       </div>
 
       <div css={fieldStyles}>
         <div css={rowBetweenStyles}>
-          <label css={labelStyles} htmlFor="password">비밀번호</label>
+          <label css={labelStyles} htmlFor="password">
+            비밀번호
+          </label>
         </div>
-        <input id="password" type="password" placeholder="••••••••" value={form.password} onChange={handleChange('password')} css={inputStyles} />
+        <input
+          id="password"
+          type="password"
+          placeholder="••••••••"
+          value={form.password}
+          onChange={handleChange('password')}
+          css={inputStyles}
+        />
       </div>
 
       <div css={fieldStyles}>
-        <label css={labelStyles} htmlFor="confirmPassword">비밀번호 확인</label>
+        <label css={labelStyles} htmlFor="confirmPassword">
+          비밀번호 확인
+        </label>
         <input
           id="confirmPassword"
           type="password"
@@ -183,12 +224,22 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
       </div>
 
       <div css={fieldStyles}>
-        <label css={labelStyles} htmlFor="userName">이름</label>
-        <input id="userName" placeholder="이름을 입력하세요" value={form.userName} onChange={handleChange('userName')} css={inputStyles} />
+        <label css={labelStyles} htmlFor="userName">
+          이름
+        </label>
+        <input
+          id="userName"
+          placeholder="이름을 입력하세요"
+          value={form.userName}
+          onChange={handleChange('userName')}
+          css={inputStyles}
+        />
       </div>
 
       <div css={fieldStyles}>
-        <label css={labelStyles} htmlFor="contact">연락처</label>
+        <label css={labelStyles} htmlFor="contact">
+          연락처
+        </label>
         <input
           id="contact"
           inputMode="numeric"
@@ -202,7 +253,9 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
       </div>
 
       <div css={fieldStyles}>
-        <label css={labelStyles} htmlFor="emergencyContact">비상연락처</label>
+        <label css={labelStyles} htmlFor="emergencyContact">
+          비상연락처
+        </label>
         <input
           id="emergencyContact"
           inputMode="numeric"
@@ -215,17 +268,33 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
       </div>
 
       <div css={fieldStyles}>
-        <label css={labelStyles} htmlFor="bloodType">혈액형</label>
-        <select id="bloodType" value={form.fullBloodType} onChange={handleChange('fullBloodType')} css={selectStyles}>
-          {BLOOD_TYPES.map(bt => (
-            <option key={bt} value={bt}>{bt}</option>
+        <label css={labelStyles} htmlFor="bloodType">
+          혈액형
+        </label>
+        <select
+          id="bloodType"
+          value={form.fullBloodType}
+          onChange={handleChange('fullBloodType')}
+          css={selectStyles}
+        >
+          {BLOOD_TYPES.map((bt) => (
+            <option key={bt} value={bt}>
+              {bt}
+            </option>
           ))}
         </select>
       </div>
 
       <div css={fieldStyles}>
-        <label css={labelStyles} htmlFor="gender">성별</label>
-        <select id="gender" value={form.gender} onChange={handleChange('gender')} css={selectStyles}>
+        <label css={labelStyles} htmlFor="gender">
+          성별
+        </label>
+        <select
+          id="gender"
+          value={form.gender}
+          onChange={handleChange('gender')}
+          css={selectStyles}
+        >
           <option value="MALE">남자</option>
           <option value="FEMALE">여자</option>
         </select>
@@ -239,15 +308,27 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
           onChange={handleFileChange}
           style={{ display: 'none' }}
         />
-        
+
         {imagePreview ? (
           <div css={photoPreviewContainerStyles}>
-            <img src={imagePreview} alt="프로필 미리보기" css={photoPreviewStyles} />
+            <img
+              src={imagePreview}
+              alt="프로필 미리보기"
+              css={photoPreviewStyles}
+            />
             <div css={photoActionsStyles}>
-              <button type="button" onClick={handleImageSelect} css={photoChangeButtonStyles}>
+              <button
+                type="button"
+                onClick={handleImageSelect}
+                css={photoChangeButtonStyles}
+              >
                 변경
               </button>
-              <button type="button" onClick={handleImageRemove} css={photoRemoveButtonStyles}>
+              <button
+                type="button"
+                onClick={handleImageRemove}
+                css={photoRemoveButtonStyles}
+              >
                 제거
               </button>
             </div>
@@ -265,23 +346,63 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
       <div css={fieldStyles}>
         <label css={labelStyles}>회사명</label>
         <div css={companyRowStyles}>
-          <input value={selectedCompanyName} placeholder="회사명을 입력하세요" readOnly css={companyInputStyles} />
-          <button type="button" onClick={handleOpenCompanyModal} css={searchButtonStyles}>회사 검색</button>
+          <input
+            value={selectedCompanyName}
+            placeholder="회사명을 입력하세요"
+            readOnly
+            css={companyInputStyles}
+          />
+          <button
+            type="button"
+            onClick={handleOpenCompanyModal}
+            css={searchButtonStyles}
+          >
+            회사 검색
+          </button>
         </div>
       </div>
 
-      <button type="submit" css={submitButtonStyles} disabled={loading || imageUploading || Boolean(confirmPassword && form.password !== confirmPassword)}>
-        {imageUploading ? '이미지 업로드 중...' : loading ? '회원가입 중...' : '회원가입'}
+      <button
+        type="submit"
+        css={submitButtonStyles}
+        disabled={
+          loading ||
+          imageUploading ||
+          Boolean(confirmPassword && form.password !== confirmPassword)
+        }
+      >
+        {imageUploading
+          ? '이미지 업로드 중...'
+          : loading
+            ? '회원가입 중...'
+            : '회원가입'}
       </button>
 
       {showCompanyModal && (
-        <div role="dialog" aria-modal="true" css={modalOverlayStyles} onClick={handleCloseCompanyModal}>
-          <div css={modalContentStyles} onClick={e => e.stopPropagation()}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          css={modalOverlayStyles}
+          onClick={handleCloseCompanyModal}
+        >
+          <div css={modalContentStyles} onClick={(e) => e.stopPropagation()}>
             <div css={modalHeaderStyles}>
               <span css={modalTitleStyles}>회사 검색</span>
-              <button type="button" onClick={handleCloseCompanyModal} css={modalCloseStyles}>닫기</button>
+              <button
+                type="button"
+                onClick={handleCloseCompanyModal}
+                css={modalCloseStyles}
+              >
+                닫기
+              </button>
             </div>
-            <input autoFocus placeholder="회사명을 검색하세요" value={companyQuery} onChange={e => setCompanyQuery(e.target.value)} css={modalSearchInputStyles} />
+            <input
+              autoFocus
+              placeholder="회사명을 검색하세요"
+              value={companyQuery}
+              onChange={(e) => setCompanyQuery(e.target.value)}
+              css={modalSearchInputStyles}
+            />
             <div css={modalListStyles}>
               {companiesLoading ? (
                 <div css={emptyStyles}>회사 목록을 불러오는 중...</div>
@@ -289,8 +410,13 @@ export const MobileSignUpForm = ({ onSubmit, loading = false }: SignUpFormProps)
                 <div css={errorStyles}>{companiesError}</div>
               ) : (
                 <>
-                  {filteredCompanies.map(c => (
-                    <button key={c.companyUuid} type="button" onClick={() => handleSelectCompany(c)} css={modalItemStyles}>
+                  {filteredCompanies.map((c) => (
+                    <button
+                      key={c.companyUuid}
+                      type="button"
+                      onClick={() => handleSelectCompany(c)}
+                      css={modalItemStyles}
+                    >
                       {c.companyName}
                     </button>
                   ))}
@@ -386,7 +512,7 @@ const photoUploadAreaStyles = css`
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  
+
   &:hover {
     opacity: 0.8;
   }
@@ -437,7 +563,7 @@ const photoChangeButtonStyles = css`
   font-family: 'PretendardMedium', sans-serif;
   font-size: 14px;
   cursor: pointer;
-  
+
   &:hover {
     background-color: var(--color-primary-light);
   }
@@ -452,7 +578,7 @@ const photoRemoveButtonStyles = css`
   font-family: 'PretendardMedium', sans-serif;
   font-size: 14px;
   cursor: pointer;
-  
+
   &:hover {
     background-color: var(--color-gray-100);
   }
@@ -575,5 +701,3 @@ const errorStyles = css`
   color: var(--color-red);
   font-family: 'PretendardRegular', sans-serif;
 `
-
-

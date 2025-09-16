@@ -37,7 +37,7 @@ export const SelectedWorkersPage = () => {
   // areaAlias 또는 areaName으로 표시용 라벨 구성
   const areaLabels = useMemo(() => {
     const labels = areas
-      .map((a) => a.areaAlias ?? a.areaName)
+      .map((area) => area.areaAlias ?? area.areaName)
       .filter(Boolean) as string[]
     return unique(['전체', ...labels])
   }, [areas])
@@ -46,8 +46,8 @@ export const SelectedWorkersPage = () => {
   const labelToUuid = useMemo(() => {
     const map = new Map<string, string>()
     map.set('전체', '')
-    for (const a of areas) {
-      map.set(a.areaAlias ?? a.areaName, a.areaUuid)
+    for (const area of areas) {
+      map.set(area.areaAlias ?? area.areaName, area.areaUuid)
     }
     return map
   }, [areas])
