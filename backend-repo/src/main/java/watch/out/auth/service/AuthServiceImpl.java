@@ -3,7 +3,6 @@ package watch.out.auth.service;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,6 @@ import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.CookieUtil;
 import watch.out.common.util.JwtUtil;
 import watch.out.common.util.SecurityUtil;
-import watch.out.notification.service.FcmService;
 import watch.out.user.entity.User;
 import watch.out.user.entity.UserRole;
 import watch.out.user.repository.UserRepository;
@@ -31,7 +29,6 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder encoder;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
-    private final FcmService fcmService;
 
     @Value("${jwt.refresh-token-expiration}")
     private int refreshTokenExpiration;
@@ -60,20 +57,8 @@ public class AuthServiceImpl implements AuthService {
     public void logout(HttpServletRequest httpServletRequest,
         HttpServletResponse httpServletResponse) {
         Optional<UUID> currentUserUuid = SecurityUtil.getCurrentUserUuid();
-
-        if (!currentUserUuid.isPresent()) {
-            throw new BusinessException(ErrorCode.INVALID_TOKEN);
-        }
-
-        UUID userUuid = currentUserUuid.get();
-
-        String key = "refresh_token:" + userUuid;
+        String key = "refresh_token:" + currentUserUuid;
         redisTemplate.delete(key);
-
-        // FCM 토큰 초기화
-        fcmService.clearUserFcmToken(userUuid);
-
-        // 쿠키에서 refresh token 삭제
         CookieUtil.deleteCookie(httpServletRequest, httpServletResponse, "refresh_token");
     }
 

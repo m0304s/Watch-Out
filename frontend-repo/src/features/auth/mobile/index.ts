@@ -1,5 +1,5 @@
-export { MobileLoginPage } from '@/features/auth/mobile/pages/LoginPage'
-export { MobileLoginForm } from '@/features/auth/mobile/components/LoginForm'
-export { MobileAppHeader } from '@/features/auth/mobile/components/AppHeader'
-export { MobileSignUpPage } from '@/features/auth/mobile/pages/SignUpPage'
+export { MobileLoginPage } from './pages/LoginPage'
+export { MobileLoginForm } from './components/LoginForm'
+export { MobileAppHeader } from './components/AppHeader'
+
 

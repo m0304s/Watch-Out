@@ -3,7 +3,6 @@ package watch.out.user.dto.response;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
-import watch.out.common.util.S3Util;
 import watch.out.user.entity.BloodType;
 import watch.out.user.entity.Gender;
 import watch.out.user.entity.RhFactor;
@@ -25,31 +24,34 @@ public record UserResponse(
     TrainingStatus trainingStatus,
     LocalDateTime trainingCompletedAt,
     UserRole userRole,
-    Integer watchId,
+    Integer watchNumber,
     String photoUrl,
     LocalDateTime assignedAt
 ) {
 
-    public static UserResponse from(UserDto userDto, S3Util s3Util) {
-        String photoUrl = s3Util.keyToUrl(userDto.photoKey());
+    public static UserResponse from(User user, Optional<Integer> watchNumber) {
+        String companyName =
+            (user.getCompany() != null) ? user.getCompany().getCompanyName() : null;
+        String areaName = (user.getArea() != null) ? user.getArea().getAreaName() : null;
+        String photoUrl = user.getPhotoKey(); // S3 생성 후 수정 필요
 
         return new UserResponse(
-            userDto.userUuid(),
-            userDto.userId(),
-            userDto.userName(),
-            userDto.companyName(),
-            userDto.areaName(),
-            userDto.contact(),
-            userDto.emergencyContact(),
-            userDto.gender(),
-            userDto.bloodType(),
-            userDto.rhFactor(),
-            userDto.trainingStatus(),
-            userDto.trainingCompletedAt(),
-            userDto.userRole(),
-            userDto.watchId(),
+            user.getUuid(),
+            user.getUserId(),
+            user.getUserName(),
+            companyName,
+            areaName,
+            user.getContact(),
+            user.getEmergencyContact(),
+            user.getGender(),
+            user.getBloodType(),
+            user.getRhFactor(),
+            user.getTrainingStatus(),
+            user.getTrainingCompletedAt(),
+            user.getRole(),
+            watchNumber.orElse(null),
             photoUrl,
-            userDto.assignedAt()
+            user.getAssignedAt()
         );
     }
 }

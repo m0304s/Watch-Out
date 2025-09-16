@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   appName: 'watch-out',
   webDir: 'dist',
   server: {
-    // url: `http://${env.VITE_CAPACITOR_SERVER_IP}:${env.VITE_CAPACITOR_SERVER_PORT}`,
+    url: `http://${env.VITE_CAPACITOR_SERVER_IP}:${env.VITE_CAPACITOR_SERVER_PORT}`,
     cleartext: true,
   },
 }

@@ -8,8 +8,8 @@ import watch.out.area.entity.Area;
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
 import watch.out.user.dto.request.ApproveUsersRequest;
-import watch.out.user.dto.response.UserDto;
-import watch.out.user.dto.response.UsersDto;
+import watch.out.user.dto.response.UserResponse;
+import watch.out.user.dto.response.UsersResponse;
 import watch.out.user.entity.TrainingStatus;
 import watch.out.user.entity.UserRole;
 
@@ -23,14 +23,14 @@ public interface UserRepositoryCustom {
      */
     Optional<UserWithAreaDto> findUserWithAreaById(UUID userUuid);
 
-    PageResponse<UsersDto> findUsers(UUID areaUuid, TrainingStatus trainingStatus,
+    PageResponse<UsersResponse> findUsers(UUID areaUuid, TrainingStatus trainingStatus,
         String search, UserRole userRole, PageRequest pageRequest);
 
-    Optional<UserDto> findByUserIdAsDto(UUID userUuid);
+    Optional<UserResponse> findByUserIdAsDto(UUID userUuid);
 
     void updateAreaForUsers(List<UUID> uuids, Area area);
 
-    PageResponse<UsersDto> findUsersWhereIsApprovedIsFalse(PageRequest pageRequest);
+    PageResponse<UsersResponse> findUsersWhereIsApprovedIsFalse(PageRequest pageRequest);
 
     void updateIsApprovedForUsers(ApproveUsersRequest approveUsersRequest);
 }

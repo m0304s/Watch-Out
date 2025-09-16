@@ -3,7 +3,7 @@ import { IoIosArrowForward } from 'react-icons/io'
 import { IoIosArrowDown } from 'react-icons/io'
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { NAV_ITEMS } from '@/constants/navigationWeb'
+import { NAV_ITEMS } from '@/constants/navigation'
 
 const Navigation = () => {
   const [openNavArea, setOpenNavArea] = useState<boolean>(false)
