@@ -23,6 +23,7 @@ import watch.out.cctv.util.EquipmentTypeDetector;
 import watch.out.safety.entity.SafetyViolationType;
 import watch.out.safety.service.SafetyViolationService;
 import watch.out.safety.util.SafetyViolationMapper;
+import watch.out.notification.service.FcmService;
 
 @Component
 @RequiredArgsConstructor
@@ -32,6 +33,7 @@ public class CctvEventListener {
     private final ObjectMapper om = new ObjectMapper();
     private final SafetyViolationService safetyViolationService;
     private final CctvRepository cctvRepository;
+    private final FcmService fcmService;
 
     @KafkaListener(topics = "${app.kafka.topic}")
     @Transactional
@@ -201,6 +203,9 @@ public class CctvEventListener {
 
                 log.info("안전장비 위반 내역 저장 완료: cctv={}, area={}, types={}, image={}",
                     cctv.getCctvName(), areaName, violationTypes, snapshot);
+
+                // FCM 알림 전송
+                sendSafetyViolationNotification(cctv, areaName, violationTypes, snapshot);
             } catch (Exception e) {
                 log.error("안전장비 위반 내역 저장 실패: types={}, error={}", violationTypes, e.getMessage(),
                     e);
@@ -217,6 +222,46 @@ public class CctvEventListener {
             cctv.getCctvName(), areaName, detectedClass, count, snapshot);
 
         // TODO: 중장비 관련 추가 처리 로직 구현
+    }
+
+    /**
+     * 안전장비 위반 FCM 알림 전송 (구역별 담당자에게만)
+     */
+    private void sendSafetyViolationNotification(Cctv cctv, String areaName,
+        List<SafetyViolationType> violationTypes, String snapshot) {
+        try {
+            // 위반 유형을 문자열 리스트로 변환
+            List<String> violationTypeNames = violationTypes.stream()
+                .map(Enum::name)
+                .toList();
+
+            // S3 이미지 URL 생성 (실제 S3 URL로 변경 필요)
+            String imageUrl = generateImageUrl(snapshot);
+
+            // 해당 구역의 담당자들에게만 FCM 알림 전송
+            fcmService.sendSafetyViolationNotification(
+                cctv.getArea().getUuid(),  // 구역 UUID 추가
+                areaName,
+                cctv.getCctvName(),
+                violationTypeNames,
+                imageUrl
+            );
+
+            log.info("FCM 안전장비 위반 알림 전송 완료: area={}, cctv={}, types={}",
+                areaName, cctv.getCctvName(), violationTypeNames);
+
+        } catch (Exception e) {
+            log.error("FCM 안전장비 위반 알림 전송 실패: area={}, cctv={}", areaName, cctv.getCctvName(), e);
+        }
+    }
+
+    /**
+     * S3 이미지 URL 생성
+     */
+    private String generateImageUrl(String snapshot) {
+        // TODO: 실제 S3 URL 생성 로직 구현
+        // 예: https://your-bucket.s3.region.amazonaws.com/snapshots/{snapshot}
+        return "https://example-bucket.s3.ap-northeast-2.amazonaws.com/snapshots/" + snapshot;
     }
 
 }
