@@ -3,7 +3,6 @@ package watch.out.auth.service;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +14,6 @@ import watch.out.area.entity.AreaManager;
 import watch.out.area.repository.AreaManagerRepository;
 import watch.out.auth.dto.request.LoginRequest;
 import watch.out.auth.dto.response.LoginResponse;
-import watch.out.common.entity.BaseEntity;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.CookieUtil;
@@ -34,6 +32,7 @@ public class AuthServiceImpl implements AuthService {
     private final AreaManagerRepository areaManagerRepository;
     private final PasswordEncoder encoder;
     private final JwtUtil jwtUtil;
+    private final CookieUtil cookieUtil;
     private final StringRedisTemplate redisTemplate;
     private final FcmService fcmService;
 
@@ -53,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user.getUuid(), user.getRole());
 
         // 쿠키에 refreshToken 저장
-        CookieUtil.addHttpOnlyCookie(response, "refresh_token", refreshToken,
+        cookieUtil.addHttpOnlyCookie(response, "refresh_token", refreshToken,
             refreshTokenExpiration);
 
         Optional<AreaManager> areaManager = areaManagerRepository.findByUser_Uuid(user.getUuid());
@@ -81,12 +80,12 @@ public class AuthServiceImpl implements AuthService {
         fcmService.clearUserFcmToken(userUuid);
 
         // 쿠키에서 refresh token 삭제
-        CookieUtil.deleteCookie(httpServletRequest, httpServletResponse, "refresh_token");
+        cookieUtil.deleteCookie(httpServletRequest, httpServletResponse, "refresh_token");
     }
 
     @Override
     public String reissueToken(HttpServletRequest httpServletRequest) {
-        String refreshToken = CookieUtil.getCookieValue(httpServletRequest, "refresh_token");
+        String refreshToken = cookieUtil.getCookieValue(httpServletRequest, "refresh_token");
 
         if (refreshToken == null) {
             throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
