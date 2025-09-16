@@ -17,11 +17,9 @@ import watch.out.area.entity.AreaManager;
 import watch.out.area.repository.AreaManagerRepository;
 import watch.out.area.repository.AreaRepository;
 import watch.out.common.dto.PageRequest;
-import watch.out.user.repository.UserRepository;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.SecurityUtil;
-import watch.out.user.entity.User;
 import watch.out.user.entity.UserRole;
 
 @Service
@@ -30,7 +28,6 @@ public class AreaServiceImpl implements AreaService {
 
     private final AreaRepository areaRepository;
     private final AreaManagerRepository areaManagerRepository;
-    private final UserRepository userRepository;
 
     /**
      * 구역 접근 권한을 확인합니다.
@@ -70,29 +67,13 @@ public class AreaServiceImpl implements AreaService {
     @Override
     @Transactional
     public void createArea(AreaRequest areaRequest) {
-        // 관리자 유효성 검증
-        User manager = userRepository.findById(areaRequest.managerUuid())
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-
-        if (manager.getRole() != UserRole.AREA_ADMIN) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
-        }
-
         // 구역 생성
         Area area = Area.builder()
             .areaName(areaRequest.areaName())
             .areaAlias(areaRequest.areaAlias())
             .build();
 
-        Area savedArea = areaRepository.save(area);
-
-        // 구역 관리자 관계 생성
-        AreaManager areaManager = AreaManager.builder()
-            .area(savedArea)
-            .user(manager)
-            .build();
-
-        areaManagerRepository.save(areaManager);
+        areaRepository.save(area);
     }
 
     @Override
@@ -148,11 +129,6 @@ public class AreaServiceImpl implements AreaService {
             throw new BusinessException(ErrorCode.NOT_FOUND);
         }
 
-        // 관리자가 없는 경우 예외 발생
-        if (areaDetail.managerUuid() == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND);
-        }
-
         // 작업자 목록 조회 (작업자가 없을 수도 있음)
         int offset = pageRequest.pageNum() * pageRequest.display();
         List<AreaDetailItemResponse> workers = areaRepository.findWorkersByAreaUuidAsDto(areaUuid,
@@ -189,26 +165,6 @@ public class AreaServiceImpl implements AreaService {
 
         // 구역 정보 수정
         area.updateArea(areaRequest.areaName(), areaRequest.areaAlias());
-
-        // 관리자 변경 처리
-        User newManager = userRepository.findById(areaRequest.managerUuid())
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-
-        if (newManager.getRole() != UserRole.AREA_ADMIN) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
-        }
-
-        // 기존 관리자 관계 삭제
-        List<AreaManager> existingManagers = areaManagerRepository.findByAreaUuid(areaUuid);
-        areaManagerRepository.deleteAll(existingManagers);
-
-        // 새로운 관리자 관계 생성
-        AreaManager newAreaManager = AreaManager.builder()
-            .area(area)
-            .user(newManager)
-            .build();
-
-        areaManagerRepository.save(newAreaManager);
     }
 
     @Override
