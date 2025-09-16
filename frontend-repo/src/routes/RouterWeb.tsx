@@ -1,7 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LayoutPage from '@/layouts/web/pages/LayoutPage'
-import { LoginPage } from '@/features/auth'
-import { SelectedWorkersPage } from '@/features/worker'
+import { LoginPage, MobileSignUpPage } from '@/features/auth'
+import { SelectedWorkersPage, MobileWorkerListPage } from '@/features/worker'
+import { AreaManagementPage } from '@/features/cctv'
 
 const RouterWeb = () => {
   const isLoggedIn: boolean = true // 개발용
@@ -9,14 +10,17 @@ const RouterWeb = () => {
   return (
     <>
       <Routes>
+        <Route path="/signup" element={<MobileSignUpPage />} />
         <Route
           path="/"
           element={
             isLoggedIn ? <LayoutPage /> : <Navigate to="/login" replace />
           }
         >
-          <Route path="/worker" element={<SelectedWorkersPage />} />
+          <Route path="/worker1" element={<SelectedWorkersPage />} />
+          <Route path="/area" element={<AreaManagementPage />} />
         </Route>
+        <Route path="/worker2" element={<MobileWorkerListPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
       </Routes>

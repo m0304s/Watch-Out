@@ -3,6 +3,7 @@ package watch.out.user.service;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,7 @@ import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
-import watch.out.common.util.SecurityUtil;
+import watch.out.common.util.S3Util;
 import watch.out.company.entity.Company;
 import watch.out.company.repository.CompanyRepository;
 import watch.out.user.dto.request.ApproveUsersRequest;
@@ -24,13 +25,16 @@ import watch.out.user.dto.request.AssignAreaRequest;
 import watch.out.user.dto.request.SignupRequest;
 import watch.out.user.dto.request.UpdateUserRequest;
 import watch.out.user.dto.request.UserRoleUpdateRequest;
+import watch.out.user.dto.response.UserDto;
 import watch.out.user.dto.response.UserResponse;
 import watch.out.user.dto.response.UserRoleUpdateResponse;
+import watch.out.user.dto.response.UsersDto;
 import watch.out.user.dto.response.UsersResponse;
 import watch.out.user.entity.TrainingStatus;
 import watch.out.user.entity.User;
 import watch.out.user.entity.UserRole;
 import watch.out.user.repository.UserRepository;
+import watch.out.watch.repository.RentalHistoryRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -40,7 +44,9 @@ public class UserServiceImpl implements UserService {
     private final CompanyRepository companyRepository;
     private final AreaRepository areaRepository;
     private final AreaManagerRepository areaManagerRepository;
+    private final RentalHistoryRepository rentalHistoryRepository;
     private final PasswordEncoder passwordEncoder;
+    private final S3Util s3Util;
 
     @Override
     @Transactional
@@ -52,7 +58,7 @@ public class UserServiceImpl implements UserService {
         Company company = companyRepository.findById(signupRequest.companyUuid())
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         String encodedPassword = passwordEncoder.encode(signupRequest.password());
-        String photoKey = signupRequest.photoUrl(); // S3 생성 후 수정 필요
+        String photoKey = s3Util.urlToKey(signupRequest.photoUrl()); // S3 생성 후 수정 필요
 
         User user = signupRequest.toEntity(encodedPassword, company, photoKey);
         userRepository.save(user);
@@ -61,16 +67,27 @@ public class UserServiceImpl implements UserService {
     @Override
     public PageResponse<UsersResponse> getUsers(UUID areaUuid, TrainingStatus trainingStatus,
         String search, UserRole userRole, PageRequest pageRequest) {
-        PageResponse<UsersResponse> usersResponse = userRepository.findUsers(areaUuid,
+        PageResponse<UsersDto> usersDto = userRepository.findUsers(areaUuid,
             trainingStatus, search, userRole, pageRequest);
-        return usersResponse;
+
+        List<UsersResponse> usersResponse = usersDto.data().stream()
+            .map(dto -> UsersResponse.from(dto, s3Util))
+            .collect(Collectors.toList());
+
+        return PageResponse.of(
+            usersResponse,
+            usersDto.pagination().pageNum(),
+            usersDto.pagination().display(),
+            usersDto.pagination().totalItems()
+        );
     }
 
     @Override
     public UserResponse getUser(UUID userUuid) {
-        UserResponse userResponse = userRepository.findByUserIdAsDto(userUuid)
+        UserDto userDto = userRepository.findByUserIdAsDto(userUuid)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        return userResponse;
+
+        return UserResponse.from(userDto, s3Util);
     }
 
     @Override
@@ -100,14 +117,15 @@ public class UserServiceImpl implements UserService {
             updateUserRequest.emergencyContact(),
             updateUserRequest.bloodType(),
             updateUserRequest.rhFactor(),
-            updateUserRequest.photoUrl(), // S3 생성 후 수정 필요
+            s3Util.urlToKey(updateUserRequest.photoUrl()),
             company);
 
-        // Watch 병합 후 수정 필요
-//        Optional<Integer> watchNumber = entalHistoryRepository.findCurrentWatchNumberByUserUuid(userUuid);
-        Optional<Integer> watchNumber = Optional.of(1);
+        Optional<Integer> watchId = rentalHistoryRepository.findWatchIdByUserUuid(
+            userUuid);
 
-        return UserResponse.from(user, watchNumber);
+        UserDto userDto = new UserDto(user, watchId.orElse(null));
+
+        return UserResponse.from(userDto, s3Util);
     }
 
     @Override
@@ -150,9 +168,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResponse<UsersResponse> getApprovalUsers(PageRequest pageRequest) {
-        PageResponse<UsersResponse> usersResponse = userRepository.findUsersWhereIsApprovedIsFalse(
+        PageResponse<UsersDto> usersDto = userRepository.findUsersWhereIsApprovedIsFalse(
             pageRequest);
-        return usersResponse;
+
+        List<UsersResponse> usersResponse = usersDto.data().stream()
+            .map(dto -> UsersResponse.from(dto, s3Util))
+            .collect(Collectors.toList());
+
+        return PageResponse.of(
+            usersResponse,
+            usersDto.pagination().pageNum(),
+            usersDto.pagination().display(),
+            usersDto.pagination().totalItems()
+        );
     }
 
     @Override

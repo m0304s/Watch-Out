@@ -17,8 +17,8 @@ import watch.out.area.entity.EntryExit;
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
 import watch.out.user.dto.request.ApproveUsersRequest;
-import watch.out.user.dto.response.UserResponse;
-import watch.out.user.dto.response.UsersResponse;
+import watch.out.user.dto.response.UserDto;
+import watch.out.user.dto.response.UsersDto;
 import watch.out.user.entity.TrainingStatus;
 import watch.out.user.entity.UserRole;
 
@@ -26,6 +26,8 @@ import static watch.out.user.entity.QUser.user;
 import static watch.out.company.entity.QCompany.company;
 import static watch.out.area.entity.QArea.area;
 import static watch.out.area.entity.QEntryExitHistory.entryExitHistory;
+import static watch.out.watch.entity.QWatch.watch;
+import static watch.out.watch.entity.QRentalHistory.rentalHistory;
 
 
 @Repository
@@ -60,11 +62,11 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
     }
 
     @Override
-    public PageResponse<UsersResponse> findUsers(UUID areaUuid, TrainingStatus trainingStatus,
+    public PageResponse<UsersDto> findUsers(UUID areaUuid, TrainingStatus trainingStatus,
         String search, UserRole userRole, PageRequest pageRequest) {
         long offset = (long) pageRequest.pageNum() * pageRequest.display();
 
-        List<UsersResponse> usersResponse = createBaseUserQuery()
+        List<UsersDto> usersDto = createBaseUserQuery()
             .where(
                 user.deletedAt.isNull(),
                 user.isApproved.isTrue(),
@@ -87,40 +89,39 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             userRoleEq(userRole)
         );
 
-        return PageResponse.of(usersResponse, pageRequest.pageNum(), pageRequest.display(), count);
+        return PageResponse.of(usersDto, pageRequest.pageNum(), pageRequest.display(), count);
     }
 
     @Override
-    public Optional<UserResponse> findByUserIdAsDto(UUID userUuid) {
-//        return queryFactory.select(
-//                Projections.constructor(UserResponse.class,
-//                    user.uuid,
-//                    user.userId,
-//                    user.userName,
-//                    user.company.companyName,
-//                    user.area.areaName,
-//                    user.contact,
-//                    user.emergencyContact,
-//                    user.gender,
-//                    user.bloodType,
-//                    user.rhFactor,
-//                    user.trainingStatus,
-//                    user.trainingCompletedAt,
-//                    user.role,
-//                    user.watch.watchNumber,
-//                    user.photoKey,
-//                    user.assignedAt
-//                )
-//            )
-//            .from(user)
-//            .join(user.company, company)
-//            .leftJoin(user.area, area)
-//            .leftJoin(rentalHistory).on(rentalHistory.user.uuid.eq(user.uuid)
-//                .and(rentalHistory.returnedAt.isNull()))
-//            .leftJoin(watch).on(watch.uuid.eq(rentalHistory.watch.uuid))
-//            .where(user.uuid.eq(userUuid))
-//            .fetchOne();
-        return Optional.empty();
+    public Optional<UserDto> findByUserIdAsDto(UUID userUuid) {
+        return Optional.ofNullable(queryFactory.select(
+                Projections.constructor(UserDto.class,
+                    user.uuid,
+                    user.userId,
+                    user.userName,
+                    user.company.companyName,
+                    user.area.areaName,
+                    user.contact,
+                    user.emergencyContact,
+                    user.gender,
+                    user.bloodType,
+                    user.rhFactor,
+                    user.trainingStatus,
+                    user.trainingCompletedAt,
+                    user.role,
+                    watch.watchId,
+                    user.photoKey,
+                    user.assignedAt
+                )
+            )
+            .from(user)
+            .join(user.company, company)
+            .leftJoin(user.area, area)
+            .leftJoin(rentalHistory).on(rentalHistory.user.uuid.eq(user.uuid)
+                .and(rentalHistory.returnedAt.isNull()))
+            .leftJoin(watch).on(watch.uuid.eq(rentalHistory.watch.uuid))
+            .where(user.uuid.eq(userUuid))
+            .fetchOne());
     }
 
     @Override
@@ -137,10 +138,10 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
     }
 
     @Override
-    public PageResponse<UsersResponse> findUsersWhereIsApprovedIsFalse(PageRequest pageRequest) {
+    public PageResponse<UsersDto> findUsersWhereIsApprovedIsFalse(PageRequest pageRequest) {
         long offset = (long) pageRequest.pageNum() * pageRequest.display();
 
-        List<UsersResponse> usersResponse = createBaseUserQuery()
+        List<UsersDto> usersDto = createBaseUserQuery()
             .where(
                 user.deletedAt.isNull(),
                 user.isApproved.isFalse()
@@ -155,7 +156,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             user.isApproved.isFalse()
         );
 
-        return PageResponse.of(usersResponse, pageRequest.pageNum(), pageRequest.display(), count);
+        return PageResponse.of(usersDto, pageRequest.pageNum(), pageRequest.display(), count);
     }
 
     @Override
@@ -167,9 +168,9 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             .execute();
     }
 
-    private JPAQuery<UsersResponse> createBaseUserQuery() {
+    private JPAQuery<UsersDto> createBaseUserQuery() {
         return queryFactory.select(
-                Projections.constructor(UsersResponse.class,
+                Projections.constructor(UsersDto.class,
                     user.uuid,
                     user.userId,
                     user.userName,
