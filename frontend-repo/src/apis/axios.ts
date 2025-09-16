@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosRequestConfig } from 'axios'
+import { useAuthStore } from '@/stores/authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const isDevelopment = import.meta.env.DEV
@@ -58,8 +59,8 @@ if (isDevelopment) {
 // 인증을 위한 요청 인터셉터
 apiClient.interceptors.request.use(
   (config) => {
-    // localStorage에서 액세스 토큰 가져오기
-    const token = localStorage.getItem('accessToken')
+    // Zustand 메모리 스토어에서 액세스 토큰 가져오기
+    const token = useAuthStore.getState().accessToken
 
     // 토큰 재발급 및 로그인 요청에는 Authorization 헤더를 붙이지 않음
     const url = config.url || ''
@@ -95,11 +96,13 @@ apiClient.interceptors.response.use(
         console.log('토큰 갱신 시도...')
 
         // 토큰 갱신 API 호출 (refreshToken은 쿠키로 자동 전송됨)
-        const response = await apiClient.post('/auth/reissue', undefined, { withCredentials: true })
+        const response = await apiClient.post('/auth/reissue', undefined, {
+          withCredentials: true,
+        })
 
-        // 새로운 accessToken을 localStorage에 저장
+        // 새로운 accessToken을 스토어에 저장
         if (response.data?.result?.accessToken) {
-          localStorage.setItem('accessToken', response.data.result.accessToken)
+          useAuthStore.getState().updateToken(response.data.result.accessToken)
 
           // 원래 요청의 Authorization 헤더 업데이트
           originalRequest.headers.Authorization = `Bearer ${response.data.result.accessToken}`
@@ -112,8 +115,8 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         console.error('토큰 갱신 실패:', refreshError)
 
-        // 토큰 갱신 실패 시 localStorage에서 토큰 제거
-        localStorage.removeItem('accessToken')
+        // 토큰 갱신 실패 시 메모리 스토어 초기화
+        useAuthStore.getState().clearAuth()
 
         // 로그인 페이지로 리다이렉트
         window.location.href = '/login'

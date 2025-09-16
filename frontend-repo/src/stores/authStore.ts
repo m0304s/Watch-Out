@@ -1,19 +1,18 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { LoginResponse } from '@/features/auth/types'
 
 interface AuthState {
   // 인증 상태
   isAuthenticated: boolean
   accessToken: string | null
-  
+
   // 사용자 정보
   userUuid: string | null
   userId: string | null
   userName: string | null
   userRole: 'WORKER' | 'AREA_ADMIN' | 'ADMIN' | null
   isApproved: boolean
-  
+
   // 로딩 상태
   isLoading: boolean
   error: string | null
@@ -22,17 +21,17 @@ interface AuthState {
 interface AuthActions {
   // 로그인 성공 시 상태 업데이트
   setAuthData: (loginResponse: LoginResponse) => void
-  
+
   // 로그아웃
   logout: () => void
-  
+
   // 토큰 업데이트
   updateToken: (accessToken: string) => void
-  
+
   // 에러 상태 관리
   setError: (error: string | null) => void
   setLoading: (loading: boolean) => void
-  
+
   // 초기화
   clearAuth: () => void
 }
@@ -51,70 +50,54 @@ const initialState: AuthState = {
   error: null,
 }
 
-export const useAuthStore = create<AuthStore>()(
-  persist(
-    (set) => ({
+export const useAuthStore = create<AuthStore>()((set) => ({
+  ...initialState,
+
+  setAuthData: (loginResponse: LoginResponse) => {
+    set({
+      isAuthenticated: true,
+      accessToken: loginResponse.accessToken,
+      userUuid: loginResponse.userUuid,
+      userId: loginResponse.userId,
+      userName: loginResponse.userName,
+      userRole: loginResponse.userRole,
+      isApproved: loginResponse.isApproved,
+      error: null,
+      isLoading: false,
+    })
+  },
+
+  logout: () => {
+    set({
       ...initialState,
+    })
+  },
 
-      setAuthData: (loginResponse: LoginResponse) => {
-        set({
-          isAuthenticated: true,
-          accessToken: loginResponse.accessToken,
-          userUuid: loginResponse.userUuid,
-          userId: loginResponse.userId,
-          userName: loginResponse.userName,
-          userRole: loginResponse.userRole,
-          isApproved: loginResponse.isApproved,
-          error: null,
-          isLoading: false,
-        })
-      },
+  updateToken: (accessToken: string) => {
+    set({
+      accessToken,
+    })
+  },
 
-      logout: () => {
-        set({
-          ...initialState,
-        })
-      },
+  setError: (error: string | null) => {
+    set({
+      error,
+      isLoading: false,
+    })
+  },
 
-      updateToken: (accessToken: string) => {
-        set({
-          accessToken,
-        })
-      },
+  setLoading: (loading: boolean) => {
+    set({
+      isLoading: loading,
+    })
+  },
 
-      setError: (error: string | null) => {
-        set({
-          error,
-          isLoading: false,
-        })
-      },
-
-      setLoading: (loading: boolean) => {
-        set({
-          isLoading: loading,
-        })
-      },
-
-      clearAuth: () => {
-        set({
-          ...initialState,
-        })
-      },
-    }),
-    {
-      name: 'auth-storage', // localStorage key
-      partialize: (state) => ({
-        isAuthenticated: state.isAuthenticated,
-        accessToken: state.accessToken,
-        userUuid: state.userUuid,
-        userId: state.userId,
-        userName: state.userName,
-        userRole: state.userRole,
-        isApproved: state.isApproved,
-      }),
-    }
-  )
-)
+  clearAuth: () => {
+    set({
+      ...initialState,
+    })
+  },
+}))
 
 // 편의 선택자들
 export const useAuth = () => {
