@@ -25,10 +25,14 @@
     .meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .pill{ font-size:11px; color:#666; background:#f0f2f5; border-radius:999px; padding:2px 8px; border:1px solid #e3e6ea; }
     .name { font-weight:700; color:#333; }
-    .controls-row{ display:flex; gap:6px; padding:8px 10px; align-items:center; border-top:1px solid #eee; }
+    .controls-row{ display:flex; gap:6px; padding:8px 10px; align-items:center; border-top:1px solid #eee; flex-wrap:wrap; }
+    .row-right{ margin-left:auto; display:flex; gap:6px; }
     img.stream{ width:100%; height:auto; display:block; background:#000; aspect-ratio:16/9; object-fit:contain; }
     .footer{ padding:10px 16px; color:#888; font-size:12px; }
     .divider{ height:1px; background:#ececf2; margin:0; }
+    .status-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; background:#bbb; }
+    .status-on{ background:#28a745; }
+    .status-off{ background:#bbb; }
     @media (max-width: 480px){ .grid{ grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -44,8 +48,8 @@
           <option value="false" selected>false</option>
         </select>
       </label>
-      <button class="btn primary" id="startAll">모두 시작</button>
-      <button class="btn danger" id="stopAll">모두 정지</button>
+      <button class="btn primary" id="startAllView">모두 보기</button>
+      <button class="btn danger" id="stopAllView">모두 끄기</button>
       <button class="btn ghost" id="clearAll">전체 삭제</button>
     </div>
   </header>
@@ -57,7 +61,7 @@
     <button class="btn" id="add">추가</button>
   </div>
 
-  <div class="hint">숫자(예: <code>0</code>, <code>1</code>)는 로컬 카메라 인덱스로 처리되고, 그 외는 RTSP/HTTP URL로 처리됩니다. 각 소스는 서버의 <code>/cctv?src=...&company=...&camera=...</code> 로 요청합니다.</div>
+  <div class="hint">각 카드에서 <b>추론</b>(워커)과 <b>보기</b>(MJPEG)를 독립적으로 제어할 수 있습니다.</div>
   <hr class="divider"/>
 
   <div id="grid" class="grid" style="--cols:2; --gap:12px;"></div>
@@ -73,14 +77,21 @@
           <span class="pill company"></span>
         </div>
         <div class="meta">
-          <button class="btn ghost start">시작</button>
-          <button class="btn ghost stop">정지</button>
-          <button class="btn danger remove">삭제</button>
+          <span class="status">
+            <span class="status-dot"></span> <span class="status-text">detector: off</span>
+          </span>
         </div>
       </header>
       <img class="stream" alt="stream" />
       <div class="controls-row">
         <span class="pill src"></span>
+        <div class="row-right">
+          <button class="btn ghost detect-start">추론 시작</button>
+          <button class="btn ghost detect-stop">추론 정지</button>
+          <button class="btn primary view-start">보기 시작</button>
+          <button class="btn danger view-stop">보기 정지</button>
+          <button class="btn danger remove">삭제</button>
+        </div>
       </div>
     </div>
   </template>
@@ -96,12 +107,12 @@
     const linkEl    = document.getElementById('link');
     const addBtn    = document.getElementById('add');
 
-    const startAllBtn = document.getElementById('startAll');
-    const stopAllBtn  = document.getElementById('stopAll');
+    const startAllViewBtn = document.getElementById('startAllView');
+    const stopAllViewBtn  = document.getElementById('stopAllView');
     const clearAllBtn = document.getElementById('clearAll');
 
     const tpl = document.getElementById('cardTpl');
-    const state = { items: [] }; // {company, camera, link, el, img}
+    const state = { items: [] }; // {company,camera,link,el,img,detecting}
 
     function toSrcParam(val){
       const t = (val||'').trim();
@@ -109,20 +120,15 @@
       const isInt = /^-?\d+$/.test(t);
       return isInt ? t : encodeURIComponent(t);
     }
-
     function buildStreamURL(link, company, camera){
       const srcParam = toSrcParam(link);
       if(!srcParam) return '';
       const mirror = mirrorEl.value;
       const q = new URLSearchParams({
-        src: srcParam,
-        mirror,
-        company: company || '',
-        camera: camera || ''
+        src: srcParam, mirror, company: company || '', camera: camera || ''
       });
       return `/cctv?${q.toString()}`;
     }
-
     function applyLayout(){
       const cols = Math.min(Math.max(+colsEl.value||2,1),6);
       const gap  = Math.min(Math.max(+gapEl.value||12,0),40);
@@ -130,7 +136,6 @@
       grid.style.setProperty('--gap', `${gap}px`);
       persist();
     }
-
     function persist(){
       const data = {
         cols:+colsEl.value||2,
@@ -140,7 +145,6 @@
       };
       localStorage.setItem('multiview-form-config', JSON.stringify(data));
     }
-
     function restore(){
       const raw = localStorage.getItem('multiview-form-config');
       if(!raw) return;
@@ -154,31 +158,81 @@
       }catch{}
     }
 
+    async function postJSON(url, params){
+      const qs = new URLSearchParams(params).toString();
+      const res = await fetch(`${url}?${qs}`, {method:'POST'});
+      if(!res.ok) throw new Error(`${url} ${res.status}`);
+      return res.json();
+    }
+
+    function setDetectStatus(item, running){
+      item.detecting = !!running;
+      const dot = item.el.querySelector('.status-dot');
+      const text = item.el.querySelector('.status-text');
+      if(running){
+        dot.classList.add('status-on'); dot.classList.remove('status-off');
+        text.textContent = 'detector: on';
+      }else{
+        dot.classList.add('status-off'); dot.classList.remove('status-on');
+        text.textContent = 'detector: off';
+      }
+    }
+
+    async function refreshRunning(){
+      try{
+        const res = await fetch('/running');
+        const data = await res.json();
+        const running = new Set((data.items||[]).map(it => `${it.company}:${it.camera}`));
+        state.items.forEach(it => setDetectStatus(it, running.has(`${it.company}:${it.camera}`)));
+      }catch{}
+    }
+
     function addCard(company, camera, link, noPersist){
       const node = tpl.content.firstElementChild.cloneNode(true);
       const nameEl = node.querySelector('.name');
       const compEl = node.querySelector('.company');
       const srcPill = node.querySelector('.src');
       const img = node.querySelector('img.stream');
-      const startBtn = node.querySelector('.start');
-      const stopBtn  = node.querySelector('.stop');
-      const removeBtn= node.querySelector('.remove');
+      const btnDetectStart = node.querySelector('.detect-start');
+      const btnDetectStop  = node.querySelector('.detect-stop');
+      const btnViewStart   = node.querySelector('.view-start');
+      const btnViewStop    = node.querySelector('.view-stop');
+      const btnRemove      = node.querySelector('.remove');
 
       nameEl.textContent = camera || '(이름 없음)';
       compEl.textContent = company || '(회사 없음)';
       srcPill.textContent = link || '(링크 없음)';
 
-      const item = { company, camera, link, el: node, img };
+      const item = { company, camera, link, el: node, img, detecting:false };
       state.items.push(item);
       grid.appendChild(node);
 
-      startBtn.addEventListener('click', () => {
+      // 추론 시작/정지
+      btnDetectStart.addEventListener('click', async () => {
+        if(!company || !camera || !link){ alert('회사명/카메라/링크가 필요합니다.'); return; }
+        try{
+          const r = await postJSON('/detect/start', { company, camera, src: link, mirror: mirrorEl.value, push: false });
+          setDetectStatus(item, r.running);
+        }catch(e){ alert('추론 시작 실패: ' + e.message); }
+      });
+      btnDetectStop.addEventListener('click', async () => {
+        if(!company || !camera){ alert('회사명/카메라가 필요합니다.'); return; }
+        try{
+          const r = await postJSON('/detect/stop', { company, camera });
+          setDetectStatus(item, false);
+        }catch(e){ alert('추론 정지 실패: ' + e.message); }
+      });
+
+      // 보기 시작/정지
+      btnViewStart.addEventListener('click', () => {
         const url = buildStreamURL(item.link, item.company, item.camera);
         if(!url){ alert('유효한 링크가 없습니다.'); return; }
         img.src = url;
       });
-      stopBtn.addEventListener('click', () => { img.src = ''; });
-      removeBtn.addEventListener('click', () => {
+      btnViewStop.addEventListener('click', () => { img.src = ''; });
+
+      // 삭제
+      btnRemove.addEventListener('click', () => {
         img.src = '';
         node.remove();
         const i = state.items.indexOf(item);
@@ -187,28 +241,27 @@
       });
 
       if(!noPersist) persist();
+      // 초기 상태 동기화
+      refreshRunning();
     }
 
-    // Events
+    // 상단 제어
     addBtn.addEventListener('click', () => {
       const company = companyEl.value.trim();
       const camera  = cameraEl.value.trim();
       const link    = linkEl.value.trim();
-      if(!company || !camera || !link){
-        alert('회사명, 카메라명, 링크를 모두 입력하세요.');
-        return;
-      }
+      if(!company || !camera || !link){ alert('회사명, 카메라명, 링크를 모두 입력하세요.'); return; }
       addCard(company, camera, link);
       companyEl.value = cameraEl.value = linkEl.value = '';
     });
 
-    startAllBtn.addEventListener('click', () => {
+    startAllViewBtn.addEventListener('click', () => {
       state.items.forEach(it => {
         const url = buildStreamURL(it.link, it.company, it.camera);
         if(url) it.img.src = url;
       });
     });
-    stopAllBtn.addEventListener('click', () => {
+    stopAllViewBtn.addEventListener('click', () => {
       state.items.forEach(it => it.img.src='');
     });
     clearAllBtn.addEventListener('click', () => {
@@ -222,16 +275,15 @@
     colsEl.addEventListener('change', applyLayout);
     gapEl.addEventListener('change', applyLayout);
     mirrorEl.addEventListener('change', () => {
-      // 미러 변경 시 실행 중 스트림 새로고침
-      state.items.forEach(it => {
-        if(it.img.src){ it.img.src = buildStreamURL(it.link, it.company, it.camera); }
-      });
+      state.items.forEach(it => { if(it.img.src){ it.img.src = buildStreamURL(it.link, it.company, it.camera); } });
       persist();
     });
 
     // init
     restore();
     applyLayout();
+    refreshRunning();
+    setInterval(refreshRunning, 3000); // 3초 주기 상태 동기화
   </script>
 </body>
 </html>
