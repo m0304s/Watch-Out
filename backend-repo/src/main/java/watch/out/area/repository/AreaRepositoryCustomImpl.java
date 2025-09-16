@@ -48,36 +48,6 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
     }
 
     @Override
-    public List<AreaListResponse> findAreasAsDto() {
-        QArea area = QArea.area;
-
-        return queryFactory
-            .select(Projections.constructor(AreaListResponse.class,
-                area.uuid,
-                area.areaName,
-                area.areaAlias))
-            .from(area)
-            .orderBy(area.areaName.asc(), area.areaAlias.asc())
-            .fetch();
-    }
-
-    @Override
-    public List<AreaListResponse> findAreasAsDto(int pageNum, int display) {
-        QArea area = QArea.area;
-
-        return queryFactory
-            .select(Projections.constructor(AreaListResponse.class,
-                area.uuid,
-                area.areaName,
-                area.areaAlias))
-            .from(area)
-            .orderBy(area.areaName.asc(), area.areaAlias.asc())
-            .offset(pageNum * display)
-            .limit(display)
-            .fetch();
-    }
-
-    @Override
     public List<AreaListResponse> findAreasAsDto(int pageNum, int display, String search) {
         QArea area = QArea.area;
 
@@ -95,43 +65,6 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
         }
 
         return query
-            .orderBy(area.areaName.asc(), area.areaAlias.asc())
-            .offset(pageNum * display)
-            .limit(display)
-            .fetch();
-    }
-
-    @Override
-    public List<AreaListResponse> findAreasByUserUuidAsDto(UUID userUuid) {
-        QArea area = QArea.area;
-        QAreaManager areaManager = QAreaManager.areaManager;
-
-        return queryFactory
-            .select(Projections.constructor(AreaListResponse.class,
-                area.uuid,
-                area.areaName,
-                area.areaAlias))
-            .from(areaManager)
-            .join(areaManager.area, area)
-            .where(areaManager.user.uuid.eq(userUuid))
-            .orderBy(area.areaName.asc(), area.areaAlias.asc())
-            .fetch();
-    }
-
-    @Override
-    public List<AreaListResponse> findAreasByUserUuidAsDto(UUID userUuid, int pageNum,
-        int display) {
-        QArea area = QArea.area;
-        QAreaManager areaManager = QAreaManager.areaManager;
-
-        return queryFactory
-            .select(Projections.constructor(AreaListResponse.class,
-                area.uuid,
-                area.areaName,
-                area.areaAlias))
-            .from(areaManager)
-            .join(areaManager.area, area)
-            .where(areaManager.user.uuid.eq(userUuid))
             .orderBy(area.areaName.asc(), area.areaAlias.asc())
             .offset(pageNum * display)
             .limit(display)
@@ -238,15 +171,6 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
     }
 
     @Override
-    public long countAreas() {
-        QArea area = QArea.area;
-
-        return safeCount(queryFactory
-            .select(area.count())
-            .from(area));
-    }
-
-    @Override
     public long countAreas(String search) {
         QArea area = QArea.area;
 
@@ -261,18 +185,6 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
         }
 
         return safeCount(query);
-    }
-
-    @Override
-    public long countAreasByUserUuid(UUID userUuid) {
-        QArea area = QArea.area;
-        QAreaManager areaManager = QAreaManager.areaManager;
-
-        return safeCount(queryFactory
-            .select(area.count())
-            .from(areaManager)
-            .join(areaManager.area, area)
-            .where(areaManager.user.uuid.eq(userUuid)));
     }
 
     @Override

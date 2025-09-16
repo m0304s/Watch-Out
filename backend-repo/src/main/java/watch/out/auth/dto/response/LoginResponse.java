@@ -9,6 +9,7 @@ public record LoginResponse(
     String userId,
     String userName,
     UserRole userRole,
+    UUID areaUuid,
     boolean isApproved
 ) {
 

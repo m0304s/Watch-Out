@@ -11,8 +11,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import watch.out.area.entity.AreaManager;
+import watch.out.area.repository.AreaManagerRepository;
 import watch.out.auth.dto.request.LoginRequest;
 import watch.out.auth.dto.response.LoginResponse;
+import watch.out.common.entity.BaseEntity;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.CookieUtil;
@@ -28,6 +31,7 @@ import watch.out.user.repository.UserRepository;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final AreaManagerRepository areaManagerRepository;
     private final PasswordEncoder encoder;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
@@ -52,8 +56,11 @@ public class AuthServiceImpl implements AuthService {
         CookieUtil.addHttpOnlyCookie(response, "refresh_token", refreshToken,
             refreshTokenExpiration);
 
+        Optional<AreaManager> areaManager = areaManagerRepository.findByUser_Uuid(user.getUuid());
+        UUID areaUuid = areaManager.map(manager -> manager.getArea().getUuid()).orElse(null);
+
         return new LoginResponse(accessToken, user.getUuid(), user.getUserId(), user.getUserName(),
-            user.getRole(), user.isApproved());
+            user.getRole(), areaUuid, user.isApproved());
     }
 
     @Override
