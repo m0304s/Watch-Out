@@ -29,7 +29,7 @@ public class SafetyViolation extends BaseTimeEntity {
     @OneToMany(mappedBy = "safetyViolation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<SafetyViolationDetail> violationDetails;
 
-    @Column(name = "image_key", length = 256)
+    @Column(name = "image_key", length = 100)
     private String imageKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
