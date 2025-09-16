@@ -100,7 +100,8 @@ public class User extends BaseSoftDeleteEntity {
     }
 
     public void updateUser(String userName, String contact, String emergencyContact,
-        BloodType bloodType, RhFactor rhFactor, String photoKey, Company company) {
+        BloodType bloodType,
+        RhFactor rhFactor, String photoKey, Company company) {
         if (userName != null) {
             this.userName = userName;
         }

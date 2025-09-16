@@ -1,53 +1,36 @@
 import { css } from '@emotion/react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 
-import type { LoginFormData, LoginRequest } from '@/features/auth/types'
+import type { LoginFormData } from '@/features/auth/types'
 import { AppHeader } from '@/features/auth/web/components/AppHeader'
 import { LoginForm } from '@/features/auth/web/components/LoginForm'
-import { login } from '@/features/auth/api/auth'
-import { useAuthStore } from '@/stores/authStore'
 
 export const LoginPage = () => {
   const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
-  const { setAuthData, setError } = useAuthStore()
-
+  
   const handleLogin = async (formData: LoginFormData) => {
     setLoading(true)
-
+    
     try {
-      const loginRequest: LoginRequest = {
-        userId: formData.id,
-        password: formData.password,
-      }
-
-      const response = await login(loginRequest)
-
-      if (response.success && response.result) {
-        // Auth 스토어에 로그인 정보 저장
-        setAuthData(response.result)
-
-        alert('로그인 성공!')
-        console.log('로그인 성공:', response.result)
-
-        // 대시보드로 리다이렉트
-        navigate('/dashboard')
-      } else {
-        const errorMessage = response.message || '로그인에 실패했습니다.'
-        setError(errorMessage)
-        alert(errorMessage)
-      }
+      // TODO: 실제 API 호출 구현
+      // eslint-disable-next-line no-console
+      console.log('Login attempt:', formData)
+      
+      // 임시 지연 시뮬레이션
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      
+      // 성공 시 리다이렉트 로직 추가 예정
+      // eslint-disable-next-line no-console
+      console.log('Login successful')
     } catch (error) {
-      const errorMessage = '로그인 중 오류가 발생했습니다.'
-      console.error('로그인 실패:', error)
-      setError(errorMessage)
-      alert(errorMessage)
+      // eslint-disable-next-line no-console
+      console.error('Login failed:', error)
+      // 에러 처리 로직 추가 예정
     } finally {
       setLoading(false)
     }
   }
-
+  
   return (
     <div css={pageContainer}>
       <div css={contentContainer}>

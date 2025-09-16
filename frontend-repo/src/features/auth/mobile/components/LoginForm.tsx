@@ -1,6 +1,6 @@
 import { css } from '@emotion/react'
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+
 import type { LoginFormData } from '@/features/auth/types'
 
 interface MobileLoginFormProps {
@@ -8,11 +8,7 @@ interface MobileLoginFormProps {
   loading?: boolean
 }
 
-export const MobileLoginForm = ({
-  onSubmit,
-  loading = false,
-}: MobileLoginFormProps) => {
-  const navigate = useNavigate()
+export const MobileLoginForm = ({ onSubmit, loading = false }: MobileLoginFormProps) => {
   const [formData, setFormData] = useState<LoginFormData>({
     id: '',
     password: '',
@@ -37,10 +33,6 @@ export const MobileLoginForm = ({
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev)
-  }
-
-  const handleSignUpClick = () => {
-    navigate('/signup')
   }
 
   return (
@@ -90,17 +82,6 @@ export const MobileLoginForm = ({
           {loading ? '로그인 중...' : '로그인'}
         </button>
       </form>
-
-      <div css={signUpSectionStyles}>
-        <button
-          type="button"
-          onClick={handleSignUpClick}
-          disabled={loading}
-          css={signUpButtonStyles}
-        >
-          회원가입
-        </button>
-      </div>
     </div>
   )
 }
@@ -181,9 +162,7 @@ const submitButtonStyles = css`
   border-radius: 10px;
   font-family: 'PretendardSemiBold', sans-serif;
   font-size: 18px;
-  transition:
-    opacity 0.2s ease,
-    transform 0.05s ease;
+  transition: opacity 0.2s ease, transform 0.05s ease;
 
   &:hover {
     opacity: 0.9;
@@ -197,33 +176,4 @@ const submitButtonStyles = css`
   }
 `
 
-const signUpSectionStyles = css`
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid var(--color-gray-200);
-  text-align: center;
-`
 
-const signUpButtonStyles = css`
-  width: 100%;
-  height: 48px;
-  background-color: transparent;
-  color: var(--color-gray-600);
-  border: 1px solid var(--color-gray-300);
-  border-radius: 10px;
-  font-family: 'PretendardMedium', sans-serif;
-  font-size: 16px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: var(--color-gray-50);
-    border-color: var(--color-gray-400);
-  }
-  &:active {
-    transform: translateY(1px);
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`

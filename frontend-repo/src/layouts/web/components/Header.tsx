@@ -3,8 +3,8 @@ import { css } from '@emotion/react'
 import { useLocation } from 'react-router-dom'
 import { GoSidebarCollapse } from 'react-icons/go'
 import { GoSidebarExpand } from 'react-icons/go'
-import type { NavItem } from '@/constants/navigationWeb'
-import { NAV_ITEMS } from '@/constants/navigationWeb'
+import type { NavItem } from '@/constants/navigation'
+import { NAV_ITEMS } from '@/constants/navigation'
 import { useLayoutStore } from '@/stores/layoutStore'
 
 const Header: React.FC = () => {
@@ -73,9 +73,7 @@ const toggleButton = css`
 `
 
 const headerText = css`
-  padding: 0 1rem;
-  font-weight: 600;
-  font-size: 18px;
+  padding: 0 0.5rem;
 `
 
 const weatherBox = css`

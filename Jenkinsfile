@@ -242,15 +242,13 @@ pipeline {
                             withCredentials([
                                 file(credentialsId: 'APP_YML',        variable: 'APP_YML'),
                                 file(credentialsId: 'APP_YML_DOCKER', variable: 'APP_YML_DOCKER'),
-                                file(credentialsId: 'APP_YML_TEST',   variable: 'APP_YML_TEST'),
-                                file(credentialsId: 'watchout-firebase-key', variable: 'FIREBASE_KEY')
+                                file(credentialsId: 'APP_YML_TEST',   variable: 'APP_YML_TEST')
                             ]) {
                                 sh '''
                                   set -eux
                                   cp "$APP_YML"        _run_config/application.yml
                                   cp "$APP_YML_DOCKER" _run_config/application-docker.yml
                                   cp "$APP_YML_TEST"   _run_config/application-test.yml
-                                  cp "$FIREBASE_KEY"   _run_config/watchout-firebase-key.json
                                 '''
                             }
 
@@ -275,7 +273,6 @@ pipeline {
                                 --user 1000:1000 \
                                 -e SPRING_PROFILES_ACTIVE=docker,test \
                                 -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
-                                -e FIREBASE_SERVICE_ACCOUNT_FILE=/app/config/watchout-firebase-key.json \
                                 ${tag}
                             """
                         } else if (branch == 'master') {
@@ -285,15 +282,13 @@ pipeline {
                             withCredentials([
                                 file(credentialsId: 'APP_YML',        variable: 'APP_YML'),
                                 file(credentialsId: 'APP_YML_DOCKER', variable: 'APP_YML_DOCKER'),
-                                file(credentialsId: 'APP_YML_PROD',   variable: 'APP_YML_PROD'),
-                                file(credentialsId: 'watchout-firebase-key', variable: 'FIREBASE_KEY')
+                                file(credentialsId: 'APP_YML_PROD',   variable: 'APP_YML_PROD')
                             ]) {
                                 sh '''
                                   set -eux
                                   cp "$APP_YML"        _run_config/application.yml
                                   cp "$APP_YML_DOCKER" _run_config/application-docker.yml
                                   cp "$APP_YML_PROD"   _run_config/application-prod.yml
-                                  cp "$FIREBASE_KEY"   _run_config/watchout-firebase-key.json
                                 '''
                             }
 
@@ -326,7 +321,6 @@ pipeline {
                                 --user 1000:1000 \
                                 -e SPRING_PROFILES_ACTIVE=docker,prod \
                                 -e SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/ \
-                                -e FIREBASE_SERVICE_ACCOUNT_FILE=/app/config/watchout-firebase-key.json \
                                 ${tag}
 
                               sleep 30
