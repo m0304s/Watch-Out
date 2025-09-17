@@ -1,6 +1,6 @@
 package watch.out.cctv.service;
 
-import watch.out.cctv.dto.response.AreaViewListResponse;
+import watch.out.cctv.dto.response.AreaViewResponse;
 import watch.out.cctv.entity.Cctv;
 
 import java.util.List;
@@ -11,25 +11,10 @@ public interface StreamDirectoryService {
 
     Optional<Cctv> findOne(UUID uuid);
 
-    List<AreaViewListResponse.Item> listAreaProxyItems(UUID areaUuid, boolean useFastapiMjpeg);
+    List<AreaViewResponse> listAreaProxyItems(UUID areaUuid, boolean useFastapiMjpeg);
 
-    default String springMjpegProxyUrl(Cctv cctv, boolean useFastapiMjpeg) {
-        return "/cctv/stream/mjpeg?uuid=" + cctv.getUuid() + "&useFastapiMjpeg=" + useFastapiMjpeg;
-    }
+    // URL 빌더도 Impl로 내린다 (환경설정 사용)
+    String springMjpegProxyUrl(Cctv cctv, boolean useFastapiMjpeg);
 
-    default String fastapiMjpegUrl(Cctv cctv) {
-        // 필요 시 FastAPI MJPEG URL 생성 규칙 맞춰서 수정
-        return "http://localhost:8000/cctv?company="
-            + (cctv.getArea() != null ? cctv.getArea().getUuid() : "default")
-            + "&camera=" + urlEncode(cctv.getCctvName())
-            + "&src=" + urlEncode(cctv.getCctvUrl());
-    }
-
-    private static String urlEncode(String s) {
-        try {
-            return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            return s;
-        }
-    }
+    String fastapiMjpegUrl(Cctv cctv);
 }

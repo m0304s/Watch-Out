@@ -12,6 +12,7 @@ import watch.out.cctv.dto.request.CreateCctvRequest;
 import watch.out.cctv.dto.request.UpdateCctvRequest;
 import watch.out.cctv.dto.response.AreaViewListResponse;
 import watch.out.cctv.dto.response.CctvResponse;
+import watch.out.cctv.dto.response.StartReportResponse;
 import watch.out.cctv.entity.Cctv;
 import watch.out.cctv.service.CctvService;
 import watch.out.cctv.service.StreamDirectoryService;
@@ -67,10 +68,10 @@ public class CctvController {
     }
 
     @GetMapping("/views/area")
-    @PreAuthorize("permitAll()") // 공개로 열고 싶으면 permitAll. 보호하려면 이 줄 제거.
+    @PreAuthorize("permitAll()")
     public ResponseEntity<AreaViewListResponse> areaViews(
         @RequestParam UUID areaUuid,
-        @RequestParam(defaultValue = "false") boolean useFastapiMjpeg // 로컬 기본: ffmpeg
+        @RequestParam(defaultValue = "false") boolean useFastapiMjpeg
     ) {
         AreaViewListResponse body = new AreaViewListResponse(
             areaUuid,
@@ -81,27 +82,24 @@ public class CctvController {
     }
 
     @GetMapping(value = "/stream/mjpeg", produces = "multipart/x-mixed-replace; boundary=frame")
-    @PreAuthorize("permitAll()") // 공개로 열고 싶으면 permitAll. 보호하려면 이 줄 제거.
+    @PreAuthorize("permitAll()")
     public void streamOne(
         @RequestParam UUID uuid,
-        @RequestParam(defaultValue = "false") boolean useFastapiMjpeg, // 로컬 기본: ffmpeg
+        @RequestParam(defaultValue = "false") boolean useFastapiMjpeg,
         HttpServletResponse response
     ) throws IOException {
         Cctv cctv = streamDirectoryService.findOne(uuid)
             .orElseThrow(() -> new IllegalArgumentException("CCTV not found or not type=CCTV"));
         if (useFastapiMjpeg) {
-            MjpegStreaming.proxyUpstreamMultipart(streamDirectoryService.fastapiMjpegUrl(cctv),
-                response);
+            MjpegStreaming.proxyUpstreamMultipart(streamDirectoryService.fastapiMjpegUrl(cctv), response);
         } else {
             Process process = MjpegStreaming.transcodeToMjpegAndStream(cctv.getCctvUrl(), response);
-            if (process != null && process.isAlive()) {
-                process.destroy();
-            }
+            // ⚠️ 여길 즉시 destroy 하면 바로 끊김. (원래는 클라이언트 종료 시 정리 로직에서 종료)
         }
     }
 
     @PostMapping("/infer/start-all")
-    public ResponseEntity<InferenceStartService.StartReport> startAll(
+    public ResponseEntity<StartReportResponse> startAll(
         @RequestParam(defaultValue = "true") boolean mirror,
         @RequestParam(defaultValue = "false") boolean push
     ) {
@@ -109,7 +107,7 @@ public class CctvController {
     }
 
     @PostMapping("/infer/start-area")
-    public ResponseEntity<InferenceStartService.StartReport> startArea(
+    public ResponseEntity<StartReportResponse> startArea(   // ✅ 통일
         @RequestParam UUID areaUuid,
         @RequestParam(defaultValue = "true") boolean mirror,
         @RequestParam(defaultValue = "false") boolean push
