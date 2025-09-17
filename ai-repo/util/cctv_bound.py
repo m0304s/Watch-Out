@@ -7,6 +7,7 @@ from pathlib import Path
 import logging, json, os, math, hashlib
 from collections import Counter
 from datetime import datetime, timezone
+from urllib.parse import quote  # URL 인코딩
 
 try:
     from dotenv import load_dotenv
@@ -231,6 +232,25 @@ def _get_s3():
             _s3 = False
     return _s3
 
+def _s3_object_url(bucket, region, key, *, url_style=None, cloudfront=None):
+    """
+    고정 객체 URL 생성:
+    - cloudfront가 있으면 CloudFront 도메인 사용
+    - url_style: "virtual"(기본) | "path"
+    """
+    qkey = quote(key, safe="/")
+    if cloudfront:
+        return f"https://{cloudfront}/{qkey}"
+    style = (url_style or os.getenv("S3_URL_STYLE", "virtual")).lower()
+    if style == "path":
+        host = "s3.amazonaws.com" if (not region or region == "us-east-1") else f"s3.{region}.amazonaws.com"
+        return f"https://{host}/{bucket}/{qkey}"
+    else:
+        # virtual-hosted-style
+        if not region or region == "us-east-1":
+            return f"https://{bucket}.s3.amazonaws.com/{qkey}"
+        return f"https://{bucket}.s3.{region}.amazonaws.com/{qkey}"
+
 def _save_jpeg_to_s3(image_bgr, key):
     cfg = _s3_cfg()
     if not cfg["bucket"]:
@@ -247,15 +267,28 @@ def _save_jpeg_to_s3(image_bgr, key):
             Key=key,
             Body=buf.tobytes(),
             ContentType="image/jpeg",
+            # 공개로 쓸 경우 버킷 정책 또는 ACL(public-read) 필요
+            # ACL="public-read",
         )
-        url = None
+        public_url = _s3_object_url(
+            cfg["bucket"],
+            cfg["region"],
+            key,
+            url_style=os.getenv("S3_URL_STYLE"),
+            cloudfront=os.getenv("S3_CLOUDFRONT")
+        )
+        presigned_url = None
         if cfg["do_presign"]:
-            url = s3.generate_presigned_url(
+            presigned_url = s3.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": cfg["bucket"], "Key": key},
                 ExpiresIn=cfg["presign_ex"],
             )
-        return {"s3_uri": f"s3://{cfg['bucket']}/{key}", "url": url}
+        return {
+            "s3_uri": f"s3://{cfg['bucket']}/{key}",
+            "public_url": public_url,   # 고정 URL
+            "url": presigned_url        # presigned (옵션)
+        }
     except Exception as e:
         logging.error(f"S3 upload failed: {e}")
         return None
@@ -365,7 +398,9 @@ def mjpeg_generator(src=0, mirror=True, meta=None):
 
                 upload_info = _save_jpeg_to_s3(vis, key) if cfg["bucket"] else None
                 if upload_info:
-                    snap_ref = upload_info.get("url") or upload_info.get("s3_uri")
+                    snap_ref = (upload_info.get("public_url")
+                                or upload_info.get("url")
+                                or upload_info.get("s3_uri"))
                 else:
                     info = _save_jpeg_local(vis, local_path)
                     snap_ref = info.get("path")
@@ -466,7 +501,9 @@ def detect_loop_streaming(src, mirror=True, company=None, camera=None, on_vis_jp
 
                 upload_info = _save_jpeg_to_s3(vis, key) if cfg["bucket"] else None
                 if upload_info:
-                    snap_ref = upload_info.get("url") or upload_info.get("s3_uri")
+                    snap_ref = (upload_info.get("public_url")
+                                or upload_info.get("url")
+                                or upload_info.get("s3_uri"))
                 else:
                     info = _save_jpeg_local(vis, local_path)
                     snap_ref = info.get("path")
