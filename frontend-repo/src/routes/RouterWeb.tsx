@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LayoutPage from '@/layouts/web/pages/LayoutPage'
+import CctvMonitoringPage from '@/features/area/web/pages/CctvMonitoringPage'
 import { LoginPage, MobileSignUpPage } from '@/features/auth'
 import { SelectedWorkersPage, MobileWorkerListPage } from '@/features/worker'
 import { AreaManagementPage } from '@/features/cctv'
@@ -17,6 +18,7 @@ const RouterWeb = () => {
             isLoggedIn ? <LayoutPage /> : <Navigate to="/login" replace />
           }
         >
+          <Route path="/cctv/monitoring" element={<CctvMonitoringPage />} />
           <Route path="/worker1" element={<SelectedWorkersPage />} />
           <Route path="/area" element={<AreaManagementPage />} />
         </Route>

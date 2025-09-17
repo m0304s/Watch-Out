@@ -27,7 +27,7 @@ const Layout: React.FC = () => {
         </aside>
         <div css={contentConatiner}>
           <Header />
-          <main>
+          <main css={mainContainer}>
             <Outlet />
           </main>
         </div>
@@ -59,6 +59,9 @@ const sideContainer = (isNavOpen: boolean) => css`
 `
 const contentConatiner = css`
   flex-grow: 1;
+`
+const mainContainer = css`
+  padding: 24px;
 `
 
 const notiContainer = css`
