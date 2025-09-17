@@ -3,6 +3,7 @@ package watch.out.safety.service;
 import java.util.List;
 import java.util.UUID;
 import watch.out.dashboard.dto.response.SafetyViolationStatusResponse;
+import watch.out.safety.dto.response.SafetyViolationResponse;
 import watch.out.safety.entity.SafetyViolation;
 import watch.out.safety.entity.SafetyViolationType;
 
@@ -14,12 +15,12 @@ public interface SafetyViolationService {
      * @param cctvUuid       CCTV UUID
      * @param areaUuid       구역 UUID
      * @param violationTypes 위반 유형 리스트 (단일 또는 복합)
-     * @param imageKey       이미지 키 (S3 키)
+     * @param snapshotUrl    S3 스냅샷 URL (URL을 키로 변환하여 저장)
      * @return 저장된 안전장비 위반 내역
      */
     SafetyViolation saveViolation(UUID cctvUuid, UUID areaUuid,
         List<SafetyViolationType> violationTypes,
-        String imageKey);
+        String snapshotUrl);
 
     /**
      * 오늘 안전장비 미착용 현황을 조회
@@ -34,8 +35,8 @@ public interface SafetyViolationService {
      *
      * @param areaUuids     구역 UUID 리스트 (null이거나 비어있으면 전체 구역)
      * @param violationType 조회할 위반 유형 (예: HELMET_OFF)
-     * @return 해당 위반 유형을 포함한 위반 내역 리스트
+     * @return 해당 위반 유형을 포함한 위반 내역 리스트 (이미지 URL 포함)
      */
-    List<SafetyViolation> getViolationsByType(List<UUID> areaUuids,
+    List<SafetyViolationResponse> getViolationsByType(List<UUID> areaUuids,
         SafetyViolationType violationType);
 }

@@ -8,6 +8,7 @@ import watch.out.cctv.entity.HeavyEquipmentType;
 import watch.out.cctv.util.HeavyEquipmentMapper;
 import watch.out.notification.service.FcmService;
 import watch.out.safety.entity.SafetyViolationType;
+import watch.out.common.util.S3Util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,14 +24,15 @@ import java.util.UUID;
 public class FcmNotificationHandlerImpl implements FcmNotificationHandler {
 
     private final FcmService fcmService;
+    private final S3Util s3Util;
 
     @Override
     public void sendSafetyEquipmentViolationNotification(Cctv cctv,
         List<SafetyViolationType> violationTypes,
-        String snapshot, String areaName) {
+        String imageUrl, String areaName) {
         try {
-            log.info("안전장비 미착용 FCM 알림 전송 시작: cctv={}, area={}, violations={}",
-                cctv.getCctvName(), areaName, violationTypes);
+            log.info("안전장비 미착용 FCM 알림 전송 시작: cctv={}, area={}, violations={}, imageUrl={}",
+                cctv.getCctvName(), areaName, violationTypes, imageUrl);
 
             // 위반 유형을 문자열 리스트로 변환
             List<String> violationTypeStrings = violationTypes.stream()
@@ -42,7 +44,7 @@ public class FcmNotificationHandlerImpl implements FcmNotificationHandler {
                 areaName,
                 cctv.getCctvName(),
                 violationTypeStrings,
-                snapshot
+                imageUrl
             );
 
             log.info("안전장비 미착용 FCM 알림 전송 완료: cctv={}, area={}",
