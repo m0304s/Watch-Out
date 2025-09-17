@@ -2,6 +2,7 @@ package watch.out.area.repository;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import java.util.UUID;
@@ -18,6 +19,8 @@ import watch.out.user.entity.UserRole;
 public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
+    
+    private static final String NO_MANAGER = "";
 
     /**
      * 구역명 또는 별칭으로 검색하는 조건을 생성
@@ -50,6 +53,8 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
     @Override
     public List<AreaListResponse> findAreasAsDto(int pageNum, int display, String search) {
         QArea area = QArea.area;
+        QAreaManager areaManager = QAreaManager.areaManager;
+        QUser user = QUser.user;
 
         BooleanExpression searchCondition = createSearchCondition(area, search);
 
@@ -57,8 +62,11 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
             .select(Projections.constructor(AreaListResponse.class,
                 area.uuid,
                 area.areaName,
-                area.areaAlias))
-            .from(area);
+                area.areaAlias,
+                user.userName.coalesce(NO_MANAGER)))
+            .from(area)
+            .leftJoin(areaManager).on(areaManager.area.eq(area))
+            .leftJoin(user).on(areaManager.user.eq(user));
 
         if (searchCondition != null) {
             query.where(searchCondition);
@@ -76,6 +84,7 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
         String search) {
         QArea area = QArea.area;
         QAreaManager areaManager = QAreaManager.areaManager;
+        QUser user = QUser.user;
 
         // 기본 조건: userUuid로 필터링
         BooleanExpression whereCondition = areaManager.user.uuid.eq(userUuid);
@@ -90,9 +99,11 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
             .select(Projections.constructor(AreaListResponse.class,
                 area.uuid,
                 area.areaName,
-                area.areaAlias))
+                area.areaAlias,
+                user.userName.coalesce(NO_MANAGER)))
             .from(areaManager)
             .join(areaManager.area, area)
+            .join(areaManager.user, user)
             .where(whereCondition)
             .orderBy(area.areaName.asc(), area.areaAlias.asc())
             .offset(pageNum * display)
