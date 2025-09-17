@@ -19,7 +19,7 @@ import watch.out.user.entity.UserRole;
 public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
-    
+
     private static final String NO_MANAGER = "";
 
     /**
