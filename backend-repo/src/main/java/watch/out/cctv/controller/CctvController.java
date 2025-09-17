@@ -68,7 +68,7 @@ public class CctvController {
     }
 
     @GetMapping("/views/area")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
     public ResponseEntity<AreaViewListResponse> areaViews(
         @RequestParam UUID areaUuid,
         @RequestParam(defaultValue = "false") boolean useFastapiMjpeg
@@ -82,7 +82,7 @@ public class CctvController {
     }
 
     @GetMapping(value = "/stream/mjpeg", produces = "multipart/x-mixed-replace; boundary=frame")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
     public void streamOne(
         @RequestParam UUID uuid,
         @RequestParam(defaultValue = "false") boolean useFastapiMjpeg,
