@@ -1,0 +1,24 @@
+# 가상 환경 (Virtual Environment)
+.venv/
+venv/
+
+# 환경 변수 파일 (민감 정보)
+.env
+
+# 파이썬 캐시 파일
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE 및 에디터 설정 파일
+.idea/
+.vscode/
+
+# 운영체제 생성 파일
+.DS_Store
+Thumbs.db
+
+# 로그 파일
+logs/
+*.log
