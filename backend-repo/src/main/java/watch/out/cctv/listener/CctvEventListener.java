@@ -18,12 +18,15 @@ import org.springframework.transaction.annotation.Transactional;
 import watch.out.cctv.dto.EquipmentClassification;
 import watch.out.cctv.dto.request.CctvEventRequest;
 import watch.out.cctv.entity.Cctv;
+import watch.out.cctv.handler.FcmNotificationHandler;
 import watch.out.cctv.repository.CctvRepository;
 import watch.out.cctv.util.EquipmentTypeDetector;
+import watch.out.safety.entity.SafetyViolation;
 import watch.out.safety.entity.SafetyViolationType;
 import watch.out.safety.service.SafetyViolationService;
 import watch.out.safety.util.SafetyViolationMapper;
 import watch.out.notification.service.FcmService;
+import watch.out.common.util.S3Util;
 
 @Component
 @RequiredArgsConstructor
@@ -33,7 +36,9 @@ public class CctvEventListener {
     private final ObjectMapper om = new ObjectMapper();
     private final SafetyViolationService safetyViolationService;
     private final CctvRepository cctvRepository;
+    private final FcmNotificationHandler fcmNotificationHandler;
     private final FcmService fcmService;
+    private final S3Util s3Util;
 
     @KafkaListener(topics = "${app.kafka.topic}")
     @Transactional
@@ -45,7 +50,7 @@ public class CctvEventListener {
                 rec.key(), cctvEventRequest.company(), cctvEventRequest.camera(),
                 cctvEventRequest.triggers(), cctvEventRequest.snapshot());
 
-            processEquipmentDetectionEvents(cctvEventRequest);
+            processDetectionEvents(cctvEventRequest);
 
             ack.acknowledge();
         } catch (Exception e) {
@@ -56,7 +61,7 @@ public class CctvEventListener {
     /**
      * 장비 감지 이벤트를 처리 (안전장비/중장비 구분)
      */
-    private void processEquipmentDetectionEvents(CctvEventRequest cctvEventRequest) {
+    private void processDetectionEvents(CctvEventRequest cctvEventRequest) {
         Map<String, Integer> detections = cctvEventRequest.detections();
         if (detections == null || detections.isEmpty()) {
             return;
@@ -64,6 +69,7 @@ public class CctvEventListener {
 
         // CCTV 정보 조회
         Cctv cctv = findCctvByName(cctvEventRequest.camera());
+
         if (cctv == null) {
             log.warn("CCTV를 찾을 수 없습니다. camera={}", cctvEventRequest.camera());
             return;
@@ -137,7 +143,7 @@ public class CctvEventListener {
     }
 
     /**
-     * 안전장비 위반 처리 (복수)
+     * 안전장비 위반 처리 - 모듈화된 핸들러 사용
      */
     private void processSafetyEquipmentViolations(Cctv cctv, Set<String> safetyEquipmentClasses,
         String snapshot, String areaName) {
@@ -154,6 +160,7 @@ public class CctvEventListener {
         log.info("안전장비 위반 감지: classes={}, violationTypes={}",
             safetyEquipmentClasses, finalViolationTypes);
 
+        // 안전장비 위반 내역 저장 및 FCM 알림 전송
         processSafetyEquipmentViolation(cctv, finalViolationTypes, snapshot, areaName);
     }
 
@@ -175,37 +182,47 @@ public class CctvEventListener {
     }
 
     /**
-     * 중장비 감지 처리
+     * 중장비 감지 처리 - 모듈화된 핸들러 사용
      */
     private void processHeavyEquipmentDetections(Cctv cctv,
         Map<String, Integer> heavyEquipmentDetections,
         String snapshot, String areaName) {
+
+        log.info("중장비 감지: cctv={}, area={}, detections={}",
+            cctv.getCctvName(), areaName, heavyEquipmentDetections);
+
+        // 기존 로그 출력
         for (Map.Entry<String, Integer> entry : heavyEquipmentDetections.entrySet()) {
             processHeavyEquipmentDetection(cctv, entry.getKey(), snapshot, areaName,
                 entry.getValue());
         }
+
+        // FCM 알림 전송
+        fcmNotificationHandler.sendHeavyEquipmentEntryNotification(
+            cctv, heavyEquipmentDetections, snapshot, areaName);
     }
 
     /**
      * 안전장비 위반 처리
      */
     private void processSafetyEquipmentViolation(Cctv cctv,
-        List<SafetyViolationType> violationTypes,
-        String snapshot, String areaName) {
+        List<SafetyViolationType> violationTypes, String snapshot, String areaName) {
         if (violationTypes != null && !violationTypes.isEmpty()) {
             try {
-                safetyViolationService.saveViolation(
+                // 안전장비 위반 내역 저장
+                SafetyViolation savedViolation = safetyViolationService.saveViolation(
                     cctv.getUuid(),
                     cctv.getArea().getUuid(),
                     violationTypes,
                     snapshot
                 );
 
-                log.info("안전장비 위반 내역 저장 완료: cctv={}, area={}, types={}, image={}",
-                    cctv.getCctvName(), areaName, violationTypes, snapshot);
+                log.info("안전장비 위반 내역 저장 완료: cctv={}, area={}, types={}, imageKey={}",
+                    cctv.getCctvName(), areaName, violationTypes, savedViolation.getImageKey());
 
-                // FCM 알림 전송
-                sendSafetyViolationNotification(cctv, areaName, violationTypes, snapshot);
+                // 저장된 이미지 키를 URL로 변환하여 FCM 알림 전송
+                String imageUrl = s3Util.keyToUrl(savedViolation.getImageKey());
+                sendSafetyViolationNotification(cctv, areaName, violationTypes, imageUrl);
             } catch (Exception e) {
                 log.error("안전장비 위반 내역 저장 실패: types={}, error={}", violationTypes, e.getMessage(),
                     e);
@@ -224,11 +241,12 @@ public class CctvEventListener {
         // TODO: 중장비 관련 추가 처리 로직 구현
     }
 
+
     /**
      * 안전장비 위반 FCM 알림 전송 (구역별 담당자에게만)
      */
     private void sendSafetyViolationNotification(Cctv cctv, String areaName,
-        List<SafetyViolationType> violationTypes, String snapshot) {
+        List<SafetyViolationType> violationTypes, String imageUrl) {
         try {
             // 위반 유형을 문자열 리스트로 변환
             List<String> violationTypeNames = violationTypes.stream()
@@ -241,11 +259,11 @@ public class CctvEventListener {
                 areaName,
                 cctv.getCctvName(),
                 violationTypeNames,
-                snapshot
+                imageUrl
             );
 
-            log.info("FCM 안전장비 위반 알림 전송 완료: area={}, cctv={}, types={}",
-                areaName, cctv.getCctvName(), violationTypeNames);
+            log.info("FCM 안전장비 위반 알림 전송 완료: area={}, cctv={}, types={}, imageUrl={}",
+                areaName, cctv.getCctvName(), violationTypeNames, imageUrl);
 
         } catch (Exception e) {
             log.error("FCM 안전장비 위반 알림 전송 실패: area={}, cctv={}", areaName, cctv.getCctvName(), e);

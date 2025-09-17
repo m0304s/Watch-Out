@@ -19,8 +19,10 @@ import watch.out.cctv.repository.CctvRepository;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.SecurityUtil;
+import watch.out.common.util.S3Util;
 import watch.out.dashboard.dto.response.SafetyViolationStatusResponse;
 import watch.out.dashboard.dto.response.ViolationTypeStatistics;
+import watch.out.safety.dto.response.SafetyViolationResponse;
 import watch.out.safety.entity.SafetyViolation;
 import watch.out.safety.entity.SafetyViolationDetail;
 import watch.out.safety.entity.SafetyViolationType;
@@ -39,10 +41,11 @@ public class SafetyViolationServiceImpl implements SafetyViolationService {
     private final AreaRepository areaRepository;
     private final AreaAccessService areaAccessService;
     private final ObjectMapper objectMapper;
+    private final S3Util s3Util;
 
     @Override
     public SafetyViolation saveViolation(UUID cctvUuid, UUID areaUuid,
-        List<SafetyViolationType> violationTypes, String imageKey) {
+        List<SafetyViolationType> violationTypes, String snapshotUrl) {
         // CCTV 엔티티 조회
         Cctv cctv = cctvRepository.findById(cctvUuid)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -50,6 +53,12 @@ public class SafetyViolationServiceImpl implements SafetyViolationService {
         // Area 엔티티 조회
         Area area = areaRepository.findById(areaUuid)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        // S3 URL을 키로 변환
+        String imageKey = s3Util.urlToKey(snapshotUrl);
+        if (imageKey == null) {
+            throw new BusinessException(ErrorCode.INVALID_FILE_NAME);
+        }
 
         // SafetyViolation 엔티티 생성 및 저장
         SafetyViolation safetyViolation = SafetyViolation.builder()
@@ -123,7 +132,7 @@ public class SafetyViolationServiceImpl implements SafetyViolationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SafetyViolation> getViolationsByType(List<UUID> areaUuids,
+    public List<SafetyViolationResponse> getViolationsByType(List<UUID> areaUuids,
         SafetyViolationType violationType) {
         LocalDate today = LocalDate.now();
 
@@ -137,12 +146,17 @@ public class SafetyViolationServiceImpl implements SafetyViolationService {
             .toList();
 
         // 특정 위반 유형을 포함한 위반 내역 조회
-        return safetyViolationDetailRepository.findViolationsByAreaAndViolationType(
+        List<SafetyViolation> violations = safetyViolationDetailRepository.findViolationsByAreaAndViolationType(
             foundAreaUuids,
             violationType,
             today.atStartOfDay(),
             today.atTime(23, 59, 59)
         );
+
+        // SafetyViolation 엔티티를 SafetyViolationResponse DTO로 변환
+        return violations.stream()
+            .map(violation -> SafetyViolationResponse.from(violation, s3Util))
+            .toList();
     }
 
 }

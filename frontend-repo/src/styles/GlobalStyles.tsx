@@ -32,6 +32,7 @@ const GlobalStyles = () => (
         /* Primary */
         --color-primary: #1a73e8;
         --color-primary-light: #eaf1fe;
+        --color-secondary: #e8f0fe;
 
         /* Gray */
         --color-gray-50: #fafafa;
@@ -68,7 +69,7 @@ const GlobalStyles = () => (
 
       body {
         font-family: 'PretendardRegular', sans-serif;
-      
+
         color: var(--color-text);
         line-height: 1.6;
       }
@@ -119,4 +120,3 @@ const GlobalStyles = () => (
 )
 
 export default GlobalStyles
-
