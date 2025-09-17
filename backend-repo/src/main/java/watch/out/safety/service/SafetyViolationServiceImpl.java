@@ -1,13 +1,14 @@
 package watch.out.safety.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,19 +17,22 @@ import watch.out.area.repository.AreaRepository;
 import watch.out.area.service.AreaAccessService;
 import watch.out.cctv.entity.Cctv;
 import watch.out.cctv.repository.CctvRepository;
+import watch.out.common.dto.PageRequest;
+import watch.out.common.dto.PageResponse;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.SecurityUtil;
 import watch.out.common.util.S3Util;
 import watch.out.dashboard.dto.response.SafetyViolationStatusResponse;
 import watch.out.dashboard.dto.response.ViolationTypeStatistics;
+import watch.out.safety.dto.request.SafetyViolationsRequest;
 import watch.out.safety.dto.response.SafetyViolationResponse;
 import watch.out.safety.entity.SafetyViolation;
 import watch.out.safety.entity.SafetyViolationDetail;
 import watch.out.safety.entity.SafetyViolationType;
 import watch.out.safety.repository.SafetyViolationDetailRepository;
 import watch.out.safety.repository.SafetyViolationRepository;
-import watch.out.user.entity.UserRole;
+import watch.out.safety.repository.SafetyViolationRepositoryCustom;
 
 @Service
 @RequiredArgsConstructor
@@ -157,6 +161,66 @@ public class SafetyViolationServiceImpl implements SafetyViolationService {
         return violations.stream()
             .map(violation -> SafetyViolationResponse.from(violation, s3Util))
             .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<SafetyViolationResponse> getViolations(
+        PageRequest pageRequest, SafetyViolationsRequest request) {
+        // 현재 사용자 권한에 따른 접근 가능한 구역 조회
+        List<Area> accessibleAreas = areaAccessService.getAccessibleAreas(
+            request.areaUuids());
+        List<UUID> accessibleAreaUuids = accessibleAreas.stream()
+            .map(Area::getUuid)
+            .toList();
+
+        if (accessibleAreaUuids.isEmpty()) {
+            return PageResponse.of(List.of(), pageRequest.pageNum(),
+                pageRequest.display(), 0L);
+        }
+
+        // 날짜 변환
+        LocalDateTime startDateTime = request.startDate() != null ?
+            request.startDate().atStartOfDay() : null;
+        LocalDateTime endDateTime = request.endDate() != null ?
+            request.endDate().atTime(23, 59, 59) : null;
+
+        // 위반 목록 조회
+        List<SafetyViolation> violations = safetyViolationRepository.findViolationList(
+            pageRequest,
+            accessibleAreaUuids,
+            request.violationType(),
+            startDateTime,
+            endDateTime
+        );
+
+        // 총 개수 조회
+        long totalCount = safetyViolationRepository.countViolations(
+            accessibleAreaUuids,
+            request.violationType(),
+            startDateTime,
+            endDateTime
+        );
+
+        // 응답 DTO 변환
+        List<SafetyViolationResponse> responses = violations.stream()
+            .map(violation -> SafetyViolationResponse.from(violation, s3Util))
+            .toList();
+
+        return PageResponse.of(responses, pageRequest.pageNum(),
+            pageRequest.display(), totalCount);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SafetyViolationResponse getViolationDetail(UUID violationUuid) {
+        SafetyViolation safetyViolation = safetyViolationRepository.findViolationDetailByUuid(
+            violationUuid);
+        if (safetyViolation == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND);
+        }
+
+        return SafetyViolationResponse.from(safetyViolation, s3Util);
     }
 
 }

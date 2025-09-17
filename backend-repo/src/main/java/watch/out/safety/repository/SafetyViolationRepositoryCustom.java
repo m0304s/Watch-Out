@@ -15,25 +15,25 @@ public interface SafetyViolationRepositoryCustom {
      * 다중 필터 조건으로 안전장비 위반 목록을 조회
      *
      * @param pageRequest   페이지 요청 정보
-     * @param areaUuid      구역 UUID (선택사항)
+     * @param areaUuids     구역 UUID 리스트 (선택사항)
      * @param violationType 위반 유형 (선택사항)
      * @param startDate     시작 날짜 (선택사항)
      * @param endDate       종료 날짜 (선택사항)
      * @return 안전장비 위반 목록
      */
-    List<SafetyViolation> findViolationList(PageRequest pageRequest, UUID areaUuid,
+    List<SafetyViolation> findViolationList(PageRequest pageRequest, List<UUID> areaUuids,
         SafetyViolationType violationType, LocalDateTime startDate, LocalDateTime endDate);
 
     /**
      * 안전장비 위반 목록 조회 시 총 개수 조회
      *
-     * @param areaUuid      구역 UUID (선택사항)
+     * @param areaUuids     구역 UUID 리스트 (선택사항)
      * @param violationType 위반 유형 (선택사항)
      * @param startDate     시작 날짜 (선택사항)
      * @param endDate       종료 날짜 (선택사항)
      * @return 총 위반 개수
      */
-    long countViolations(UUID areaUuid, SafetyViolationType violationType,
+    long countViolations(List<UUID> areaUuids, SafetyViolationType violationType,
         LocalDateTime startDate, LocalDateTime endDate);
 
     /**
@@ -132,4 +132,12 @@ public interface SafetyViolationRepositoryCustom {
      */
     List<SafetyViolation> findViolationsByIndividualType(List<UUID> areaUuids, LocalDate date,
         String individualViolationType);
+
+    /**
+     * 안전장비 위반 상세 정보를 조회
+     *
+     * @param violationUuid 위반 UUID
+     * @return 안전장비 위반 상세 정보 (Area, Cctv, SafetyViolationDetail 포함)
+     */
+    SafetyViolation findViolationDetailByUuid(UUID violationUuid);
 }

@@ -2,7 +2,10 @@ package watch.out.safety.service;
 
 import java.util.List;
 import java.util.UUID;
+import watch.out.common.dto.PageRequest;
+import watch.out.common.dto.PageResponse;
 import watch.out.dashboard.dto.response.SafetyViolationStatusResponse;
+import watch.out.safety.dto.request.SafetyViolationsRequest;
 import watch.out.safety.dto.response.SafetyViolationResponse;
 import watch.out.safety.entity.SafetyViolation;
 import watch.out.safety.entity.SafetyViolationType;
@@ -39,4 +42,22 @@ public interface SafetyViolationService {
      */
     List<SafetyViolationResponse> getViolationsByType(List<UUID> areaUuids,
         SafetyViolationType violationType);
+
+    /**
+     * 안전장비 미착용 목록을 조회합니다.
+     *
+     * @param pageRequest 페이지네이션 정보
+     * @param request 필터 조건
+     * @return 안전장비 미착용 목록 (페이지네이션 포함)
+     */
+    PageResponse<SafetyViolationResponse> getViolations(
+        PageRequest pageRequest, SafetyViolationsRequest request);
+
+    /**
+     * 안전장비 미착용 상세 정보를 조회합니다.
+     *
+     * @param violationUuid 위반 UUID
+     * @return 안전장비 미착용 상세 정보
+     */
+    SafetyViolationResponse getViolationDetail(UUID violationUuid);
 }
