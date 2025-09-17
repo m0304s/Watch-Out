@@ -23,5 +23,9 @@ public interface AreaRepositoryCustom {
 
     long countWorkersByAreaUuid(UUID areaUuid);
 
+    List<AreaDetailItemResponse> findManagersByAreaUuidAsDto(UUID areaUuid, int offset, int limit);
+
+    long countManagersByAreaUuid(UUID areaUuid);
+
     boolean hasAreaAccess(UUID userUuid, UUID areaUuid);
 }

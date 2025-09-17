@@ -136,7 +136,7 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
         }
 
         // Tuple에서 값 추출하여 AreaDetailResponse 생성
-        // workers는 별도 조회하므로 null로 설정 (Service에서 처리)
+        // workers는 Service에서 별도 조회하여 설정
         return new AreaDetailResponse(
             result.get(area.uuid),
             result.get(area.areaName),
@@ -150,6 +150,36 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
     @Override
     public List<AreaDetailItemResponse> findWorkersByAreaUuidAsDto(UUID areaUuid, int offset,
         int limit) {
+        QUser user = QUser.user;
+
+        return queryFactory
+            .select(Projections.constructor(AreaDetailItemResponse.class,
+                user.uuid,
+                user.userName,
+                user.userId))
+            .from(user)
+            .where(user.area.uuid.eq(areaUuid)
+                .and(user.role.eq(UserRole.WORKER)))
+            .orderBy(user.userName.asc())
+            .offset(offset)
+            .limit(limit)
+            .fetch();
+    }
+
+    @Override
+    public long countWorkersByAreaUuid(UUID areaUuid) {
+        QUser user = QUser.user;
+
+        return safeCount(queryFactory
+            .select(user.count())
+            .from(user)
+            .where(user.area.uuid.eq(areaUuid)
+                .and(user.role.eq(UserRole.WORKER))));
+    }
+
+    @Override
+    public List<AreaDetailItemResponse> findManagersByAreaUuidAsDto(UUID areaUuid, int offset,
+        int limit) {
         QAreaManager areaManager = QAreaManager.areaManager;
         QUser user = QUser.user;
 
@@ -161,7 +191,7 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
             .from(areaManager)
             .join(areaManager.user, user)
             .where(areaManager.area.uuid.eq(areaUuid)
-                .and(user.role.eq(UserRole.WORKER)))
+                .and(user.role.eq(UserRole.AREA_ADMIN)))
             .orderBy(user.userName.asc())
             .offset(offset)
             .limit(limit)
@@ -169,7 +199,7 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
     }
 
     @Override
-    public long countWorkersByAreaUuid(UUID areaUuid) {
+    public long countManagersByAreaUuid(UUID areaUuid) {
         QAreaManager areaManager = QAreaManager.areaManager;
         QUser user = QUser.user;
 
@@ -178,7 +208,7 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
             .from(areaManager)
             .join(areaManager.user, user)
             .where(areaManager.area.uuid.eq(areaUuid)
-                .and(user.role.eq(UserRole.WORKER))));
+                .and(user.role.eq(UserRole.AREA_ADMIN))));
     }
 
     @Override

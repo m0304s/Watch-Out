@@ -129,14 +129,14 @@ public class AreaServiceImpl implements AreaService {
             throw new BusinessException(ErrorCode.NOT_FOUND);
         }
 
-        // 작업자 목록 조회 (작업자가 없을 수도 있음)
+        // 구역에 배정된 작업자 목록 조회
         int offset = pageRequest.pageNum() * pageRequest.display();
         List<AreaDetailItemResponse> workers = areaRepository.findWorkersByAreaUuidAsDto(areaUuid,
             offset,
             pageRequest.display());
         long totalWorkers = areaRepository.countWorkersByAreaUuid(areaUuid);
 
-        // 페이지네이션 정보 생성 (작업자가 없어도 빈 배열로 반환)
+        // 페이지네이션 정보 생성
         PageResponse<AreaDetailItemResponse> workersPage = PageResponse.of(
             workers,
             pageRequest.pageNum(),
