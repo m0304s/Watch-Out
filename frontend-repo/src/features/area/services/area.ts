@@ -1,4 +1,4 @@
-import apiClient from '@/api/axios'
+import apiClient from '@/apis/axios'
 import type {
   AreaListRequest,
   AreaListResponse,
