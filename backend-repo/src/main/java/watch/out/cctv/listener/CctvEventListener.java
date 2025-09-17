@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import watch.out.cctv.dto.EquipmentClassification;
 import watch.out.cctv.dto.request.CctvEventRequest;
 import watch.out.cctv.entity.Cctv;
+import watch.out.cctv.handler.FcmNotificationHandler;
 import watch.out.cctv.repository.CctvRepository;
 import watch.out.cctv.util.EquipmentTypeDetector;
 import watch.out.safety.entity.SafetyViolationType;
@@ -33,6 +34,7 @@ public class CctvEventListener {
     private final ObjectMapper om = new ObjectMapper();
     private final SafetyViolationService safetyViolationService;
     private final CctvRepository cctvRepository;
+    private final FcmNotificationHandler fcmNotificationHandler;
     private final FcmService fcmService;
 
     @KafkaListener(topics = "${app.kafka.topic}")
@@ -45,7 +47,7 @@ public class CctvEventListener {
                 rec.key(), cctvEventRequest.company(), cctvEventRequest.camera(),
                 cctvEventRequest.triggers(), cctvEventRequest.snapshot());
 
-            processEquipmentDetectionEvents(cctvEventRequest);
+            processDetectionEvents(cctvEventRequest);
 
             ack.acknowledge();
         } catch (Exception e) {
@@ -56,7 +58,7 @@ public class CctvEventListener {
     /**
      * 장비 감지 이벤트를 처리 (안전장비/중장비 구분)
      */
-    private void processEquipmentDetectionEvents(CctvEventRequest cctvEventRequest) {
+    private void processDetectionEvents(CctvEventRequest cctvEventRequest) {
         Map<String, Integer> detections = cctvEventRequest.detections();
         if (detections == null || detections.isEmpty()) {
             return;
@@ -64,6 +66,7 @@ public class CctvEventListener {
 
         // CCTV 정보 조회
         Cctv cctv = findCctvByName(cctvEventRequest.camera());
+
         if (cctv == null) {
             log.warn("CCTV를 찾을 수 없습니다. camera={}", cctvEventRequest.camera());
             return;
@@ -137,7 +140,7 @@ public class CctvEventListener {
     }
 
     /**
-     * 안전장비 위반 처리 (복수)
+     * 안전장비 위반 처리 - 모듈화된 핸들러 사용
      */
     private void processSafetyEquipmentViolations(Cctv cctv, Set<String> safetyEquipmentClasses,
         String snapshot, String areaName) {
@@ -154,7 +157,12 @@ public class CctvEventListener {
         log.info("안전장비 위반 감지: classes={}, violationTypes={}",
             safetyEquipmentClasses, finalViolationTypes);
 
+        // 안전장비 위반 내역 저장
         processSafetyEquipmentViolation(cctv, finalViolationTypes, snapshot, areaName);
+
+        // FCM 알림 전송
+        fcmNotificationHandler.sendSafetyEquipmentViolationNotification(
+            cctv, finalViolationTypes, snapshot, areaName);
     }
 
     /**
@@ -175,23 +183,31 @@ public class CctvEventListener {
     }
 
     /**
-     * 중장비 감지 처리
+     * 중장비 감지 처리 - 모듈화된 핸들러 사용
      */
     private void processHeavyEquipmentDetections(Cctv cctv,
         Map<String, Integer> heavyEquipmentDetections,
         String snapshot, String areaName) {
+
+        log.info("중장비 감지: cctv={}, area={}, detections={}",
+            cctv.getCctvName(), areaName, heavyEquipmentDetections);
+
+        // 기존 로그 출력
         for (Map.Entry<String, Integer> entry : heavyEquipmentDetections.entrySet()) {
             processHeavyEquipmentDetection(cctv, entry.getKey(), snapshot, areaName,
                 entry.getValue());
         }
+
+        // FCM 알림 전송
+        fcmNotificationHandler.sendHeavyEquipmentEntryNotification(
+            cctv, heavyEquipmentDetections, snapshot, areaName);
     }
 
     /**
      * 안전장비 위반 처리
      */
     private void processSafetyEquipmentViolation(Cctv cctv,
-        List<SafetyViolationType> violationTypes,
-        String snapshot, String areaName) {
+        List<SafetyViolationType> violationTypes, String snapshot, String areaName) {
         if (violationTypes != null && !violationTypes.isEmpty()) {
             try {
                 safetyViolationService.saveViolation(
@@ -223,6 +239,7 @@ public class CctvEventListener {
 
         // TODO: 중장비 관련 추가 처리 로직 구현
     }
+
 
     /**
      * 안전장비 위반 FCM 알림 전송 (구역별 담당자에게만)

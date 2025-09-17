@@ -10,10 +10,23 @@ public class EquipmentTypeDetector {
 
     // 중장비 관련 트리거들
     private static final Set<String> HEAVY_EQUIPMENT_TRIGGERS = Set.of(
+        // 기존 중장비
         "Excavator", "Crane", "Bulldozer", "Loader", "Dump Truck",
-        "Forklift", "Fork lane", "Concrete Mixer", "Pile Driver", "Grader",
-        "Backhoe", "Skid Steer", "Tower Crane", "Mobile Crane", "Truck Crane",
-        "Wheel Loader", "Track Loader", "Compactor", "Roller", "Paver"
+        "Forklift", "Concrete Mixer", "Pile Driver", "Grader",
+        "Backhoe", "Skid Steer", "Mobile Crane", "Truck Crane",
+        "Wheel Loader", "Track Loader", "Compactor", "Roller", "Paver",
+
+        // 새로운 중장비 (한국어/영어)
+        "Fork lane", "Payloader", "Dump truck", "Remicon", "Pump car",
+        "Pile driver", "Truck", "Aerial workbench", "Tower crane",
+        "Aerial work platform car", "Gang form", "Al form", "A-type ladder",
+        "Uma", "ELB", "Opening cover", "Dangerous goods storage",
+        "Elevator fall arrester", "Hoist", "Jack support",
+        "Steal pipe scaffolding", "System scaffolding", "Cement brick",
+        "Hammer", "Electric drill", "Remital", "Stucco block", "Mixer",
+        "H beam", "High speed cutting machine", "Vibrator",
+        "Fire extinguisher", "Welding machine", "Hand grinder",
+        "Hand car", "Anti-burn"
     );
 
     /**
