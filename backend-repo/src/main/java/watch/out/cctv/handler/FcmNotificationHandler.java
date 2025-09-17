@@ -15,11 +15,11 @@ public interface FcmNotificationHandler {
      *
      * @param cctv           CCTV 정보
      * @param violationTypes 위반 유형 목록
-     * @param snapshot       스냅샷 이미지 URL
+     * @param imageUrl       이미지 URL (S3Util로 변환된 URL)
      * @param areaName       구역명
      */
     void sendSafetyEquipmentViolationNotification(Cctv cctv,
-        List<SafetyViolationType> violationTypes, String snapshot, String areaName);
+        List<SafetyViolationType> violationTypes, String imageUrl, String areaName);
 
     /**
      * 중장비 진입 알림 전송
