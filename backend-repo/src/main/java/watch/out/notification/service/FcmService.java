@@ -233,4 +233,233 @@ public class FcmService {
             log.error("FCM 토큰 {} 초기화 실패", fcmToken, e);
         }
     }
+
+    /**
+     * 모든 사용자에게 공지사항 전송
+     */
+    public void sendAnnouncementToAll(String title, String content) {
+        try {
+            // 모든 사용자 조회
+            List<User> allUsers = userRepository.findByDeletedAtIsNull();
+            List<UUID> allUserUuids = allUsers.stream()
+                .map(User::getUuid)
+                .toList();
+
+            if (allUserUuids.isEmpty()) {
+                log.warn("전송할 사용자가 없습니다.");
+                return;
+            }
+
+            // 모든 사용자의 FCM 토큰 조회
+            List<FcmToken> fcmTokens = fcmTokenRepository.findByUserUuidInAndFcmTokenIsNotNull(
+                allUserUuids);
+
+            if (fcmTokens.isEmpty()) {
+                log.warn("FCM 토큰이 등록된 사용자가 없습니다.");
+                return;
+            }
+
+            sendAnnouncementNotification(fcmTokens, title, content);
+            log.info("전체 공지사항 FCM 전송 완료: 대상자 수={}", fcmTokens.size());
+
+        } catch (Exception e) {
+            log.error("전체 공지사항 FCM 전송 실패", e);
+        }
+    }
+
+    /**
+     * 특정 사용자들에게 공지사항 전송
+     */
+    public void sendAnnouncementToUsers(List<UUID> userUuids, String title, String content) {
+        try {
+            if (userUuids.isEmpty()) {
+                log.warn("전송할 사용자가 없습니다.");
+                return;
+            }
+
+            // 대상 사용자들의 FCM 토큰 조회
+            List<FcmToken> fcmTokens = fcmTokenRepository.findByUserUuidInAndFcmTokenIsNotNull(
+                userUuids);
+
+            if (fcmTokens.isEmpty()) {
+                log.warn("FCM 토큰이 등록된 사용자가 없습니다.");
+                return;
+            }
+
+            sendAnnouncementNotification(fcmTokens, title, content);
+            log.info("사용자별 공지사항 FCM 전송 완료: 대상자 수={}", fcmTokens.size());
+
+        } catch (Exception e) {
+            log.error("사용자별 공지사항 FCM 전송 실패", e);
+        }
+    }
+
+    /**
+     * 구역별 근로자들에게 공지사항 전송 (MulticastMessage 사용)
+     */
+    public void sendAnnouncementToAreaWorkers(Map<UUID, List<UUID>> areaWorkersMap, String title,
+        String content) {
+        try {
+            if (areaWorkersMap.isEmpty()) {
+                log.warn("전송할 구역이 없습니다.");
+                return;
+            }
+
+            int totalSentCount = 0;
+            int totalAreaCount = 0;
+
+            // 각 구역별로 FCM 토큰 조회 및 전송
+            for (Map.Entry<UUID, List<UUID>> entry : areaWorkersMap.entrySet()) {
+                UUID areaUuid = entry.getKey();
+                List<UUID> workerUuids = entry.getValue();
+
+                log.info("구역 {} 처리 시작: 근로자 수={}", areaUuid, workerUuids.size());
+
+                if (workerUuids.isEmpty()) {
+                    log.warn("구역 {}에 배치된 근로자가 없습니다.", areaUuid);
+                    continue;
+                }
+
+                // 해당 구역 근로자들의 FCM 토큰 조회
+                List<FcmToken> fcmTokens = fcmTokenRepository.findByUserUuidInAndFcmTokenIsNotNull(
+                    workerUuids);
+
+                log.info("구역 {} FCM 토큰 조회 결과: {}명 중 {}명", areaUuid, workerUuids.size(),
+                    fcmTokens.size());
+
+                if (fcmTokens.isEmpty()) {
+                    log.warn("구역 {}의 근로자들 중 FCM 토큰이 등록된 사용자가 없습니다.", areaUuid);
+                    continue;
+                }
+
+                // 구역별로 MulticastMessage 전송
+                sendAreaAnnouncementNotification(fcmTokens, areaUuid, title, content);
+                totalSentCount += fcmTokens.size();
+                totalAreaCount++;
+            }
+
+            log.info("구역별 공지사항 FCM 전송 완료: 구역 수={}, 총 대상자 수={}", totalAreaCount, totalSentCount);
+
+        } catch (Exception e) {
+            log.error("구역별 공지사항 FCM 전송 실패", e);
+        }
+    }
+
+    /**
+     * 공지사항 FCM 알림 전송
+     */
+    private void sendAnnouncementNotification(List<FcmToken> tokens, String title, String content) {
+        if (tokens.isEmpty()) {
+            return;
+        }
+
+        // 토큰 리스트 추출
+        List<String> tokenStrings = tokens.stream()
+            .map(FcmToken::getFcmToken)
+            .toList();
+
+        try {
+            // MulticastMessage 생성
+            MulticastMessage message = MulticastMessage.builder()
+                .setNotification(Notification.builder()
+                    .setTitle(title)
+                    .setBody(content)
+                    .build())
+                .setWebpushConfig(WebpushConfig.builder()
+                    .setFcmOptions(WebpushFcmOptions.builder()
+                        .setLink("/announcements")
+                        .build())
+                    .build())
+                .putData("type", "ANNOUNCEMENT")
+                .putData("title", title)
+                .putData("content", content)
+                .addAllTokens(tokenStrings)
+                .build();
+
+            // 일괄 전송
+            BatchResponse response = firebaseMessaging.sendEachForMulticast(message);
+
+            log.info("공지사항 FCM 알림 일괄 전송 완료: 성공={}, 실패={}",
+                response.getSuccessCount(), response.getFailureCount());
+
+            // 실패한 토큰들 처리
+            if (response.getFailureCount() > 0) {
+                List<SendResponse> responses = response.getResponses();
+                for (int i = 0; i < responses.size(); i++) {
+                    SendResponse sendResponse = responses.get(i);
+                    if (!sendResponse.isSuccessful()) {
+                        String failedToken = tokenStrings.get(i);
+                        log.warn("FCM 토큰 전송 실패: token={}, error={}",
+                            failedToken, sendResponse.getException().getMessage());
+
+                        // 토큰이 유효하지 않은 경우 null로 업데이트
+                        fcmTokenRepository.clearFcmTokenByToken(failedToken);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("공지사항 FCM 알림 전송 중 오류 발생", e);
+        }
+    }
+
+    /**
+     * 구역별 공지사항 FCM 알림 전송 (MulticastMessage 사용)
+     */
+    private void sendAreaAnnouncementNotification(List<FcmToken> tokens, UUID areaUuid,
+        String title, String content) {
+        if (tokens.isEmpty()) {
+            return;
+        }
+
+        // 토큰 리스트 추출
+        List<String> tokenStrings = tokens.stream()
+            .map(FcmToken::getFcmToken)
+            .toList();
+
+        try {
+            // MulticastMessage 생성 (구역별 정보 포함)
+            MulticastMessage message = MulticastMessage.builder()
+                .setNotification(Notification.builder()
+                    .setTitle(title)
+                    .setBody(content)
+                    .build())
+                .setWebpushConfig(WebpushConfig.builder()
+                    .setFcmOptions(WebpushFcmOptions.builder()
+                        .setLink("/announcements")
+                        .build())
+                    .build())
+                .putData("type", "ANNOUNCEMENT")
+                .putData("areaUuid", areaUuid.toString())
+                .putData("title", title)
+                .putData("content", content)
+                .addAllTokens(tokenStrings)
+                .build();
+
+            // 일괄 전송
+            BatchResponse response = firebaseMessaging.sendEachForMulticast(message);
+
+            log.info("구역 {} 공지사항 FCM 알림 전송 완료: 성공={}, 실패={}",
+                areaUuid, response.getSuccessCount(), response.getFailureCount());
+
+            // 실패한 토큰들 처리
+            if (response.getFailureCount() > 0) {
+                List<SendResponse> responses = response.getResponses();
+                for (int i = 0; i < responses.size(); i++) {
+                    SendResponse sendResponse = responses.get(i);
+                    if (!sendResponse.isSuccessful()) {
+                        String failedToken = tokenStrings.get(i);
+                        log.warn("구역 {} FCM 토큰 전송 실패: token={}, error={}",
+                            areaUuid, failedToken, sendResponse.getException().getMessage());
+
+                        // 토큰이 유효하지 않은 경우 null로 업데이트
+                        fcmTokenRepository.clearFcmTokenByToken(failedToken);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("구역 {} 공지사항 FCM 알림 전송 중 오류 발생", areaUuid, e);
+        }
+    }
 }
