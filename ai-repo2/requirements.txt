@@ -1,0 +1,14 @@
+opencv-python~=4.12.0.88
+numpy~=2.2.6
+tensorflow~=2.20.0
+psycopg2~=2.9.10
+redis~=6.4.0
+colorlog~=6.9.0
+fastapi
+uvicorn[standard]
+python-multipart
+boto3
+requests
+
+# Config
+pydantic-settings
