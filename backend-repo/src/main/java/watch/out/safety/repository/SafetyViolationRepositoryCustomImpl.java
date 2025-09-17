@@ -2,6 +2,7 @@ package watch.out.safety.repository;
 
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 import watch.out.area.entity.QArea;
 import watch.out.area.entity.QAreaManager;
@@ -32,16 +34,19 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
     private final QSafetyViolationDetail violationDetail = QSafetyViolationDetail.safetyViolationDetail;
     private final QArea area = QArea.area;
     private final QAreaManager areaManager = QAreaManager.areaManager;
+    private final QCctv cctv = QCctv.cctv;
 
     @Override
-    public List<SafetyViolation> findViolationList(PageRequest pageRequest, UUID areaUuid,
+    public List<SafetyViolation> findViolationList(PageRequest pageRequest, List<UUID> areaUuids,
         SafetyViolationType violationType, LocalDateTime startDate, LocalDateTime endDate) {
 
         JPAQuery<SafetyViolation> query = queryFactory
             .selectFrom(safetyViolation)
             .leftJoin(safetyViolation.area, area).fetchJoin()
+            .leftJoin(safetyViolation.cctv, cctv).fetchJoin()
+            .leftJoin(safetyViolation.violationDetails, violationDetail).fetchJoin()
             .where(
-                areaUuidEq(areaUuid),
+                areaUuidsIn(areaUuids),
                 violationTypeEq(violationType),
                 createdAtBetween(startDate, endDate)
             )
@@ -54,13 +59,13 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
     }
 
     @Override
-    public long countViolations(UUID areaUuid, SafetyViolationType violationType,
+    public long countViolations(List<UUID> areaUuids, SafetyViolationType violationType,
         LocalDateTime startDate, LocalDateTime endDate) {
 
         return queryFactory
             .selectFrom(safetyViolation)
             .where(
-                areaUuidEq(areaUuid),
+                areaUuidsIn(areaUuids),
                 violationTypeEq(violationType),
                 createdAtBetween(startDate, endDate)
             )
@@ -176,11 +181,12 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
         if (violationType == null) {
             return null;
         }
-        // SafetyViolationDetail을 통한 위반 유형 필터링
-        return queryFactory
-            .selectFrom(safetyViolation)
-            .join(safetyViolation.violationDetails, violationDetail)
-            .where(violationDetail.violationType.eq(violationType))
+        // SafetyViolationDetail을 통한 위반 유형 필터링 - exists 서브쿼리 사용
+        return JPAExpressions
+            .selectOne()
+            .from(violationDetail)
+            .where(violationDetail.safetyViolation.eq(safetyViolation)
+                .and(violationDetail.violationType.eq(violationType)))
             .exists();
     }
 
@@ -236,7 +242,7 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
         List<SafetyViolation> violations = queryFactory
             .selectFrom(safetyViolation)
             .leftJoin(safetyViolation.area, area).fetchJoin()
-            .leftJoin(safetyViolation.cctv, QCctv.cctv).fetchJoin()
+            .leftJoin(safetyViolation.cctv, cctv).fetchJoin()
             .leftJoin(safetyViolation.violationDetails, violationDetail).fetchJoin()
             .where(
                 safetyViolation.area.uuid.in(areaUuids),
@@ -295,7 +301,7 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
         return queryFactory
             .selectFrom(safetyViolation)
             .leftJoin(safetyViolation.area, area).fetchJoin()
-            .leftJoin(safetyViolation.cctv, QCctv.cctv).fetchJoin()
+            .leftJoin(safetyViolation.cctv, cctv).fetchJoin()
             .leftJoin(safetyViolation.violationDetails, violationDetail).fetchJoin()
             .where(
                 safetyViolation.area.uuid.in(areaUuids),
@@ -307,6 +313,25 @@ public class SafetyViolationRepositoryCustomImpl implements SafetyViolationRepos
             )
             .orderBy(safetyViolation.createdAt.desc())
             .fetch();
+    }
+
+    /**
+     * 구역 UUID 리스트 조건 생성
+     */
+    private BooleanExpression areaUuidsIn(List<UUID> areaUuids) {
+        return areaUuids != null && !areaUuids.isEmpty() ?
+            safetyViolation.area.uuid.in(areaUuids) : null;
+    }
+
+    @Override
+    public SafetyViolation findViolationDetailByUuid(UUID violationUuid) {
+        return queryFactory
+            .selectFrom(safetyViolation)
+            .leftJoin(safetyViolation.area, area).fetchJoin()
+            .leftJoin(safetyViolation.cctv, cctv).fetchJoin()
+            .leftJoin(safetyViolation.violationDetails, violationDetail).fetchJoin()
+            .where(safetyViolation.uuid.eq(violationUuid))
+            .fetchOne();
     }
 
 }

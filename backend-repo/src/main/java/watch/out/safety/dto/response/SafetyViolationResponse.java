@@ -1,5 +1,6 @@
 package watch.out.safety.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -13,6 +14,7 @@ public record SafetyViolationResponse(
     String cctvName,
     List<SafetyViolationType> violationTypes,
     String imageUrl,
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime createdAt
 ) {
 
