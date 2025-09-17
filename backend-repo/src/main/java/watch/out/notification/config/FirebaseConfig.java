@@ -24,7 +24,7 @@ public class FirebaseConfig {
     public FirebaseMessaging firebaseMessaging() {
         try {
             log.info("Firebase 서비스 계정 키 파일 경로: {}", serviceAccountFilePath);
-            
+
             // 외부 파일에서 읽기
             try (InputStream serviceAccount = new java.io.FileInputStream(serviceAccountFilePath)) {
                 // JSON에서 project_id 읽기
@@ -35,7 +35,8 @@ public class FirebaseConfig {
                 log.info("JSON에서 읽은 project_id: {}", projectId);
 
                 // 다시 파일을 열어서 credentials 생성
-                try (InputStream credentialsStream = new java.io.FileInputStream(serviceAccountFilePath)) {
+                try (InputStream credentialsStream = new java.io.FileInputStream(
+                    serviceAccountFilePath)) {
                     GoogleCredentials credentials = GoogleCredentials.fromStream(credentialsStream);
 
                     FirebaseOptions options = FirebaseOptions.builder()
