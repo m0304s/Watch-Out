@@ -2,7 +2,13 @@
 export { LoginPage, LoginForm, AppHeader } from '@/features/auth/web'
 
 // Mobile exports
-export { MobileLoginPage, MobileLoginForm, MobileAppHeader, MobileSignUpPage } from '@/features/auth/mobile'
+export {
+  MobileLoginPage,
+  MobileLoginForm,
+  MobileAppHeader,
+  MobileSignUpPage,
+  MobileFaceRegistrationPage,
+} from '@/features/auth/mobile'
 
 // Types exports
 export type {
@@ -16,4 +22,10 @@ export type {
   ABOType,
   RhFactor,
   FullBloodType,
+  FacePresignedUrlRequest,
+  FacePresignedUrlResponse,
+  FacePhotos,
+  CapturedPhotos,
+  FacePhotoType,
+  FaceRegistrationError,
 } from '@/features/auth/types'

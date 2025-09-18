@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
 import { css } from '@emotion/react'
+import { useEffect, useMemo, useState } from 'react'
 import type {
   Employee,
   WorkerFilterState,
@@ -8,8 +8,10 @@ import type {
 } from '@/features/worker/types'
 import { SelectedWorkerFilters } from '@/features/worker/web/components/SelectedWorkerFilters'
 import { SelectedWorkerTable } from '@/features/worker/web/components/SelectedWorkerTable'
-import { getAreas, getEmployees } from '@/features/worker/api/workerApi'
-import { useUserRole } from '@/stores/authStore'
+import { WorkerDetailModal } from '@/features/worker/web/components/WorkerDetailModal'
+import { getAreas, getEmployees, updateUserRole } from '@/features/worker/api/workerApi'
+import { useUserRole, useAreaUuid } from '@/stores/authStore'
+import type { UserRole } from '@/features/worker/types'
 
 const DISPLAY = 10
 
@@ -30,9 +32,14 @@ export const SelectedWorkersPage = () => {
   const [rows, setRows] = useState<Employee[]>([])
   const [totalItems, setTotalItems] = useState<number>(0)
   const [areas, setAreas] = useState<AreaOption[]>([])
+  const [selectedWorkerUuid, setSelectedWorkerUuid] = useState<string | null>(
+    null,
+  )
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // 사용자 권한 확인
   const userRole = useUserRole()
+  const userAreaUuid = useAreaUuid()
 
   // areaAlias 또는 areaName으로 표시용 라벨 구성
   const areaLabels = useMemo(() => {
@@ -55,7 +62,14 @@ export const SelectedWorkersPage = () => {
   const selectedAreaLabel = filters.areas[0] ?? '전체'
   const selectedStatus: TrainingStatus | '' =
     (filters.statuses[0] as TrainingStatus | undefined) ?? ''
-  const selectedAreaUuid = labelToUuid.get(selectedAreaLabel) ?? ''
+  
+  // AREA_ADMIN인 경우 본인의 담당구역을 자동으로 설정
+  const selectedAreaUuid = useMemo(() => {
+    if (userRole === 'AREA_ADMIN' && userAreaUuid) {
+      return userAreaUuid
+    }
+    return labelToUuid.get(selectedAreaLabel) ?? ''
+  }, [userRole, userAreaUuid, selectedAreaLabel, labelToUuid])
 
   const fetchAreas = async () => {
     const list = await getAreas()
@@ -72,6 +86,8 @@ export const SelectedWorkersPage = () => {
       search,
       pageNum: page,
       display: DISPLAY,
+      // AREA_ADMIN인 경우 userRole을 WORKER로 기본 설정
+      userRole: userRole === 'AREA_ADMIN' ? 'WORKER' : undefined,
     })
     setRows(res.data)
     setTotalItems(res.pagination.totalItems)
@@ -108,15 +124,36 @@ export const SelectedWorkersPage = () => {
     void fetchUsers({ page: nextPage })
   }
 
+  const handleWorkerClick = (userUuid: string) => {
+    setSelectedWorkerUuid(userUuid)
+    setIsModalOpen(true)
+  }
+
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+    setSelectedWorkerUuid(null)
+  }
+
+  const handleRoleChange = async (userUuid: string, newRole: UserRole) => {
+    try {
+      await updateUserRole({ userUuid, newRole })
+      // 성공 시 목록 새로고침
+      await fetchUsers({ page: pageNum })
+    } catch (error) {
+      console.error('직책 변경 실패:', error)
+    }
+  }
+
   return (
     <div css={pageStyles.container}>
-      {/* ADMIN인 경우에만 필터링 컴포넌트 표시 */}
-      {userRole === 'ADMIN' && (
+      {/* ADMIN 또는 AREA_ADMIN인 경우에만 필터링 컴포넌트 표시 */}
+      {(userRole === 'ADMIN' || userRole === 'AREA_ADMIN') && (
         <SelectedWorkerFilters
           state={filters}
           onChange={handleChangeFilters}
           areaOptions={areaLabels}
           onSearch={handleSearch}
+          showAreaFilter={userRole === 'ADMIN'}
         />
       )}
 
@@ -126,6 +163,16 @@ export const SelectedWorkersPage = () => {
         display={DISPLAY}
         totalItems={totalItems}
         onPageChange={handlePageChange}
+        onRowClick={handleWorkerClick}
+        onRoleChange={handleRoleChange}
+        canChangeRole={userRole === 'ADMIN'}
+      />
+
+      {/* 작업자 상세 모달 */}
+      <WorkerDetailModal
+        userUuid={selectedWorkerUuid}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
       />
     </div>
   )

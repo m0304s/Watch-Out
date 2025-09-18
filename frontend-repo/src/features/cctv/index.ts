@@ -1,4 +1,2 @@
 export * from '@/features/cctv/types'
-export { AreaManagementPage } from '@/features/cctv/web'
-
-
+export { AreaManagementPage, CctvSettingsPage } from '@/features/cctv/web'

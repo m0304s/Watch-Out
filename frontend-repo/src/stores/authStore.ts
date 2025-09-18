@@ -12,6 +12,7 @@ interface AuthState {
   userId: string | null
   userName: string | null
   userRole: 'WORKER' | 'AREA_ADMIN' | 'ADMIN' | null
+  areaUuid: string | null // AREA_ADMIN 사용자만 가지고 있음
   isApproved: boolean
   
   // 로딩 상태
@@ -46,6 +47,7 @@ const initialState: AuthState = {
   userId: null,
   userName: null,
   userRole: null,
+  areaUuid: null,
   isApproved: false,
   isLoading: false,
   error: null,
@@ -64,6 +66,7 @@ export const useAuthStore = create<AuthStore>()(
           userId: loginResponse.userId,
           userName: loginResponse.userName,
           userRole: loginResponse.userRole,
+          areaUuid: loginResponse.areaUuid || null,
           isApproved: loginResponse.isApproved,
           error: null,
           isLoading: false,
@@ -110,6 +113,7 @@ export const useAuthStore = create<AuthStore>()(
         userId: state.userId,
         userName: state.userName,
         userRole: state.userRole,
+        areaUuid: state.areaUuid,
         isApproved: state.isApproved,
       }),
     }
@@ -126,6 +130,7 @@ export const useAuth = () => {
       userId: authStore.userId,
       userName: authStore.userName,
       userRole: authStore.userRole,
+      areaUuid: authStore.areaUuid,
       isApproved: authStore.isApproved,
     },
     accessToken: authStore.accessToken,
@@ -142,4 +147,9 @@ export const useUserRole = () => {
 export const useUserUuid = () => {
   const userUuid = useAuthStore((state) => state.userUuid)
   return userUuid
+}
+
+export const useAreaUuid = () => {
+  const areaUuid = useAuthStore((state) => state.areaUuid)
+  return areaUuid
 }

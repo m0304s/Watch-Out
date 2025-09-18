@@ -2,6 +2,7 @@ import { css } from '@emotion/react'
 import { useState, useEffect } from 'react'
 import { MobileLayout } from '@/components/mobile/MobileLayout'
 import { getEmployees, getAreas } from '@/features/worker/api/workerApi'
+import { WorkerDetailModal } from '@/features/worker/mobile/components/WorkerDetailModal'
 import type {
   Employee,
   TrainingStatus,
@@ -9,7 +10,7 @@ import type {
   GetEmployeesParams,
   AreaOption,
 } from '@/features/worker/types'
-import { useUserRole } from '@/stores/authStore'
+import { useUserRole, useAreaUuid } from '@/stores/authStore'
 
 // 교육상태 라벨 매핑
 const trainingStatusLabels: Record<TrainingStatus, string> = {
@@ -24,6 +25,7 @@ const roleLabel = (role: UserRole): string =>
 export const MobileWorkerListPage = () => {
   // 사용자 권한 확인
   const userRole = useUserRole()
+  const userAreaUuid = useAreaUuid()
 
   // 상태 관리
   const [searchInput, setSearchInput] = useState<string>('')
@@ -45,16 +47,29 @@ export const MobileWorkerListPage = () => {
     Array<Pick<AreaOption, 'areaUuid' | 'areaAlias' | 'areaName'>>
   >([])
 
+  // 모달 상태 관리
+  const [selectedWorkerUuid, setSelectedWorkerUuid] = useState<string | null>(
+    null,
+  )
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
   // API 호출 함수
   const fetchEmployees = async (params: GetEmployeesParams = {}) => {
     setLoading(true)
     try {
+      // AREA_ADMIN인 경우 본인의 담당구역을 자동으로 설정
+      const areaUuid = userRole === 'AREA_ADMIN' && userAreaUuid 
+        ? userAreaUuid 
+        : selectedArea
+
       const response = await getEmployees({
-        areaUuid: selectedArea,
+        areaUuid,
         trainingStatus: selectedStatus || undefined,
         search: params.search || '',
         pageNum: params.pageNum || 0,
         display: 10,
+        // AREA_ADMIN인 경우 userRole을 WORKER로 기본 설정
+        userRole: userRole === 'AREA_ADMIN' ? 'WORKER' : undefined,
       })
 
       setEmployees(response.data)
@@ -116,15 +131,28 @@ export const MobileWorkerListPage = () => {
     setSelectedStatus(status)
   }
 
+  // 작업자 클릭 핸들러
+  const handleWorkerClick = (userUuid: string) => {
+    setSelectedWorkerUuid(userUuid)
+    setIsModalOpen(true)
+  }
+
+  // 모달 닫기 핸들러
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+    setSelectedWorkerUuid(null)
+  }
+
+
   return (
     <MobileLayout title="작업자 관리">
-      {/* ADMIN인 경우에만 검색 및 필터링 표시 */}
-      {userRole === 'ADMIN' && (
+      {/* ADMIN 또는 AREA_ADMIN인 경우에만 검색 및 필터링 표시 */}
+      {(userRole === 'ADMIN' || userRole === 'AREA_ADMIN') && (
         <section css={ui.section}>
           <div css={ui.searchRow}>
             <input
               css={ui.searchInput}
-              placeholder="🔍 작업자 검색..."
+              placeholder="이름으로 검색"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyPress={handleSearchKeyPress}
@@ -139,19 +167,21 @@ export const MobileWorkerListPage = () => {
             </button>
           </div>
 
-          {/* 구역 필터 */}
-          <div css={ui.chipRow}>
-            {areaOptions.map((area) => (
-              <button
-                key={area.areaUuid}
-                css={ui.chip(selectedArea === area.areaUuid)}
-                onClick={() => handleAreaChange(area.areaUuid)}
-                disabled={loading}
-              >
-                {area.areaAlias ?? area.areaName}
-              </button>
-            ))}
-          </div>
+          {/* 구역 필터 - ADMIN만 표시 */}
+          {userRole === 'ADMIN' && (
+            <div css={ui.chipRow}>
+              {areaOptions.map((area) => (
+                <button
+                  key={area.areaUuid}
+                  css={ui.chip(selectedArea === area.areaUuid)}
+                  onClick={() => handleAreaChange(area.areaUuid)}
+                  disabled={loading}
+                >
+                  {area.areaAlias ?? area.areaName}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* 교육상태 필터 */}
           <div css={ui.chipRow}>
@@ -192,6 +222,7 @@ export const MobileWorkerListPage = () => {
             key={worker.userUuid}
             css={ui.card}
             aria-label={`${worker.userName} 카드`}
+            onClick={() => handleWorkerClick(worker.userUuid)}
           >
             <img
               src={worker.photoUrl}
@@ -228,6 +259,13 @@ export const MobileWorkerListPage = () => {
           {pagination.totalPages} 페이지
         </div>
       )}
+
+      {/* 작업자 상세 모달 */}
+      <WorkerDetailModal
+        userUuid={selectedWorkerUuid}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+      />
     </MobileLayout>
   )
 }
@@ -309,6 +347,17 @@ const ui = {
     background-color: var(--color-bg-white);
     border: 1px solid var(--color-gray-200);
     border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: var(--color-gray-50);
+      border-color: var(--color-primary);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
   `,
   avatar: css`
     width: 56px;

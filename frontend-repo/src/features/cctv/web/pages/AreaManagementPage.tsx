@@ -1,8 +1,10 @@
 import { css } from '@emotion/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUserRole } from '@/stores/authStore'
 import { AreaTable } from '@/features/cctv/web/components/AreaTable'
-import { getAreas } from '@/features/cctv/api/areaApi'
+import { AreaFormModal } from '@/features/cctv/web/components/AreaFormModal'
+import { AreaDetailModal } from '@/features/cctv/web/components/AreaDetailModal'
+import { getAreas, deleteArea } from '@/features/cctv/api/areaApi'
 import type { AreaItem, PaginatedResponse } from '@/features/cctv/types'
 
 const DISPLAY = 10
@@ -23,6 +25,10 @@ export const AreaManagementPage = () => {
   const [pageNum, setPageNum] = useState<number>(0)
   const [rows, setRows] = useState<AreaItem[]>([])
   const [totalItems, setTotalItems] = useState<number>(0)
+  const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false)
+  const [selectedAreaUuid, setSelectedAreaUuid] = useState<string | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
+  const [editingArea, setEditingArea] = useState<AreaItem | null>(null)
 
   const fetchList = async (opts?: { page?: number; search?: string }) => {
     const page = opts?.page ?? pageNum
@@ -57,10 +63,70 @@ export const AreaManagementPage = () => {
     void fetchList({ page: next })
   }
 
+  const handleDeleteAreas = async (areaUuids: string[]) => {
+    const confirmed = window.confirm(
+      `선택한 ${areaUuids.length}개의 구역을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
+    )
+
+    if (!confirmed) return
+
+    try {
+      // 각 구역을 순차적으로 삭제
+      for (const areaUuid of areaUuids) {
+        await deleteArea(areaUuid)
+      }
+
+      // 삭제 완료 후 목록 새로고침
+      await fetchList({ page: pageNum })
+
+      // 성공 메시지 표시
+      alert('선택한 구역이 성공적으로 삭제되었습니다.')
+    } catch (error) {
+      console.error('구역 삭제 중 오류 발생:', error)
+      alert('구역 삭제 중 오류가 발생했습니다. 다시 시도해주세요.')
+    }
+  }
+
+  const handleManagerAssigned = async () => {
+    // 담당자 지정 후 목록 새로고침
+    await fetchList({ page: pageNum })
+  }
+
+  const handleCreateArea = () => {
+    setEditingArea(null) // 생성 모드
+    setIsFormModalOpen(true)
+  }
+
+  const handleFormSuccess = async () => {
+    // 구역 생성/수정 후 목록 새로고침
+    await fetchList({ page: pageNum })
+  }
+
+  const handleAreaClick = (areaUuid: string) => {
+    setSelectedAreaUuid(areaUuid)
+    setIsDetailModalOpen(true)
+  }
+
+  const handleDetailModalClose = () => {
+    setIsDetailModalOpen(false)
+    setSelectedAreaUuid(null)
+  }
+
+  const handleEditArea = (area: AreaItem) => {
+    setEditingArea(area) // 수정 모드
+    setIsFormModalOpen(true)
+  }
+
+  const handleFormModalClose = () => {
+    setIsFormModalOpen(false)
+    setEditingArea(null)
+  }
+
   return (
     <div css={pageStyles.container}>
       <div css={pageStyles.toolbar}>
         <div css={pageStyles.searchGroup}>
+          <span css={pageStyles.label}>검색</span>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -77,8 +143,12 @@ export const AreaManagementPage = () => {
           </button>
         </div>
         <div>
-          <button type="button" css={pageStyles.primaryBtn}>
-            + 추가
+          <button
+            type="button"
+            css={pageStyles.primaryBtn}
+            onClick={handleCreateArea}
+          >
+            구역 등록
           </button>
         </div>
       </div>
@@ -89,7 +159,28 @@ export const AreaManagementPage = () => {
         display={DISPLAY}
         totalItems={totalItems}
         onPageChange={handlePageChange}
+        onDeleteAreas={handleDeleteAreas}
+        onManagerAssigned={handleManagerAssigned}
+        onRowClick={handleAreaClick}
+        onEditArea={handleEditArea}
       />
+
+      {/* 구역 생성/수정 모달 */}
+      <AreaFormModal
+        isOpen={isFormModalOpen}
+        onClose={handleFormModalClose}
+        onSuccess={handleFormSuccess}
+        editingArea={editingArea}
+      />
+
+      {/* 구역 상세 정보 모달 */}
+      {selectedAreaUuid && (
+        <AreaDetailModal
+          areaUuid={selectedAreaUuid}
+          isOpen={isDetailModalOpen}
+          onClose={handleDetailModalClose}
+        />
+      )}
     </div>
   )
 }
@@ -112,6 +203,12 @@ const guardStyles = {
 }
 
 const pageStyles = {
+  label: css`
+    font-family: 'PretendardSemiBold', sans-serif;
+    color: var(--color-gray-800);
+    font-size: 14px;
+    min-width: 64px;
+  `,
   container: css`
     display: flex;
     flex-direction: column;
@@ -133,7 +230,7 @@ const pageStyles = {
     gap: 8px;
   `,
   input: css`
-    width: 280px;
+    width: 240px;
     padding: 10px 12px;
     border: 1px solid var(--color-gray-300);
     border-radius: 8px;
@@ -145,12 +242,14 @@ const pageStyles = {
     }
   `,
   searchBtn: css`
-    padding: 10px 14px;
+    padding: 10px 12px;
+    border: none;
     border-radius: 8px;
-    border: 1px solid var(--color-gray-300);
-    background: var(--color-gray-100);
-    color: var(--color-gray-800);
+    background-color: var(--color-primary);
+    color: var(--color-text-white);
     font-size: 14px;
+    font-family: 'PretendardSemiBold', sans-serif;
+    cursor: pointer;
   `,
   primaryBtn: css`
     padding: 10px 14px;

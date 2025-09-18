@@ -1,3 +1,10 @@
 export { AreaManagementPage } from '@/features/cctv/web/pages/AreaManagementPage'
-
-
+export { AreaTable } from '@/features/cctv/web/components/AreaTable'
+export { CctvSettingsPage } from '@/features/cctv/web/pages/CctvSettingsPage'
+export { ManagerDropdown } from '@/features/cctv/web/components/ManagerDropdown'
+export { AreaFormModal } from '@/features/cctv/web/components/AreaFormModal'
+export { BottomActionBar } from '@/features/cctv/web/components/BottomActionBar'
+export { AreaDetailModal } from '@/features/cctv/web/components/AreaDetailModal'
+export { CctvFormModal } from '@/features/cctv/web/components/CctvFormModal'
+export { CctvTable } from '@/features/cctv/web/components/CctvTable'
+export { CctvFilters } from '@/features/cctv/web/components/CctvFilters'
