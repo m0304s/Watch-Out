@@ -18,7 +18,7 @@ const Navigation = () => {
           {item.children ? (
             <div>
               <button css={navButton} onClick={() => handleNavAreaClick()}>
-                {openNavArea ? <IoIosArrowForward /> : <IoIosArrowDown />}
+                {openNavArea ? <IoIosArrowDown /> : <IoIosArrowForward />}
                 {item.icon && <item.icon />}
                 <div css={toggleItem}> {item.name}</div>
               </button>
@@ -70,7 +70,7 @@ const commonItem = css`
   align-items: center;
   gap: 8px;
   padding: 0.5rem 1rem;
-  margin: 0.5rem 0;
+  margin: 0.3rem 0;
   cursor: pointer;
   border-radius: 8px;
   transition: background-color 0.2s ease;
@@ -120,7 +120,6 @@ const subMenu = css`
   flex-direction: column;
   margin-left: 24px;
   padding-left: 27px;
-  gap: 4px;
 `
 
 const iconSpacer = css`
