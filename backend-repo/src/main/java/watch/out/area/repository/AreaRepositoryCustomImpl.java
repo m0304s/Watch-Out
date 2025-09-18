@@ -281,9 +281,9 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
             .from(qUser)
             .join(qUser.area, qArea)
             .join(qAreaManager)
-                .on(qAreaManager.area.uuid.eq(qArea.uuid))
+            .on(qAreaManager.area.uuid.eq(qArea.uuid))
             .join(qAreaManagerUser)
-                .on(qAreaManager.user.uuid.eq(qAreaManagerUser.uuid))
+            .on(qAreaManager.user.uuid.eq(qAreaManagerUser.uuid))
             .where(qUser.uuid.eq(userUuid)
                 .and(qAreaManagerUser.role.eq(UserRole.AREA_ADMIN)))
             .fetchFirst();

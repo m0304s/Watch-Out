@@ -32,7 +32,8 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     private final FcmService fcmService;
 
     @Override
-    public List<AnnouncementResponse> sendAnnouncementToAreas(AnnouncementRequest announcementRequest) {
+    public List<AnnouncementResponse> sendAnnouncementToAreas(
+        AnnouncementRequest announcementRequest) {
         // 현재 사용자 조회
         UUID currentUserUuid = SecurityUtil.getCurrentUserUuid()
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -98,7 +99,8 @@ public class AnnouncementServiceImpl implements AnnouncementService {
         log.info("FCM 전송 대상 맵 크기: {}", areaWorkersMap.size());
         if (!areaWorkersMap.isEmpty()) {
             try {
-                fcmService.sendAnnouncementToAreaWorkers(areaWorkersMap, announcementRequest.title(),
+                fcmService.sendAnnouncementToAreaWorkers(areaWorkersMap,
+                    announcementRequest.title(),
                     announcementRequest.content());
                 log.info("구역별 공지사항 FCM 알림 전송 완료: 구역 수={}, 총 대상자 수={}",
                     areaWorkersMap.size(), allResponses.size());

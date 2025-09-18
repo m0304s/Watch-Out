@@ -40,7 +40,10 @@ public class CctvEventListener {
     private final FcmService fcmService;
     private final S3Util s3Util;
 
-    @KafkaListener(topics = "${app.kafka.topic}")
+    @KafkaListener(
+        topics = "${app.kafka.topic.cctv-events}",
+        containerFactory = "cctvConsumerKafkaListenerContainerFactory"
+    )
     @Transactional
     public void onMessage(ConsumerRecord<String, String> rec, Acknowledgment ack) {
         try {
