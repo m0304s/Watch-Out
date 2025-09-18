@@ -203,7 +203,6 @@ public class AccidentServiceImpl implements AccidentService {
                     "areaUuid", area.getUuid().toString(),
                     "areaName", area.getAreaName(),
                     "reporterName", reporter.getUserName(),
-                    "reporterId", reporter.getUserId(),
                     "accidentType", accident.getType().name(), // AUTO_SOS 또는 MANUAL_SOS
                     "accidentTypeDescription", accident.getType().getDescription(),
                     // "자동 SOS" 또는 "수동 SOS"
