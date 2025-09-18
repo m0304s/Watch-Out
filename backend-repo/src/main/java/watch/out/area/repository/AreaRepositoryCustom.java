@@ -5,6 +5,7 @@ import java.util.UUID;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
 import watch.out.area.dto.response.AreaDetailItemResponse;
+import watch.out.area.dto.response.MyAreaResponse;
 
 public interface AreaRepositoryCustom {
 
@@ -28,4 +29,6 @@ public interface AreaRepositoryCustom {
     long countManagersByAreaUuid(UUID areaUuid);
 
     boolean hasAreaAccess(UUID userUuid, UUID areaUuid);
+
+    MyAreaResponse findMyAreaDetail(UUID userUuid);
 }

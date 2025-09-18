@@ -11,6 +11,7 @@ import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
 import watch.out.area.dto.response.AreaDetailItemResponse;
+import watch.out.area.dto.response.MyAreaResponse;
 import watch.out.common.dto.PageResponse;
 import watch.out.area.entity.Area;
 import watch.out.area.entity.AreaManager;
@@ -206,5 +207,19 @@ public class AreaServiceImpl implements AreaService {
         }
 
         return AreaCountResponse.of(count);
+    }
+
+    @Override
+    public MyAreaResponse getMyArea() {
+        Optional<UUID> currentUserUuid = SecurityUtil.getCurrentUserUuid();
+
+        if(!currentUserUuid.isPresent()){
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        UUID userUuid = currentUserUuid.get();
+
+        //userUuid 바탕으로 배정된 구역(UUID, NAME), 담당 직원(UUID, NAME) 조회
+        return areaRepository.findMyAreaDetail(userUuid);
     }
 }
