@@ -1,8 +1,9 @@
 <resources>
     <string name="app_name">WatchOut</string>
-    <!--
-    This string is used for square devices and overridden by hello_world in
-    values-round/strings.xml for round devices.
-    -->
-    <string name="hello_world">From the Square world,\nHello, %1$s!</string>
+    <string name="hello_world">Hello %1$s!</string>
+
+    <string name="register_button_label">Register</string>
+    <string name="unregister_button_label">Unregister</string>
+    <string name="registered_message">Fall detection registered.</string>
+    <string name="unregistered_message">Fall detection not registered.</string>
 </resources>

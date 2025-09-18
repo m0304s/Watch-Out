@@ -3,7 +3,7 @@
  * most up to date changes to the libraries and their usages.
  */
 
-package com.watchout.presentation
+package com.watchout.presentation.main
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -20,9 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
+import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material.TimeText
-import androidx.wear.tooling.preview.devices.WearDevices
 import com.watchout.R
 import com.watchout.presentation.theme.WatchOutTheme
 
@@ -65,7 +64,7 @@ fun Greeting(greetingName: String) {
     )
 }
 
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
+@Preview(device = "id:wearos_small_round", showSystemUi = true)
 @Composable
 fun DefaultPreview() {
     WearApp("Preview Android")
