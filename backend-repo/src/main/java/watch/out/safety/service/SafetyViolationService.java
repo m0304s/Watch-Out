@@ -47,7 +47,7 @@ public interface SafetyViolationService {
      * 안전장비 미착용 목록을 조회합니다.
      *
      * @param pageRequest 페이지네이션 정보
-     * @param request 필터 조건
+     * @param request     필터 조건
      * @return 안전장비 미착용 목록 (페이지네이션 포함)
      */
     PageResponse<SafetyViolationResponse> getViolations(

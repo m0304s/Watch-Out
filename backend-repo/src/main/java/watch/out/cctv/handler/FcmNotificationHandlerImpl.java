@@ -8,12 +8,10 @@ import watch.out.cctv.entity.HeavyEquipmentType;
 import watch.out.cctv.util.HeavyEquipmentMapper;
 import watch.out.notification.service.FcmService;
 import watch.out.safety.entity.SafetyViolationType;
-import watch.out.common.util.S3Util;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * FCM 알림 핸들러 구현체
@@ -24,7 +22,6 @@ import java.util.UUID;
 public class FcmNotificationHandlerImpl implements FcmNotificationHandler {
 
     private final FcmService fcmService;
-    private final S3Util s3Util;
 
     @Override
     public void sendSafetyEquipmentViolationNotification(Cctv cctv,
@@ -77,7 +74,7 @@ public class FcmNotificationHandlerImpl implements FcmNotificationHandler {
                 .map(this::getHeavyEquipmentTypeDisplayName)
                 .toList();
 
-            fcmService.sendSafetyViolationNotification(
+            fcmService.sendHeavyEquipmentEntryNotification(
                 cctv.getArea().getUuid(),
                 areaName,
                 cctv.getCctvName(),

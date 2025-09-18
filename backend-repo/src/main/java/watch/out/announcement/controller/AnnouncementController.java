@@ -36,7 +36,8 @@ public class AnnouncementController {
     @PreAuthorize("hasAnyRole('ADMIN', 'AREA_ADMIN')")
     public ResponseEntity<List<AnnouncementResponse>> sendAnnouncementToAreas(
         @Valid @RequestBody AnnouncementRequest announcementRequest) {
-        List<AnnouncementResponse> announcementResponses = announcementService.sendAnnouncementToAreas(announcementRequest);
+        List<AnnouncementResponse> announcementResponses = announcementService.sendAnnouncementToAreas(
+            announcementRequest);
         return ResponseEntity.ok(announcementResponses);
     }
 
@@ -60,7 +61,8 @@ public class AnnouncementController {
     @PreAuthorize("hasAnyRole('ADMIN', 'AREA_ADMIN')")
     public ResponseEntity<AnnouncementResponse> getAnnouncementDetail(
         @PathVariable UUID announcementUuid) {
-        AnnouncementResponse announcementResponse = announcementService.getAnnouncementDetail(announcementUuid);
+        AnnouncementResponse announcementResponse = announcementService.getAnnouncementDetail(
+            announcementUuid);
         return ResponseEntity.ok(announcementResponse);
     }
 
