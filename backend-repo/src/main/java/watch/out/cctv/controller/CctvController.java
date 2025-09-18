@@ -27,7 +27,6 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/cctv")
-@PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
 @Validated
 public class CctvController {
 
@@ -36,12 +35,14 @@ public class CctvController {
     private final InferenceStartService inferenceStartService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
     public ResponseEntity<Void> createCctv(@Valid @RequestBody CreateCctvRequest request) {
         cctvService.createCctv(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
     public ResponseEntity<PageResponse<CctvResponse>> getCctv(
         @RequestParam(defaultValue = "0") int pageNum,
         @RequestParam(defaultValue = "10") int display,
@@ -55,6 +56,7 @@ public class CctvController {
     }
 
     @PutMapping("/{cctvUuid}")
+    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
     public ResponseEntity<CctvResponse> updateCctv(@PathVariable UUID cctvUuid,
         @RequestBody UpdateCctvRequest request) {
         CctvResponse cctvResponse = cctvService.updateCctv(cctvUuid, request);
@@ -62,6 +64,7 @@ public class CctvController {
     }
 
     @DeleteMapping("/{cctvUuid}")
+    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
     public ResponseEntity<Void> deleteCctv(@PathVariable UUID cctvUuid) {
         cctvService.deleteCctv(cctvUuid);
         return ResponseEntity.noContent().build();
@@ -82,7 +85,7 @@ public class CctvController {
     }
 
     @GetMapping(value = "/stream/mjpeg", produces = "multipart/x-mixed-replace; boundary=frame")
-    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
+//    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
     public void streamOne(
         @RequestParam UUID uuid,
         @RequestParam(defaultValue = "false") boolean useFastapiMjpeg,
@@ -99,6 +102,7 @@ public class CctvController {
     }
 
     @PostMapping("/infer/start-all")
+    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
     public ResponseEntity<StartReportResponse> startAll(
         @RequestParam(defaultValue = "true") boolean mirror,
         @RequestParam(defaultValue = "false") boolean push
@@ -107,7 +111,8 @@ public class CctvController {
     }
 
     @PostMapping("/infer/start-area")
-    public ResponseEntity<StartReportResponse> startArea(   // ✅ 통일
+    @PreAuthorize("hasAnyRole('ADMIN','AREA_ADMIN')")
+    public ResponseEntity<StartReportResponse> startArea(
         @RequestParam UUID areaUuid,
         @RequestParam(defaultValue = "true") boolean mirror,
         @RequestParam(defaultValue = "false") boolean push
