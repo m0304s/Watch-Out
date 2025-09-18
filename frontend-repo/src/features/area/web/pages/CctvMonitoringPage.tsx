@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { AreaListResponse, AreaListItem } from '@/features/area/types/area'
-import type { CctvItem } from '@/features/area/types/cctv'
+import type { CctvViewAreaItem } from '@/features/area/types/cctv'
 import { areaAPI } from '@/features/area/services/area'
 import AreaFilter from '@/components/common/AreaFilter'
 import CctvList from '@/features/area/web/components/CctvList'
@@ -15,7 +15,9 @@ const CctvMonitoringPage = () => {
   const [cctvCount, setCctvCount] = useState<number>(0) // 선택된 구역의 cctv 총 개수
   const [pageNum, setPageNum] = useState<number>(0) // 현재 페이지
   const ITEM_PER_PAGE = 4
-  const [selectedCctv, setSelectedCctv] = useState<CctvItem | null>(null)
+  const [selectedCctv, setSelectedCctv] = useState<CctvViewAreaItem | null>(
+    null,
+  )
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 
   useEffect(() => {
@@ -51,7 +53,7 @@ const CctvMonitoringPage = () => {
     setSelectedArea(area)
   }
 
-  const handleCctvClick = (cctv: CctvItem) => {
+  const handleCctvClick = (cctv: CctvViewAreaItem) => {
     setSelectedCctv(cctv)
     setIsModalOpen(true)
   }

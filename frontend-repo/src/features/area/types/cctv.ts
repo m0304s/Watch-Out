@@ -25,3 +25,22 @@ export interface CctvListResponse {
     totalPages: number
   }
 }
+
+export interface CctvViewAreaItem {
+  uuid: string
+  name: string
+  springProxyUrl: string
+  fastapiMjpegUrl: string
+  online: boolean
+}
+
+export interface CctvViewAreaRequest {
+  areaUuid: string
+  useFastapiMjpeg: boolean
+}
+
+export interface CctvViewAreaResponse {
+  areaUuid: string
+  useFastapiMjpeg: boolean
+  items: CctvViewAreaItem[]
+}

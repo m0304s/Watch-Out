@@ -3,14 +3,14 @@ import { useState, useEffect, type Dispatch, type SetStateAction } from 'react'
 import { TbCancel } from 'react-icons/tb'
 import { cctvAPI } from '@/features/area/services/cctv'
 import type { AreaListItem } from '@/features/area/types/area'
-import type { CctvItem } from '@/features/area/types/cctv'
+import type { CctvViewAreaItem } from '@/features/area/types/cctv'
 
 interface CctvListProps {
   selectedArea: AreaListItem
   pageNum: number
   setCctvCount: Dispatch<SetStateAction<number>>
   itemPerPage: number
-  onCctvClick: (cctv: CctvItem) => void
+  onCctvClick: (cctv: CctvViewAreaItem) => void
 }
 
 const CctvList: React.FC<CctvListProps> = ({
@@ -20,7 +20,8 @@ const CctvList: React.FC<CctvListProps> = ({
   itemPerPage,
   onCctvClick,
 }) => {
-  const [cctvList, setCctvList] = useState<CctvItem[] | null>(null)
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  const [cctvList, setCctvList] = useState<CctvViewAreaItem[] | null>(null)
 
   useEffect(() => {
     const getCctvList = async () => {
@@ -31,10 +32,17 @@ const CctvList: React.FC<CctvListProps> = ({
           display: itemPerPage,
           isOnline: true,
         })
+        const cctvViewResponse = await cctvAPI.getCctvViewArea({
+          areaUuid: selectedArea.areaUuid,
+          useFastapiMjpeg: true,
+        })
         const fetchCctv = cctvResponse
         if (fetchCctv) {
-          setCctvList(fetchCctv.data)
           setCctvCount(fetchCctv.pagination.totalItems) // 선택된 구역의 cctv 총 개수
+        }
+        const viewCctv: CctvViewAreaItem[] = cctvViewResponse.items // cctv 스트리밍 목록
+        if (viewCctv) {
+          setCctvList(viewCctv)
         }
       } catch (error) {
         console.log('cctv 목록 조회', error)
@@ -49,14 +57,13 @@ const CctvList: React.FC<CctvListProps> = ({
         const cctv = cctvList?.[index]
         if (cctv) {
           return (
-            <div key={cctv.cctvUuid} css={cell}>
-              <iframe
+            <div key={cctv.uuid} css={cell}>
+              <img
                 css={iFrameBox}
-                src={cctv.cctvUrl}
-                allow="autoplay; fullscreen"
-              ></iframe>
+                src={`${API_BASE_URL}${cctv.springProxyUrl}`}
+              ></img>
               <div css={labelBox}>
-                <p>{cctv.cctvName}</p>
+                <p>{cctv.name}</p>
               </div>
               <div css={overlay} onClick={() => onCctvClick(cctv)}></div>
             </div>

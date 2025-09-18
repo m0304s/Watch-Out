@@ -1,13 +1,14 @@
 import { css } from '@emotion/react'
 import { useCallback, useEffect, useRef } from 'react'
-import type { CctvItem } from '@/features/area/types/cctv'
+import type { CctvViewAreaItem } from '@/features/area/types/cctv'
 
 interface CctvModalProps {
-  cctv: CctvItem | null
+  cctv: CctvViewAreaItem | null
   onClose: () => void
 }
 
 const CctvModal: React.FC<CctvModalProps> = ({ cctv, onClose }) => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   const modalRef = useRef<HTMLDivElement>(null)
 
   const handleCloseModal = useCallback(
@@ -50,15 +51,14 @@ const CctvModal: React.FC<CctvModalProps> = ({ cctv, onClose }) => {
           <div css={modalContentWrapper} ref={modalRef}>
             <div css={container}>
               <div css={iframeWrapper}>
-                <iframe
+                <img
                   css={iFrameBox}
-                  src={cctv.cctvUrl}
-                  allow="autoplay; fullscreen"
-                ></iframe>
+                  src={`${API_BASE_URL}${cctv.springProxyUrl}`}
+                ></img>
               </div>
             </div>
             <div css={titleWrapper}>
-              <p css={titleStyle}>{cctv.cctvName}</p>
+              <p css={titleStyle}>{cctv.name}</p>
             </div>
           </div>
         </div>
