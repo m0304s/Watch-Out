@@ -26,15 +26,22 @@ class Settings(BaseSettings):
   AWS_ACCESS_KEY_ID: str | None = None
   AWS_SECRET_ACCESS_KEY: str | None = None
   AWS_REGION: str = "ap-northeast-2"
+  S3_PRESIGN: int
+  S3_PRESIGN_EX: int
+  S3_PREFIX: str
 
-  # ================== 경로 수정 부분 ==================
-  # 이제 모든 경로는 프로젝트 최상위 폴더(BASE_DIR)를 기준으로 생성됩니다.
+  # Kafka
+  KAFKA_BOOTSTRAP: str
+  KAFKA_TOPIC_EVENTS: str
+  KAFKA_TOPIC_CONTROL: str
+  KAFKA_CLIENT_ID: str
+
+  # Models
   MODEL_PATH: str = os.path.join(BASE_DIR, "models/MobileFaceNet.pb")
   PROTOTXT_PATH: str = os.path.join(BASE_DIR, "models/deploy.prototxt")
   CAFFE_MODEL_PATH: str = os.path.join(BASE_DIR, "models/res10_300x300_ssd_iter_140000.caffemodel")
-  # ====================================================
 
-  # Settings
+  # General Settings
   RECOGNITION_THRESHOLD: float = Field(default=1.0)
   DETECTION_CONFIDENCE: float = Field(default=0.5)
   INPUT_SIZE: Tuple[int, int] = (112, 112)
