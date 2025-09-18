@@ -5,6 +5,7 @@ import watch.out.area.dto.request.AreaRequest;
 import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
+import watch.out.area.dto.response.MyAreaResponse;
 import watch.out.common.dto.PageResponse;
 import watch.out.common.dto.PageRequest;
 
@@ -21,4 +22,6 @@ public interface AreaService {
     void deleteArea(UUID areaUuid);
 
     AreaCountResponse getMyAreaCount();
+
+    MyAreaResponse getMyArea();
 }

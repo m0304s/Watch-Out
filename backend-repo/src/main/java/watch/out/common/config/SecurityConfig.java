@@ -48,7 +48,7 @@ public class SecurityConfig {
                     "/auth/**",
                     "/company",
                     "/s3/photo/presigned-url",
-                    "/api/cctv/stream/**"
+                    "/cctv/stream/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.POST, "/area").hasRole("ADMIN")
                 .anyRequest().authenticated()
