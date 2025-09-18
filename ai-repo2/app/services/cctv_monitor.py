@@ -2,21 +2,18 @@ import cv2
 import numpy as np
 import threading
 import time
-import queue
 import logging
-import uuid
 from datetime import datetime, timedelta
 
-# 리팩토링된 모듈들을 import
 from app.adapters.db import get_db_connection
 from app.adapters.redis_client import get_redis_connection
+from app.adapters.kafka_producer import send_event_to_kafka
 from app.services.face_embedding import face_embedding_service # 싱글톤 모델 서비스
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 # 전역 변수 및 동기화 객체
-db_log_queue = queue.Queue()
 running_camera_threads = {}
 global_shutdown_event = threading.Event()
 known_embeddings = {}
@@ -27,18 +24,15 @@ last_seen_at_lock = threading.Lock()
 # --- DB 의존 로직 ---
 def load_known_faces_from_db():
   global known_embeddings
-  logger.info("DB에서 사용자 이름 및 얼굴 정보 업데이트 중...") # 로그 메시지 수정
+  logger.info("DB에서 사용자 이름 및 얼굴 정보 업데이트 중...")
   temp_embeddings = {}
   try:
     with get_db_connection() as conn:
       cursor = conn.cursor()
-      # 쿼리에 user_name 추가
       cursor.execute("SELECT uuid, user_name, avg_embedding FROM users WHERE avg_embedding IS NOT NULL")
-      # user_name도 함께 반복
       for user_uuid, user_name, embedding_bytes in cursor.fetchall():
         if len(embedding_bytes) == 512:
           embedding = np.frombuffer(embedding_bytes, dtype=np.float32)
-          # 이제 이름과 임베딩을 함께 저장
           temp_embeddings[str(user_uuid)] = {
             "name": user_name,
             "embedding": embedding
@@ -89,35 +83,11 @@ def update_cctv_status(cctv_uuid: str, status: bool):
   except Exception as e:
     logger.error(f"CCTV 상태 업데이트 실패 ({cctv_uuid[:8]}): {e}")
 
-def db_log_writer():
-  while not global_shutdown_event.is_set() or not db_log_queue.empty():
-    try:
-      log_data = db_log_queue.get(timeout=1)
-      if log_data is None: break
-
-      with get_db_connection() as conn:
-        try:
-          cursor = conn.cursor()
-          sql = "INSERT INTO entry_exit_history (uuid, type, created_at, updated_at, area_uuid, user_uuid) VALUES (%s, %s, %s, %s, %s, %s)"
-          now = datetime.now()
-          new_uuid = str(uuid.uuid4())
-          cursor.execute(sql, (new_uuid, log_data['event_type'], now, now, log_data['area_uuid'], log_data['user_uuid']))
-          conn.commit()
-          cursor.close()
-          logger.info(f"✅ DB LOGGED: User {log_data['user_uuid'][:8]} - Event: {log_data['event_type']}")
-        except Exception as e:
-          logger.error(f"DB LOG WRITER 실패: {e}")
-          conn.rollback()
-    except queue.Empty:
-      continue
-  logger.info("DB log writer 스레드 종료.")
-
 def find_best_match(live_embedding, current_known_embeddings):
   min_dist = float('inf')
   found_user_uuid = None
   if not current_known_embeddings: return None
 
-  # user_info 딕셔너리에서 임베딩 값을 꺼내서 비교
   for user_uuid, user_info in current_known_embeddings.items():
     dist = np.sqrt(np.sum(np.square(live_embedding - user_info["embedding"])))
     if dist < min_dist:
@@ -136,17 +106,13 @@ def process_camera_stream(camera_info, thread_shutdown_event):
   last_processed_time = time.time()
   is_stream_ok = cap.isOpened()
 
-  # 스레드 시작 시 DB에 초기 상태를 먼저 업데이트합니다.
   update_cctv_status(cam_uuid, is_stream_ok)
-
   logger.info(f"카메라 [{cam_name}] 스트림 처리를 시작합니다. (초기 상태: {'Online' if is_stream_ok else 'Offline'})")
 
   while not global_shutdown_event.is_set() and not thread_shutdown_event.is_set():
     ret, frame = cap.read()
 
-    # 영상 프레임을 가져오지 못했을 때 (연결 끊김)
     if not ret:
-      # 이전에 연결이 정상이었다면, 상태를 'Offline'으로 변경합니다.
       if is_stream_ok:
         logger.warning(f"[{cam_name}] 스트림 연결 끊김.")
         update_cctv_status(cam_uuid, False)
@@ -157,7 +123,6 @@ def process_camera_stream(camera_info, thread_shutdown_event):
       time.sleep(10)
       cap = cv2.VideoCapture(cam_url)
 
-      # 재연결에 성공했는지 확인합니다.
       if cap.isOpened():
         logger.info(f"[{cam_name}] 스트림이 다시 연결되었습니다.")
         update_cctv_status(cam_uuid, True)
@@ -215,12 +180,22 @@ def process_camera_stream(camera_info, thread_shutdown_event):
                   redis_conn.srem(redis_key, found_user_uuid)
                   logger.info(f"Redis SREM: User {log_user_info} from Area {area_uuid[:8]}")
 
-                log_data = {'user_uuid': found_user_uuid, 'area_uuid': area_uuid, 'event_type': event_type}
-                db_log_queue.put(log_data)
-          except Exception as e:
-            logger.error(f"Redis 또는 로깅 중 오류 발생: {e}")
+                # ### 핵심 변경 지점 ###
+                # Kafka로 전송할 이벤트 데이터를 생성합니다.
+                event_data = {
+                  'userUuid': found_user_uuid,
+                  'userName': user_name,
+                  'areaUuid': area_uuid,
+                  'eventType': event_type,
+                  'timestamp': now.isoformat() # ISO 8601 표준 형식으로 시간 전송
+                }
+                # Kafka Producer를 호출하여 이벤트를 전송합니다.
+                send_event_to_kafka(settings.KAFKA_TOPIC_EVENTS, event_data)
+                logger.info(f"🚀 Kafka Event Sent: User {log_user_info} - Event: {event_type}")
 
-  # 스레드가 종료될 때, 최종적으로 상태를 'Offline'으로 업데이트합니다.
+          except Exception as e:
+            logger.error(f"Redis 또는 Kafka 전송 중 오류 발생: {e}")
+
   update_cctv_status(cam_uuid, False)
   cap.release()
   logger.info(f"카메라 [{cam_name}] 스트림 처리를 종료합니다.")
@@ -270,11 +245,8 @@ def start_monitoring():
 
   # 백그라운드 스레드들 시작
   update_thread = threading.Thread(target=update_known_faces_periodically, name="FaceUpdater", daemon=True)
-  db_writer_thread = threading.Thread(target=db_log_writer, name="DBLogWriter", daemon=True)
   monitor_thread = threading.Thread(target=manage_camera_threads_loop, name="CCTV-Manager", daemon=True)
-
   update_thread.start()
-  db_writer_thread.start()
   monitor_thread.start()
 
   logger.info("🚀 모든 모니터링 백그라운드 스레드 시작 완료!")
@@ -297,7 +269,4 @@ def stop_monitoring():
     thread_info['thread'].join(timeout=5)
 
   logger.info("백그라운드 스레드를 종료합니다...")
-  db_log_queue.put(None) # DB Writer 스레드 종료 신호
-  # 다른 스레드들은 daemon=True 이므로 메인 스레드 종료 시 함께 종료됨
-
   logger.info("모든 스레드 정리 완료.")
