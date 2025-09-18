@@ -7,6 +7,7 @@ interface SelectedWorkerFiltersProps {
   onChange: (next: Partial<WorkerFilterState>) => void
   areaOptions: string[]
   onSearch?: () => void
+  showAreaFilter?: boolean
 }
 
 const trainingStatusOptions: { label: string; value: TrainingStatus }[] = [
@@ -22,6 +23,7 @@ export const SelectedWorkerFilters = ({
   onChange,
   areaOptions,
   onSearch,
+  showAreaFilter = true,
 }: SelectedWorkerFiltersProps) => {
   // 단일 선택으로 변경 (같은 값 클릭 시 해제)
   const toggleArrayValue = (list: string[], value: string): string[] =>
@@ -51,20 +53,22 @@ export const SelectedWorkerFilters = ({
     <div css={section.container}>
       {/* 회사 필터 제거 */}
 
-      <div css={section.row}>
-        <span css={section.label}>구역</span>
-        {derivedChips.areas.map((area) => (
-          <button
-            key={area}
-            css={section.chip(state.areas.includes(area))}
-            onClick={() =>
-              onChange({ areas: toggleArrayValue(state.areas, area) })
-            }
-          >
-            {area}
-          </button>
-        ))}
-      </div>
+      {showAreaFilter && (
+        <div css={section.row}>
+          <span css={section.label}>구역</span>
+          {derivedChips.areas.map((area) => (
+            <button
+              key={area}
+              css={section.chip(state.areas.includes(area))}
+              onClick={() =>
+                onChange({ areas: toggleArrayValue(state.areas, area) })
+              }
+            >
+              {area}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div css={section.row}>
         <span css={section.label}>교육상태</span>

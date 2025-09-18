@@ -1,7 +1,8 @@
 import { css } from '@emotion/react'
 import { MdOutlineCheckBoxOutlineBlank } from 'react-icons/md'
 import { IoCheckbox } from 'react-icons/io5'
-import type { Employee } from '@/features/worker/types'
+import type { Employee, UserRole } from '@/features/worker/types'
+import { RoleDropdown } from './RoleDropdown'
 
 interface SelectedWorkerTableProps {
   rows: Employee[]
@@ -9,6 +10,9 @@ interface SelectedWorkerTableProps {
   display: number
   totalItems: number
   onPageChange: (page: number) => void
+  onRowClick?: (userUuid: string) => void
+  onRoleChange?: (userUuid: string, newRole: UserRole) => void
+  canChangeRole?: boolean
 }
 
 const formatDate = (iso: string): string => {
@@ -21,12 +25,19 @@ const formatDate = (iso: string): string => {
   return `${y}-${m}-${day} ${hh}:${mm}`
 }
 
+const getRoleLabel = (role: UserRole): string => {
+  return role === 'AREA_ADMIN' ? '구역 관리자' : '작업자'
+}
+
 export const SelectedWorkerTable = ({
   rows,
   pageNum,
   display,
   totalItems,
   onPageChange,
+  onRowClick,
+  onRoleChange,
+  canChangeRole = false,
 }: SelectedWorkerTableProps) => {
   const totalPages = Math.max(1, Math.ceil(totalItems / display))
 
@@ -38,16 +49,35 @@ export const SelectedWorkerTable = ({
             <th css={styles.th}>이름</th>
             <th css={styles.th}>사번</th>
             <th css={styles.th}>구역</th>
+            <th css={styles.th}>직책</th>
             <th css={styles.th}>교육상태</th>
             <th css={styles.th}>최근 출입시간</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.userUuid}>
+            <tr
+              key={r.userUuid}
+              css={onRowClick ? styles.clickableRow : undefined}
+              onClick={() => onRowClick?.(r.userUuid)}
+            >
               <td css={styles.td}>{r.userName}</td>
               <td css={styles.td}>{r.userId}</td>
               <td css={styles.td}>{r.areaName}</td>
+              <td css={styles.td}>
+                {canChangeRole && onRoleChange ? (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <RoleDropdown
+                      currentRole={r.userRole}
+                      onRoleChange={(newRole) => onRoleChange(r.userUuid, newRole)}
+                    />
+                  </div>
+                ) : (
+                  <span css={styles.roleBadge(r.userRole)}>
+                    {getRoleLabel(r.userRole)}
+                  </span>
+                )}
+              </td>
               <td css={styles.td}>
                 <div css={styles.checkboxContainer}>
                   {r.trainingStatus === 'COMPLETED' ? (
@@ -165,5 +195,26 @@ const styles = {
       opacity: 0.5;
       cursor: not-allowed;
     }
+  `,
+  clickableRow: css`
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: var(--color-gray-50);
+    }
+  `,
+  roleBadge: (role: UserRole) => css`
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-family: 'PretendardMedium', sans-serif;
+    background-color: ${role === 'AREA_ADMIN'
+      ? 'var(--color-primary-light)'
+      : 'var(--color-gray-100)'};
+    color: ${role === 'AREA_ADMIN'
+      ? 'var(--color-primary)'
+      : 'var(--color-gray-700)'};
   `,
 }

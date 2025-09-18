@@ -3,8 +3,9 @@ import LayoutPage from '@/layouts/web/pages/LayoutPage'
 import CctvMonitoringPage from '@/features/area/web/pages/CctvMonitoringPage'
 import { LoginPage, MobileSignUpPage } from '@/features/auth'
 import { SelectedWorkersPage, MobileWorkerListPage } from '@/features/worker'
-import { AreaManagementPage } from '@/features/cctv'
+import { AreaManagementPage, CctvSettingsPage } from '@/features/cctv'
 import DashBoard from '@/features/dashboard/web/pages/DashBoard'
+import { MobileFaceRegistrationPage } from '@/features/auth'
 
 const RouterWeb = () => {
   const isLoggedIn: boolean = true // 개발용
@@ -13,6 +14,10 @@ const RouterWeb = () => {
     <>
       <Routes>
         <Route path="/signup" element={<MobileSignUpPage />} />
+        <Route
+          path="/face-registration"
+          element={<MobileFaceRegistrationPage />}
+        />
         <Route
           path="/"
           element={
@@ -23,6 +28,7 @@ const RouterWeb = () => {
           <Route path="/worker1" element={<SelectedWorkersPage />} />
           <Route path="/area" element={<AreaManagementPage />} />
           <Route path="/dashboard" element={<DashBoard />} />
+          <Route path="/cctv/settings" element={<CctvSettingsPage />} />
         </Route>
         <Route path="/worker2" element={<MobileWorkerListPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />

@@ -9,6 +9,7 @@ export interface LoginResponse {
   userId: string
   userName: string
   userRole: 'WORKER' | 'AREA_ADMIN' | 'ADMIN'
+  areaUuid?: string
   isApproved: boolean
 }
 
@@ -26,7 +27,15 @@ export interface AuthError {
 // Signup types
 export type ABOType = 'A' | 'B' | 'AB' | 'O'
 export type RhFactor = 'PLUS' | 'MINUS'
-export type FullBloodType = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
+export type FullBloodType =
+  | 'A+'
+  | 'A-'
+  | 'B+'
+  | 'B-'
+  | 'AB+'
+  | 'AB-'
+  | 'O+'
+  | 'O-'
 export type Gender = 'MALE' | 'FEMALE'
 
 export interface SignUpFormData {
@@ -80,4 +89,34 @@ export interface PresignedUrlRequest {
 export interface PresignedUrlResponse {
   uploadUrl: string
   fileUrl: string
+}
+
+// 얼굴 사진 등록 관련 타입 정의
+export interface FacePresignedUrlRequest {
+  fileNames: string[]
+}
+
+export interface FacePresignedUrlResponse {
+  uploadUrl: string
+  fileUrl: string
+}
+
+export interface FacePhotos {
+  front?: File
+  left?: File
+  right?: File
+}
+
+export interface CapturedPhotos {
+  front?: string
+  left?: string
+  right?: string
+}
+
+export type FacePhotoType = 'front' | 'left' | 'right'
+
+export interface FaceRegistrationError {
+  code: 'UPLOAD_FAILED' | 'INVALID_FILE' | 'NETWORK_ERROR' | 'SERVER_ERROR'
+  message: string
+  details?: Record<string, unknown>
 }

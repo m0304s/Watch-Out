@@ -61,12 +61,22 @@ apiClient.interceptors.request.use(
     // localStorage에서 액세스 토큰 가져오기
     const token = localStorage.getItem('accessToken')
 
-    // 토큰 재발급 및 로그인 요청에는 Authorization 헤더를 붙이지 않음
+    // 인증이 필요하지 않은 공개 API들 (Authorization 헤더 제외)
     const url = config.url || ''
-    const isAuthReissue = url.includes('/auth/reissue')
-    const isAuthLogin = url.includes('/auth/login')
+    const publicEndpoints = [
+      '/auth/reissue',
+      '/auth/login',
+      '/user/signup',
+      '/company',
+      '/s3/photo/presigned-url',
+    ]
 
-    if (!isAuthReissue && !isAuthLogin && token) {
+    const isPublicEndpoint = publicEndpoints.some((endpoint) =>
+      url.includes(endpoint),
+    )
+
+    // 공개 엔드포인트가 아니고 토큰이 있을 때만 Authorization 헤더 추가
+    if (!isPublicEndpoint && token) {
       config.headers.Authorization = `Bearer ${token}`
     }
 
@@ -89,13 +99,35 @@ apiClient.interceptors.response.use(
 
     // 401 Unauthorized 에러 처리 (토큰 만료)
     if (error.response?.status === 401 && !originalRequest._retry) {
+      const url = originalRequest.url || ''
+
+      // 공개 엔드포인트에 대해서는 토큰 갱신을 시도하지 않음
+      const publicEndpoints = [
+        '/auth/reissue',
+        '/auth/login',
+        '/user/signup',
+        '/company',
+        '/s3/photo/presigned-url',
+      ]
+
+      const isPublicEndpoint = publicEndpoints.some((endpoint) =>
+        url.includes(endpoint),
+      )
+
+      if (isPublicEndpoint) {
+        console.log('공개 엔드포인트 401 에러 - 토큰 갱신 시도하지 않음:', url)
+        return Promise.reject(error)
+      }
+
       originalRequest._retry = true
 
       try {
         console.log('토큰 갱신 시도...')
 
         // 토큰 갱신 API 호출 (refreshToken은 쿠키로 자동 전송됨)
-        const response = await apiClient.post('/auth/reissue', undefined, { withCredentials: true })
+        const response = await apiClient.post('/auth/reissue', undefined, {
+          withCredentials: true,
+        })
 
         // 새로운 accessToken을 localStorage에 저장
         if (response.data?.result?.accessToken) {

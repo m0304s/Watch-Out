@@ -1,5 +1,6 @@
 import { css } from '@emotion/react'
 import { useCallback, useEffect, useRef } from 'react'
+import { BaseModal } from '@/components/common/Modal'
 import type { CctvViewAreaItem } from '@/features/area/types/cctv'
 
 interface CctvModalProps {
@@ -11,78 +12,34 @@ const CctvModal: React.FC<CctvModalProps> = ({ cctv, onClose }) => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   const modalRef = useRef<HTMLDivElement>(null)
 
-  const handleCloseModal = useCallback(
-    (e: MouseEvent) => {
-      if (modalRef.current === null) {
-        return
-      }
-      if (!modalRef.current.contains(e.target as HTMLElement)) {
-        onClose()
-      }
-    },
-    [onClose],
-  )
-
-  // 외부 영역 클릭 시 모달창 닫기
-  useEffect(() => {
-    window.addEventListener('click', handleCloseModal, true)
-    return () => {
-      window.removeEventListener('click', handleCloseModal, true)
-    }
-  }, [handleCloseModal])
-
-  // esc 키로 모달창 닫기
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleEscape)
-    return () => {
-      window.removeEventListener('keydown', handleEscape)
-    }
-  }, [onClose])
-
   return (
-    <>
+    <BaseModal
+      isOpen={!!cctv}
+      onClose={onClose}
+      variant="cctv"
+      size="fullscreen"
+    >
       {cctv && (
-        <div css={overlay}>
-          <div css={modalContentWrapper} ref={modalRef}>
-            <div css={container}>
-              <div css={iframeWrapper}>
-                <img
-                  css={iFrameBox}
-                  src={`${API_BASE_URL}${cctv.springProxyUrl}`}
-                ></img>
-              </div>
+        <div css={modalContentWrapper} ref={modalRef}>
+          <div css={container}>
+            <div css={iframeWrapper}>
+              <img
+                css={iFrameBox}
+                src={`${API_BASE_URL}${cctv.springProxyUrl}`}
+                alt={cctv.name}
+              />
             </div>
-            <div css={titleWrapper}>
-              <p css={titleStyle}>{cctv.name}</p>
-            </div>
+          </div>
+          <div css={titleWrapper}>
+            <p css={titleStyle}>{cctv.name}</p>
           </div>
         </div>
       )}
-    </>
+    </BaseModal>
   )
 }
 
 export default CctvModal
-
-const overlay = css`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  z-index: 1000;
-  cursor: pointer;
-`
 
 const modalContentWrapper = css`
   display: flex;

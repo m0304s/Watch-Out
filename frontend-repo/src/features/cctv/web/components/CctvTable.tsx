@@ -1,33 +1,30 @@
 import { css } from '@emotion/react'
 import { useMemo, useState } from 'react'
-import type { AreaItem } from '@/features/cctv/types'
+import type { CctvItem } from '@/features/cctv/types'
 import { SelectionCheckbox } from '@/components/common/SelectionCheckbox'
-import { ManagerDropdown } from '@/features/cctv/web/components/ManagerDropdown'
 import { BottomActionBar } from '@/features/cctv/web/components/BottomActionBar'
 
-interface AreaTableProps {
-  rows: AreaItem[]
+interface CctvTableProps {
+  rows: CctvItem[]
   pageNum: number
   display: number
   totalItems: number
   onPageChange: (page: number) => void
-  onDeleteAreas: (areaUuids: string[]) => void
-  onManagerAssigned: () => void
-  onRowClick?: (areaUuid: string) => void
-  onEditArea?: (area: AreaItem) => void
+  onDeleteCctvs?: (cctvUuids: string[]) => void
+  onRowClick?: (cctvUuid: string) => void
+  onEditCctv?: (cctv: CctvItem) => void
 }
 
-export const AreaTable = ({
+export const CctvTable = ({
   rows,
   pageNum,
   display,
   totalItems,
   onPageChange,
-  onDeleteAreas,
-  onManagerAssigned,
+  onDeleteCctvs,
   onRowClick,
-  onEditArea,
-}: AreaTableProps) => {
+  onEditCctv,
+}: CctvTableProps) => {
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalItems / display)),
     [totalItems, display],
@@ -36,11 +33,11 @@ export const AreaTable = ({
 
   // 전체 선택/해제 상태 계산
   const isAllSelected = useMemo(() => {
-    return rows.length > 0 && rows.every((row) => selected[row.areaUuid])
+    return rows.length > 0 && rows.every((row) => selected[row.cctvUuid])
   }, [rows, selected])
 
   const selectedCount = useMemo(() => {
-    return rows.filter((row) => selected[row.areaUuid]).length
+    return rows.filter((row) => selected[row.cctvUuid]).length
   }, [rows, selected])
 
   const toggle = (id: string) => {
@@ -52,26 +49,26 @@ export const AreaTable = ({
       // 전체 해제
       const newSelected = { ...selected }
       rows.forEach((row) => {
-        delete newSelected[row.areaUuid]
+        delete newSelected[row.cctvUuid]
       })
       setSelected(newSelected)
     } else {
       // 전체 선택
       const newSelected = { ...selected }
       rows.forEach((row) => {
-        newSelected[row.areaUuid] = true
+        newSelected[row.cctvUuid] = true
       })
       setSelected(newSelected)
     }
   }
 
   const handleDelete = () => {
-    const selectedAreaUuids = rows
-      .filter((row) => selected[row.areaUuid])
-      .map((row) => row.areaUuid)
+    const selectedCctvUuids = rows
+      .filter((row) => selected[row.cctvUuid])
+      .map((row) => row.cctvUuid)
 
-    if (selectedAreaUuids.length > 0) {
-      onDeleteAreas(selectedAreaUuids)
+    if (selectedCctvUuids.length > 0 && onDeleteCctvs) {
+      onDeleteCctvs(selectedCctvUuids)
     }
   }
 
@@ -84,57 +81,59 @@ export const AreaTable = ({
       <table css={styles.table}>
         <thead>
           <tr>
-            <th css={styles.th}>
-              <SelectionCheckbox
-                checked={isAllSelected}
-                onToggle={toggleAll}
-                aria-label="전체 선택"
-              />
-            </th>
+            {onDeleteCctvs && (
+              <th css={styles.th}>
+                <SelectionCheckbox
+                  checked={isAllSelected}
+                  onToggle={toggleAll}
+                  aria-label="전체 선택"
+                />
+              </th>
+            )}
+            <th css={styles.th}>CCTV 이름</th>
             <th css={styles.th}>구역</th>
-            <th css={styles.th}>별칭</th>
-            <th css={styles.th}>담당자</th>
-            <th css={styles.th}></th>
+            <th css={styles.th}>상태</th>
+            {onEditCctv && <th css={styles.th}></th>}
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr
-              key={r.areaUuid}
+              key={r.cctvUuid}
               css={onRowClick ? styles.clickableRow : undefined}
-              onClick={() => onRowClick?.(r.areaUuid)}
+              onClick={() => onRowClick?.(r.cctvUuid)}
             >
-              <td css={styles.tdCheckbox}>
-                <div onClick={(e) => e.stopPropagation()}>
-                  <SelectionCheckbox
-                    checked={!!selected[r.areaUuid]}
-                    onToggle={() => toggle(r.areaUuid)}
-                    aria-label={`select ${r.areaName}`}
-                  />
-                </div>
-              </td>
+              {onDeleteCctvs && (
+                <td css={styles.tdCheckbox}>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <SelectionCheckbox
+                      checked={!!selected[r.cctvUuid]}
+                      onToggle={() => toggle(r.cctvUuid)}
+                      aria-label={`select ${r.cctvName}`}
+                    />
+                  </div>
+                </td>
+              )}
+              <td css={styles.td}>{r.cctvName}</td>
               <td css={styles.td}>{r.areaName}</td>
-              <td css={styles.td}>{r.areaAlias}</td>
               <td css={styles.td}>
-                <div onClick={(e) => e.stopPropagation()}>
-                  <ManagerDropdown
-                    areaUuid={r.areaUuid}
-                    currentManagerName={r.managerName}
-                    onManagerAssigned={onManagerAssigned}
-                  />
-                </div>
+                <span css={styles.statusBadge(r.isOnline)}>
+                  {r.isOnline ? '온라인' : '오프라인'}
+                </span>
               </td>
-              <td css={styles.td}>
-                <div onClick={(e) => e.stopPropagation()}>
-                  <button
-                    css={styles.editButton}
-                    onClick={() => onEditArea?.(r)}
-                    type="button"
-                  >
-                    수정
-                  </button>
-                </div>
-              </td>
+              {onEditCctv && (
+                <td css={styles.td}>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <button
+                      css={styles.editButton}
+                      onClick={() => onEditCctv(r)}
+                      type="button"
+                    >
+                      수정
+                    </button>
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -146,7 +145,7 @@ export const AreaTable = ({
         </div>
 
         <div css={styles.footerCenter}>
-          {selectedCount > 0 && (
+          {selectedCount > 0 && onDeleteCctvs && (
             <BottomActionBar
               selectedCount={selectedCount}
               onClearSelection={handleClearSelection}
@@ -161,6 +160,7 @@ export const AreaTable = ({
               css={styles.pagerBtn}
               onClick={() => onPageChange(pageNum - 1)}
               disabled={pageNum <= 0}
+              type="button"
             >
               이전
             </button>
@@ -171,6 +171,7 @@ export const AreaTable = ({
               css={styles.pagerBtn}
               onClick={() => onPageChange(pageNum + 1)}
               disabled={pageNum >= totalPages - 1}
+              type="button"
             >
               다음
             </button>
@@ -219,9 +220,16 @@ const styles = {
     border-top: 1px solid var(--color-gray-200);
     width: 44px;
   `,
-  managerName: css`
-    color: var(--color-gray-600);
-    font-size: 14px;
+  statusBadge: (online: boolean) => css`
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-family: 'PretendardSemiBold', sans-serif;
+    color: ${online ? 'var(--color-text-white)' : 'var(--color-gray-800)'};
+    background-color: ${online
+      ? 'var(--color-green)'
+      : 'var(--color-gray-200)'};
   `,
   footer: css`
     display: flex;
@@ -255,39 +263,11 @@ const styles = {
     color: var(--color-gray-600);
     font-size: 14px;
   `,
-  selectedCount: css`
-    font-family: 'PretendardSemiBold', sans-serif;
-    color: var(--color-primary);
-    font-size: 14px;
-    background-color: var(--color-primary-light);
-    padding: 4px 8px;
-    border-radius: 6px;
-  `,
   paginationContainer: css`
     display: flex;
     align-items: center;
     gap: 16px;
     min-width: 200px;
-  `,
-  paginationLeft: css`
-    display: flex;
-    align-items: center;
-  `,
-  paginationCenter: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-  `,
-  paginationRight: css`
-    display: flex;
-    align-items: center;
-  `,
-  pageInfo: css`
-    font-family: 'PretendardRegular', sans-serif;
-    color: var(--color-gray-600);
-    font-size: 14px;
-    margin: 0 8px;
   `,
   pagerBtn: css`
     padding: 6px 12px;
@@ -310,6 +290,12 @@ const styles = {
       cursor: not-allowed;
       background-color: var(--color-gray-100);
     }
+  `,
+  pageInfo: css`
+    font-family: 'PretendardRegular', sans-serif;
+    color: var(--color-gray-600);
+    font-size: 14px;
+    margin: 0 8px;
   `,
   editButton: css`
     padding: 6px 12px;

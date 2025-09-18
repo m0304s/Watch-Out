@@ -3,12 +3,28 @@ import { IoIosArrowForward } from 'react-icons/io'
 import { IoIosArrowDown } from 'react-icons/io'
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { NAV_ITEMS } from '@/constants/navigationWeb'
+import { NAV_ITEMS, type NavItem } from '@/constants/navigationWeb'
+import { useUserRole } from '@/stores/authStore'
 
 const Navigation = () => {
   const [openNavArea, setOpenNavArea] = useState<boolean>(false)
+  const userRole = useUserRole()
+
   const handleNavAreaClick = () => {
     setOpenNavArea((prev) => !prev)
+  }
+
+  // 권한에 따라 메뉴 필터링
+  const filterMenuByRole = (item: NavItem) => {
+    // CCTV 설정 메뉴는 ADMIN 또는 AREA_ADMIN만 접근 가능
+    if (item.path === '/cctv/settings') {
+      return userRole === 'ADMIN' || userRole === 'AREA_ADMIN'
+    }
+    // 구역 관리 메뉴는 ADMIN만 접근 가능
+    if (item.path === '/area') {
+      return userRole === 'ADMIN'
+    }
+    return true
   }
 
   return (
@@ -24,7 +40,7 @@ const Navigation = () => {
               </button>
               {openNavArea && (
                 <div css={subMenu}>
-                  {item.children.map((child) => (
+                  {item.children.filter(filterMenuByRole).map((child) => (
                     <NavLink to={child.path} css={commonItem}>
                       {child.name}
                     </NavLink>

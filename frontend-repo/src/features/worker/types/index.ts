@@ -1,5 +1,8 @@
 export type TrainingStatus = 'COMPLETED' | 'EXPIRED' | 'NOT_COMPLETED'
 export type UserRole = 'WORKER' | 'AREA_ADMIN'
+export type Gender = 'MALE' | 'FEMALE'
+export type BloodType = 'A' | 'B' | 'AB' | 'O'
+export type RhFactor = 'PLUS' | 'MINUS'
 
 export interface Employee {
   userUuid: string
@@ -51,4 +54,30 @@ export interface AreaOption {
   areaUuid: string
   areaName: string
   areaAlias?: string | null
+}
+
+// 작업자 상세 정보 타입
+export interface WorkerDetail {
+  userUuid: string
+  userId: string
+  userName: string
+  companyName: string
+  areaName: string
+  contact: string
+  emergencyContact: string
+  gender: Gender
+  bloodType: BloodType
+  rhFactor: RhFactor
+  trainingStatus: TrainingStatus
+  trainingCompletedAt: string
+  userRole: UserRole
+  watchId: number
+  photoUrl: string
+  assignedAt: string
+}
+
+// 사용자 역할 변경 요청 타입
+export interface UpdateUserRoleRequest {
+  userUuid: string
+  newRole: 'WORKER' | 'AREA_ADMIN'
 }
