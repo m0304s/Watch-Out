@@ -160,6 +160,70 @@ public class FcmService {
     }
 
     /**
+     * 여러 사용자에게 SOS 알림 일괄 전송 (MulticastMessage 사용)
+     */
+    public void sendSosNotificationToUsers(List<UUID> userUuids, FcmMessage fcmMessage) {
+        if (userUuids.isEmpty()) {
+            return;
+        }
+
+        // 모든 사용자의 FCM 토큰 조회
+        List<FcmToken> tokens = fcmTokenRepository.findByUserUuidIn(userUuids);
+
+        if (tokens.isEmpty()) {
+            log.warn("SOS 알림 대상 사용자들의 FCM 토큰이 없습니다.");
+            return;
+        }
+
+        // 토큰 리스트 추출
+        List<String> tokenStrings = tokens.stream()
+            .map(FcmToken::getFcmToken)
+            .toList();
+
+        try {
+            // MulticastMessage 생성
+            MulticastMessage.Builder messageBuilder = MulticastMessage.builder()
+                .setNotification(Notification.builder()
+                    .setTitle(fcmMessage.title())
+                    .setBody(fcmMessage.body())
+                    .build())
+                .setWebpushConfig(WebpushConfig.builder()
+                    .setFcmOptions(WebpushFcmOptions.builder()
+                        .setLink("/dashboard")
+                        .build())
+                    .build())
+                .addAllTokens(tokenStrings);
+
+            // 데이터 추가
+            if (fcmMessage.data() != null) {
+                for (Map.Entry<String, String> entry : fcmMessage.data().entrySet()) {
+                    messageBuilder.putData(entry.getKey(), entry.getValue());
+                }
+            }
+
+            // 일괄 전송
+            BatchResponse response = firebaseMessaging.sendEachForMulticast(messageBuilder.build());
+
+            log.info("SOS FCM 알림 일괄 전송 완료: 성공={}, 실패={}",
+                response.getSuccessCount(), response.getFailureCount());
+
+            // 실패한 토큰들 처리
+            if (response.getFailureCount() > 0) {
+                List<SendResponse> responses = response.getResponses();
+                for (int i = 0; i < responses.size(); i++) {
+                    if (!responses.get(i).isSuccessful()) {
+                        log.warn("SOS FCM 전송 실패: token={}, error={}",
+                            tokenStrings.get(i), responses.get(i).getException().getMessage());
+                    }
+                }
+            }
+
+        } catch (FirebaseMessagingException e) {
+            log.error("SOS FCM 알림 전송 실패", e);
+        }
+    }
+
+    /**
      * 특정 사용자에게 알림 전송
      */
     public void sendNotificationToUser(UUID userUuid, FcmMessage fcmMessage) {

@@ -1,7 +1,9 @@
 package watch.out.accident.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,7 +25,10 @@ import watch.out.common.dto.PageResponse;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.SecurityUtil;
+import watch.out.notification.dto.FcmMessage;
+import watch.out.notification.service.FcmService;
 import watch.out.user.entity.User;
+import watch.out.user.entity.UserRole;
 import watch.out.user.repository.UserRepository;
 
 @Service
@@ -33,6 +38,7 @@ public class AccidentServiceImpl implements AccidentService {
     private final AccidentRepository accidentRepository;
     private final UserRepository userRepository;
     private final AreaRepository areaRepository;
+    private final FcmService fcmService;
 
     @Override
     @Transactional(readOnly = true)
@@ -76,10 +82,6 @@ public class AccidentServiceImpl implements AccidentService {
     public PageResponse<AccidentsResponse> getAccidents(PageRequest pageRequest,
         UUID areaUuid,
         AccidentType accidentType, UUID userUuid, LocalDateTime startDate, LocalDateTime endDate) {
-        // 현재 사용자 정보 조회
-        UUID currentUserUuid = SecurityUtil.getCurrentUserUuid()
-            .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
-
         // ADMIN은 모든 사고 조회 가능, AREA_ADMIN은 관리하는 구역의 사고만 조회
         if (SecurityUtil.isAdmin()) {
             List<AccidentsResponse> accidentList = accidentRepository.findAccidentList(
@@ -144,6 +146,9 @@ public class AccidentServiceImpl implements AccidentService {
 
         Accident savedAccident = accidentRepository.save(accident);
 
+        // SOS 신고 시 FCM 알림 전송
+        sendSosNotification(area, currentUser, savedAccident);
+
         // 응답 DTO 생성
         AreaInfo areaInfo = AreaInfo.of(
             userWithArea.areaUuid(),
@@ -163,5 +168,54 @@ public class AccidentServiceImpl implements AccidentService {
             areaInfo,
             workerInfo
         );
+    }
+
+    /**
+     * SOS 신고 시 해당 구역 담당자와 ADMIN에게 FCM 알림 전송
+     */
+    private void sendSosNotification(Area area, User reporter, Accident accident) {
+        try {
+            List<User> areaAdmins = userRepository.findByAreaUuidAndRoleAndDeletedAtIsNull(
+                area.getUuid(), UserRole.AREA_ADMIN);
+            List<User> admins = userRepository.findByRoleAndDeletedAtIsNull(UserRole.ADMIN);
+
+            List<UUID> targetUserUuids = new ArrayList<>();
+            targetUserUuids.addAll(areaAdmins.stream().map(User::getUuid).toList());
+            targetUserUuids.addAll(admins.stream().map(User::getUuid).toList());
+
+            if (targetUserUuids.isEmpty()) {
+                System.out.println("SOS 알림 대상 사용자가 없습니다.");
+                return;
+            }
+
+            String title = String.format("🚨 %s 신고 접수", accident.getType().getDescription());
+            String body = String.format("[%s] %s님이 %s 신고를 접수했습니다.",
+                area.getAreaName(),
+                reporter.getUserName(),
+                accident.getType().getDescription());
+
+            FcmMessage fcmMessage = new FcmMessage(
+                title,
+                body,
+                Map.of(
+                    "type", "SOS",
+                    "accidentUuid", accident.getUuid().toString(),
+                    "areaUuid", area.getUuid().toString(),
+                    "areaName", area.getAreaName(),
+                    "reporterName", reporter.getUserName(),
+                    "reporterId", reporter.getUserId(),
+                    "accidentType", accident.getType().name(), // AUTO_SOS 또는 MANUAL_SOS
+                    "accidentTypeDescription", accident.getType().getDescription(),
+                    // "자동 SOS" 또는 "수동 SOS"
+                    "timestamp", accident.getCreatedAt().toString()
+                )
+            );
+
+            fcmService.sendSosNotificationToUsers(targetUserUuids, fcmMessage);
+
+        } catch (Exception e) {
+            // FCM 전송 실패 시 로그만 남기고 비즈니스 로직은 계속 진행
+            System.err.println("SOS 알림 전송 실패: " + e.getMessage());
+        }
     }
 }

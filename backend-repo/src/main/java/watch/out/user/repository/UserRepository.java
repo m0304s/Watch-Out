@@ -22,4 +22,8 @@ public interface UserRepository extends JpaRepository<User, UUID>, UserRepositor
     List<User> findByAreaUuidAndDeletedAtIsNull(UUID areaUuid);
 
     List<User> findByDeletedAtIsNull();
+
+    List<User> findByAreaUuidAndRoleAndDeletedAtIsNull(UUID areaUuid, UserRole role);
+
+    List<User> findByRoleAndDeletedAtIsNull(UserRole role);
 }
