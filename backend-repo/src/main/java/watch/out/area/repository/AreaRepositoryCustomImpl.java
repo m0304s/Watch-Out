@@ -2,7 +2,7 @@ package watch.out.area.repository;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import java.util.UUID;
@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
 import watch.out.area.dto.response.AreaDetailItemResponse;
+import watch.out.area.dto.response.MyAreaResponse;
 import watch.out.area.entity.QArea;
 import watch.out.area.entity.QAreaManager;
 import watch.out.user.entity.QUser;
@@ -260,4 +261,33 @@ public class AreaRepositoryCustomImpl implements AreaRepositoryCustom {
                 .and(areaManager.area.uuid.eq(areaUuid)))
             .fetchFirst() != null;
     }
+
+    @Override
+    public MyAreaResponse findMyAreaDetail(UUID userUuid) {
+
+        QArea qArea = QArea.area;
+        QAreaManager qAreaManager = QAreaManager.areaManager;
+        QUser qUser = QUser.user;
+        QUser qAreaManagerUser = new QUser("areaManagerUser");
+
+        // 한 번의 조인 쿼리로 사용자 정보와 해당 구역의 담당자 정보를 모두 조회
+        return queryFactory
+            .select(Projections.constructor(MyAreaResponse.class,
+                Expressions.stringTemplate("CAST({0} AS string)", qArea.uuid),
+                qArea.areaName,
+                Expressions.stringTemplate("CAST({0} AS string)", qAreaManagerUser.uuid),
+                qAreaManagerUser.userName
+            ))
+            .from(qUser)
+            .join(qUser.area, qArea)
+            .join(qAreaManager)
+                .on(qAreaManager.area.uuid.eq(qArea.uuid))
+            .join(qAreaManagerUser)
+                .on(qAreaManager.user.uuid.eq(qAreaManagerUser.uuid))
+            .where(qUser.uuid.eq(userUuid)
+                .and(qAreaManagerUser.role.eq(UserRole.AREA_ADMIN)))
+            .fetchFirst();
+    }
+
+
 }
