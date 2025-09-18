@@ -21,8 +21,8 @@ REPO_DIR = BASE_DIR / "yolactMaster"
 WEIGHTS  = BASE_DIR / "weights/yolact_resnet101_safety_33_200000.pth"
 SCORE_THRESHOLD = 0.3
 TOP_K = 100
-USE_ALLOWED_FILTER = False
-ALLOWED = {"Helmet on", "Helmet off", "Belt on", "Belt off","Fork lane", "Payloader", "Forklift", "Dump truck", "Remicon", "Pump car", "Pile driver", "Truck", "Aerial workbench", "Tower crane", "Aerial work platform car", "Gang form", "Al form", "A-type ladder", "Uma", "ELB", "Opening cover", "Dangerous goods storage", "Elevator fall arrester", "Hoist", "Jack support", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Stucco block", "Mixer", "H beam", "High speed cutting machine", "Vibrator", "Fire extinguisher", "Welding machine", "Hand grinder", "Hand car", "Anti-burn"}
+USE_ALLOWED_FILTER = True
+ALLOWED = {"Helmet off","Belt off","Fork lane", "Payloader", "Forklift", "Dump truck", "Remicon", "Pump car", "Pile driver", "Truck", "Aerial workbench", "Tower crane", "Aerial work platform car", "Gang form", "Al form", "A-type ladder", "Uma", "ELB", "Opening cover", "Dangerous goods storage", "Elevator fall arrester", "Hoist", "Jack support", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Stucco block", "Mixer", "H beam", "High speed cutting machine", "Vibrator", "Fire extinguisher", "Welding machine", "Hand grinder", "Hand car", "Anti-burn"}
 LABELMAP_PATH = BASE_DIR / "labelmap.txt"
 
 # 스냅샷/알림 설정
