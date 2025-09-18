@@ -25,8 +25,10 @@ const Layout: React.FC = () => {
             </div>
           )}
         </aside>
-        <div css={contentConatiner}>
-          <Header />
+        <div css={contentContainer}>
+          <div css={headerContainer}>
+            <Header />
+          </div>
           <main css={mainContainer}>
             <Outlet />
           </main>
@@ -42,6 +44,8 @@ export default Layout
 
 const layoutContainer = css`
   display: flex;
+  height: 100vh;
+  overflow: hidden;
 `
 
 const sideContainer = (isNavOpen: boolean) => css`
@@ -57,11 +61,20 @@ const sideContainer = (isNavOpen: boolean) => css`
   white-space: nowrap;
   flex-shrink: 0;
 `
-const contentConatiner = css`
+const contentContainer = css`
   flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 `
+
+const headerContainer = css`
+  height: 60px;
+`
+
 const mainContainer = css`
   padding: 24px;
+  flex-grow: 1;
+  overflow-y: auto;
 `
 
 const notiContainer = css`

@@ -52,7 +52,7 @@ const container = css`
   flex-grow: 1;
   justify-content: space-between;
   align-items: center;
-  height: 7%;
+  height: 100%;
   display: flex;
   border-bottom: 1px solid var(--color-gray-400);
 `

@@ -1,5 +1,6 @@
 import { css } from '@emotion/react'
 import { useState, useEffect, type Dispatch, type SetStateAction } from 'react'
+import { TbCancel } from 'react-icons/tb'
 import { cctvAPI } from '@/features/area/services/cctv'
 import type { AreaListItem } from '@/features/area/types/area'
 import type { CctvItem } from '@/features/area/types/cctv'
@@ -44,20 +45,32 @@ const CctvList: React.FC<CctvListProps> = ({
 
   return (
     <div css={container}>
-      {cctvList &&
-        cctvList.map((cctv) => (
-          <div key={cctv.cctvUuid} css={cell}>
-            <iframe
-              css={iFrameBox}
-              src={cctv.cctvUrl}
-              allow="autoplay; fullscreen"
-            ></iframe>
-            <div css={labelBox}>
-              <p>{cctv.cctvName}</p>
+      {Array.from({ length: itemPerPage }).map((_, index) => {
+        const cctv = cctvList?.[index]
+        if (cctv) {
+          return (
+            <div key={cctv.cctvUuid} css={cell}>
+              <iframe
+                css={iFrameBox}
+                src={cctv.cctvUrl}
+                allow="autoplay; fullscreen"
+              ></iframe>
+              <div css={labelBox}>
+                <p>{cctv.cctvName}</p>
+              </div>
+              <div css={overlay} onClick={() => onCctvClick(cctv)}></div>
             </div>
-            <div css={overlay} onClick={() => onCctvClick(cctv)}></div>
+          )
+        }
+
+        return (
+          <div key={`placeholder-${index}`} css={[cell, emptyCell]}>
+            <p>
+              <TbCancel size={50} />
+            </p>
           </div>
-        ))}
+        )
+      })}
     </div>
   )
 }
@@ -106,4 +119,20 @@ const labelBox = css`
   right: 0;
   padding: 0.5rem 0.5rem;
   color: #fff;
+`
+
+const emptyCell = css`
+  background-color: #141010;
+  color: #555;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  & > p {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
 `

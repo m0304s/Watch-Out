@@ -58,7 +58,7 @@ const CctvModal: React.FC<CctvModalProps> = ({ cctv, onClose }) => {
               </div>
             </div>
             <div css={titleWrapper}>
-              <p css={titleStyle}>{cctv.areaName}</p>
+              <p css={titleStyle}>{cctv.cctvName}</p>
             </div>
           </div>
         </div>
@@ -81,6 +81,7 @@ const overlay = css`
   align-items: center;
   flex-direction: column;
   z-index: 1000;
+  cursor: pointer;
 `
 
 const modalContentWrapper = css`
