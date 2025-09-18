@@ -90,7 +90,7 @@ public class AreaController {
 
     @GetMapping("/mine")
     @PreAuthorize("hasAnyRole('AREA_ADMIN','WORKER')")
-    public ResponseEntity<MyAreaResponse> getMyArea(){
+    public ResponseEntity<MyAreaResponse> getMyArea() {
         MyAreaResponse myAreaResponse = areaService.getMyArea();
         return ResponseEntity.ok(myAreaResponse);
     }

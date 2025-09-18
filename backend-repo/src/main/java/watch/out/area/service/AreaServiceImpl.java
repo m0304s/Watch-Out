@@ -213,7 +213,7 @@ public class AreaServiceImpl implements AreaService {
     public MyAreaResponse getMyArea() {
         Optional<UUID> currentUserUuid = SecurityUtil.getCurrentUserUuid();
 
-        if(!currentUserUuid.isPresent()){
+        if (!currentUserUuid.isPresent()) {
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
 

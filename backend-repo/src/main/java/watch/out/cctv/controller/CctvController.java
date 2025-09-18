@@ -94,7 +94,8 @@ public class CctvController {
         Cctv cctv = streamDirectoryService.findOne(uuid)
             .orElseThrow(() -> new IllegalArgumentException("CCTV not found or not type=CCTV"));
         if (useFastapiMjpeg) {
-            MjpegStreaming.proxyUpstreamMultipart(streamDirectoryService.fastapiMjpegUrl(cctv), response);
+            MjpegStreaming.proxyUpstreamMultipart(streamDirectoryService.fastapiMjpegUrl(cctv),
+                response);
         } else {
             Process process = MjpegStreaming.transcodeToMjpegAndStream(cctv.getCctvUrl(), response);
             // ⚠️ 여길 즉시 destroy 하면 바로 끊김. (원래는 클라이언트 종료 시 정리 로직에서 종료)
