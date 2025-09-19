@@ -1,5 +1,6 @@
 package watch.out.cctv.handler;
 
+import java.util.UUID;
 import watch.out.cctv.entity.Cctv;
 import watch.out.safety.entity.SafetyViolationType;
 import java.util.List;
@@ -17,9 +18,11 @@ public interface FcmNotificationHandler {
      * @param violationTypes 위반 유형 목록
      * @param imageUrl       이미지 URL (S3Util로 변환된 URL)
      * @param areaName       구역명
+     * @param violationUuid  위반 UUID
      */
     void sendSafetyEquipmentViolationNotification(Cctv cctv,
-        List<SafetyViolationType> violationTypes, String imageUrl, String areaName);
+        List<SafetyViolationType> violationTypes, String imageUrl, String areaName,
+        UUID violationUuid);
 
     /**
      * 중장비 진입 알림 전송
