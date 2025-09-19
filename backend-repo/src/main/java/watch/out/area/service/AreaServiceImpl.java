@@ -32,7 +32,7 @@ public class AreaServiceImpl implements AreaService {
 
     private final AreaRepository areaRepository;
     private final AreaManagerRepository areaManagerRepository;
-    private final StringRedisTemplate redis;
+    private final StringRedisTemplate redisTemplate;
     private final UserRepository userRepository;
 
     /**
@@ -228,8 +228,8 @@ public class AreaServiceImpl implements AreaService {
         return areaRepository.findMyAreaDetail(userUuid);
     }
 
-    public AreaWorkerResponse countWorker(UUID areaUuid) {
-        long nowWorkers = redis.opsForSet().size("area:" + areaUuid);
+    public AreaWorkerResponse getWorkerCount(UUID areaUuid) {
+        long nowWorkers = redisTemplate.opsForSet().size("area:" + areaUuid);
         Area area = areaRepository.findById(areaUuid)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         return new AreaWorkerResponse(areaUuid, area.getAreaName(), nowWorkers,

@@ -98,8 +98,8 @@ public class AreaController {
 
     @GetMapping("/area/{areaUuid}/count")
     @PreAuthorize("hasAnyRole('AREA_ADMIN', 'ADMIN')")
-    public ResponseEntity<AreaWorkerResponse> getWorkerCount(@PathVariable UUID areaUuid){
-        AreaWorkerResponse areaWorkerResponse = areaService.countWorker(areaUuid);
+    public ResponseEntity<AreaWorkerResponse> getWorkerCount(@PathVariable UUID areaUuid) {
+        AreaWorkerResponse areaWorkerResponse = areaService.getWorkerCount(areaUuid);
         return ResponseEntity.ok(areaWorkerResponse);
     }
 }

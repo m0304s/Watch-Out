@@ -26,5 +26,5 @@ public interface AreaService {
 
     MyAreaResponse getMyArea();
 
-    AreaWorkerResponse countWorker(UUID areaUuid);
+    AreaWorkerResponse getWorkerCount(UUID areaUuid);
 }
