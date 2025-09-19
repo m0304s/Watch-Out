@@ -33,4 +33,6 @@ public interface UserRepositoryCustom {
     PageResponse<UsersDto> findUsersWhereIsApprovedIsFalse(PageRequest pageRequest);
 
     void updateIsApprovedForUsers(ApproveUsersRequest approveUsersRequest);
+
+    long countUsersByAreaUuids(List<UUID> areaUuids);
 }
