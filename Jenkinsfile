@@ -127,9 +127,19 @@ pipeline {
                     sh "git fetch --all >/dev/null 2>&1 || true"
                     def changed = sh(script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}", returnStdout: true).trim()
 
+                    echo "=== 변경된 파일 목록 ==="
+                    echo changed
+                    echo "========================"
+
                     if (changed.contains('backend-repo/'))  env.DO_BACKEND_BUILD = 'true'
                     if (changed.contains('frontend-repo/')) env.DO_FRONTEND_BUILD = 'true'
                     if (changed.contains('docker/edge/'))   env.DO_EDGE_CONFIG_CHANGE = 'true'
+
+                    echo "=== 빌드 결정 사항 ==="
+                    echo "DO_BACKEND_BUILD: ${env.DO_BACKEND_BUILD}"
+                    echo "DO_FRONTEND_BUILD: ${env.DO_FRONTEND_BUILD}"
+                    echo "DO_EDGE_CONFIG_CHANGE: ${env.DO_EDGE_CONFIG_CHANGE}"
+                    echo "====================="
                 }
             }
         }
