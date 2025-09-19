@@ -77,7 +77,7 @@ async def detect_start(
 
     cap, status = try_open_capture(
         src,
-        timeout_sec=15,       # RTSP일 때 내부에서 자동 상향/재시도 적용
+        timeout_sec=30,       # RTSP일 때 내부에서 자동 상향/재시도 적용
         open_retries=2,
         per_try_read_sec=None
     )
