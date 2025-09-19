@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import watch.out.area.dto.request.AreaRequest;
@@ -11,6 +12,7 @@ import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
 import watch.out.area.dto.response.AreaDetailItemResponse;
+import watch.out.area.dto.response.AreaWorkerResponse;
 import watch.out.area.dto.response.MyAreaResponse;
 import watch.out.common.dto.PageResponse;
 import watch.out.area.entity.Area;
@@ -22,6 +24,7 @@ import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.SecurityUtil;
 import watch.out.user.entity.UserRole;
+import watch.out.user.repository.UserRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +32,8 @@ public class AreaServiceImpl implements AreaService {
 
     private final AreaRepository areaRepository;
     private final AreaManagerRepository areaManagerRepository;
+    private final StringRedisTemplate redisTemplate;
+    private final UserRepository userRepository;
 
     /**
      * 구역 접근 권한을 확인합니다.
@@ -221,5 +226,13 @@ public class AreaServiceImpl implements AreaService {
 
         //userUuid 바탕으로 배정된 구역(UUID, NAME), 담당 직원(UUID, NAME) 조회
         return areaRepository.findMyAreaDetail(userUuid);
+    }
+
+    public AreaWorkerResponse getWorkerCount(UUID areaUuid) {
+        long nowWorkers = redisTemplate.opsForSet().size("area:" + areaUuid);
+        Area area = areaRepository.findById(areaUuid)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return new AreaWorkerResponse(areaUuid, area.getAreaName(), nowWorkers,
+            userRepository.countByAreaUuid(areaUuid));
     }
 }
