@@ -29,7 +29,7 @@ public class FcmNotificationHandlerImpl implements FcmNotificationHandler {
     @Override
     public void sendSafetyEquipmentViolationNotification(Cctv cctv,
         List<SafetyViolationType> violationTypes,
-        String imageUrl, String areaName) {
+        String imageUrl, String areaName, UUID violationUuid) {
         try {
             log.info("안전장비 미착용 FCM 알림 전송 시작: cctv={}, area={}, violations={}, imageUrl={}",
                 cctv.getCctvName(), areaName, violationTypes, imageUrl);
@@ -44,7 +44,8 @@ public class FcmNotificationHandlerImpl implements FcmNotificationHandler {
                 areaName,
                 cctv.getCctvName(),
                 violationTypeStrings,
-                imageUrl
+                imageUrl,
+                violationUuid
             );
 
             log.info("안전장비 미착용 FCM 알림 전송 완료: cctv={}, area={}",
@@ -77,7 +78,7 @@ public class FcmNotificationHandlerImpl implements FcmNotificationHandler {
                 .map(this::getHeavyEquipmentTypeDisplayName)
                 .toList();
 
-            fcmService.sendSafetyViolationNotification(
+            fcmService.sendHeavyEquipmentEntryNotification(
                 cctv.getArea().getUuid(),
                 areaName,
                 cctv.getCctvName(),
