@@ -32,7 +32,7 @@ export const MobileLoginPage = () => {
         console.log('모바일 로그인 성공:', response.result)
 
         // 대시보드로 리다이렉트
-        navigate('/dashboard')
+        navigate('/worker2')
       } else {
         const errorMessage = response.message || '로그인에 실패했습니다.'
         setError(errorMessage)

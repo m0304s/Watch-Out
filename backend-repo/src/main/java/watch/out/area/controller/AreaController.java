@@ -18,6 +18,7 @@ import watch.out.area.dto.request.AreaRequest;
 import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
+import watch.out.area.dto.response.AreaWorkerResponse;
 import watch.out.area.dto.response.MyAreaResponse;
 import watch.out.common.dto.PageResponse;
 import watch.out.area.service.AreaService;
@@ -90,8 +91,15 @@ public class AreaController {
 
     @GetMapping("/mine")
     @PreAuthorize("hasAnyRole('AREA_ADMIN','WORKER')")
-    public ResponseEntity<MyAreaResponse> getMyArea(){
+    public ResponseEntity<MyAreaResponse> getMyArea() {
         MyAreaResponse myAreaResponse = areaService.getMyArea();
         return ResponseEntity.ok(myAreaResponse);
+    }
+
+    @GetMapping("/area/{areaUuid}/count")
+    @PreAuthorize("hasAnyRole('AREA_ADMIN', 'ADMIN')")
+    public ResponseEntity<AreaWorkerResponse> getWorkerCount(@PathVariable UUID areaUuid) {
+        AreaWorkerResponse areaWorkerResponse = areaService.getWorkerCount(areaUuid);
+        return ResponseEntity.ok(areaWorkerResponse);
     }
 }

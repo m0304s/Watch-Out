@@ -39,7 +39,7 @@ public class FcmService {
      * 구역별 담당자에게 안전장비 위반 알림 전송
      */
     public void sendSafetyViolationNotification(UUID areaUuid, String areaName, String cctvName,
-        List<String> violationTypes, String imageUrl) {
+        List<String> violationTypes, String imageUrl, UUID violationUuid) {
         try {
             // 해당 구역의 AREA_ADMIN 담당자들 조회
             List<AreaManager> areaManagers = areaManagerRepository.findByAreaUuid(areaUuid);
@@ -80,7 +80,8 @@ public class FcmService {
                 areaName, cctvName, String.join(", ", violationTypes));
 
             // 담당자들에게 알림 전송
-            sendNotification(fcmTokens, title, body, areaName, cctvName, violationTypes, imageUrl);
+            sendNotification(fcmTokens, title, body, areaName, cctvName, violationTypes, imageUrl,
+                violationUuid);
 
             log.info("안전장비 위반 알림 전송 완료: area={}, cctv={}, areaManagers={}, admins={}, tokens={}",
                 areaName, cctvName, areaManagerUuids.size(), adminUuids.size(), fcmTokens.size());
@@ -91,10 +92,67 @@ public class FcmService {
     }
 
     /**
+     * 중장비 진입 알림 전송 (구역 담당자와 관리자에게)
+     */
+    public void sendHeavyEquipmentEntryNotification(UUID areaUuid, String areaName, String cctvName,
+        List<String> heavyEquipmentTypes, String imageUrl) {
+        try {
+            // 해당 구역의 AREA_ADMIN 담당자들 조회
+            List<AreaManager> areaManagers = areaManagerRepository.findByAreaUuid(areaUuid);
+            List<UUID> areaManagerUuids = areaManagers.stream()
+                .map(areaManager -> areaManager.getUser().getUuid())
+                .toList();
+
+            // 최고 관리자(ADMIN) 사용자들 조회
+            List<User> adminUsers = userRepository.findByRoleInAndDeletedAtIsNull(
+                List.of(UserRole.ADMIN));
+            List<UUID> adminUuids = adminUsers.stream()
+                .map(User::getUuid)
+                .toList();
+
+            // 해당 구역 담당자와 최고 관리자 UUID 합치기
+            List<UUID> allManagerUuids = List.of(areaManagerUuids, adminUuids)
+                .stream()
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
+
+            if (allManagerUuids.isEmpty()) {
+                log.warn("구역 {}의 담당자나 ADMIN이 없습니다.", areaName);
+                return;
+            }
+
+            // 담당자들의 유효한 FCM 토큰 조회 (null이 아닌 토큰만)
+            List<FcmToken> fcmTokens = fcmTokenRepository.findByUserUuidInAndFcmTokenIsNotNull(
+                allManagerUuids);
+
+            if (fcmTokens.isEmpty()) {
+                log.warn("구역 {} 담당자들의 FCM 토큰이 없습니다.", areaName);
+                return;
+            }
+
+            String title = "중장비 진입 감지";
+            String body = String.format("[%s] %s에서 %s 진입이 감지되었습니다.",
+                areaName, cctvName, String.join(", ", heavyEquipmentTypes));
+
+            // 담당자들에게 알림 전송
+            sendHeavyEquipmentNotification(fcmTokens, title, body, areaName, cctvName,
+                heavyEquipmentTypes, imageUrl);
+
+            log.info("중장비 진입 알림 전송 완료: area={}, cctv={}, areaManagers={}, admins={}, tokens={}",
+                areaName, cctvName, areaManagerUuids.size(), adminUuids.size(), fcmTokens.size());
+
+        } catch (Exception e) {
+            log.error("중장비 진입 알림 전송 실패: area={}, cctv={}", areaName, cctvName, e);
+        }
+    }
+
+    /**
      * FCM 알림 전송 (MulticastMessage 사용)
      */
     private void sendNotification(List<FcmToken> tokens, String title, String body,
-        String areaName, String cctvName, List<String> violationTypes, String imageUrl) {
+        String areaName, String cctvName, List<String> violationTypes, String imageUrl,
+        UUID violationUuid) {
 
         if (tokens.isEmpty()) {
             return;
@@ -107,7 +165,7 @@ public class FcmService {
 
         try {
             // MulticastMessage 생성
-            MulticastMessage message = MulticastMessage.builder()
+            MulticastMessage.Builder messageBuilder = MulticastMessage.builder()
                 .setNotification(Notification.builder()
                     .setTitle(title)
                     .setBody(body)
@@ -122,7 +180,14 @@ public class FcmService {
                 .putData("cctvName", cctvName)
                 .putData("violationTypes", String.join(",", violationTypes))
                 .putData("imageUrl", imageUrl)
-                .putData("type", "SAFETY_VIOLATION")
+                .putData("type", "SAFETY_VIOLATION");
+
+            // violation UUID가 있는 경우에만 추가
+            if (violationUuid != null) {
+                messageBuilder.putData("violationUuid", violationUuid.toString());
+            }
+
+            MulticastMessage message = messageBuilder
                 .addAllTokens(tokenStrings)
                 .build();
 
@@ -156,6 +221,75 @@ public class FcmService {
 
         } catch (FirebaseMessagingException e) {
             log.error("FCM 알림 일괄 전송 실패", e);
+        }
+    }
+
+    /**
+     * 중장비 진입 FCM 알림 전송 (MulticastMessage 사용)
+     */
+    private void sendHeavyEquipmentNotification(List<FcmToken> tokens, String title, String body,
+        String areaName, String cctvName, List<String> heavyEquipmentTypes, String imageUrl) {
+
+        if (tokens.isEmpty()) {
+            return;
+        }
+
+        // 토큰 리스트 추출
+        List<String> tokenStrings = tokens.stream()
+            .map(FcmToken::getFcmToken)
+            .toList();
+
+        try {
+            // MulticastMessage 생성
+            MulticastMessage message = MulticastMessage.builder()
+                .setNotification(Notification.builder()
+                    .setTitle(title)
+                    .setBody(body)
+                    .setImage(imageUrl)
+                    .build())
+                .setWebpushConfig(WebpushConfig.builder()
+                    .setFcmOptions(WebpushFcmOptions.builder()
+                        .setLink("/dashboard")
+                        .build())
+                    .build())
+                .putData("areaName", areaName)
+                .putData("cctvName", cctvName)
+                .putData("heavyEquipmentTypes", String.join(",", heavyEquipmentTypes))
+                .putData("imageUrl", imageUrl)
+                .putData("type", "HEAVY_EQUIPMENT")
+                .addAllTokens(tokenStrings)
+                .build();
+
+            // 일괄 전송
+            BatchResponse response = firebaseMessaging.sendEachForMulticast(message);
+
+            log.info("중장비 진입 FCM 알림 일괄 전송 완료: 성공={}, 실패={}",
+                response.getSuccessCount(), response.getFailureCount());
+
+            // 실패한 토큰들 처리
+            if (response.getFailureCount() > 0) {
+                List<SendResponse> responses = response.getResponses();
+                for (int i = 0; i < responses.size(); i++) {
+                    SendResponse sendResponse = responses.get(i);
+                    if (!sendResponse.isSuccessful()) {
+                        String token = tokenStrings.get(i);
+                        log.error("중장비 진입 FCM 알림 전송 실패: token={}, error={}",
+                            token, sendResponse.getException().getMessage());
+
+                        // 토큰이 유효하지 않은 경우 삭제
+                        if (sendResponse.getException() instanceof FirebaseMessagingException) {
+                            FirebaseMessagingException e = (FirebaseMessagingException) sendResponse.getException();
+                            if (e.getMessagingErrorCode() != null) {
+                                fcmTokenRepository.clearFcmTokenByToken(token);
+                                log.info("유효하지 않은 FCM 토큰 삭제: {}", token);
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (FirebaseMessagingException e) {
+            log.error("중장비 진입 FCM 알림 일괄 전송 실패", e);
         }
     }
 
@@ -460,6 +594,134 @@ public class FcmService {
 
         } catch (Exception e) {
             log.error("구역 {} 공지사항 FCM 알림 전송 중 오류 발생", areaUuid, e);
+        }
+    }
+
+    /**
+     * 사고 신고 알림 전송 (구역 담당자와 관리자에게)
+     */
+    public void sendAccidentReportNotification(UUID areaUuid, String areaName, String accidentType,
+        String reporterName, String companyName, UUID accidentUuid) {
+        try {
+            // 해당 구역의 AREA_ADMIN 담당자들 조회
+            List<AreaManager> areaManagers = areaManagerRepository.findByAreaUuid(areaUuid);
+            List<UUID> areaManagerUuids = areaManagers.stream()
+                .map(areaManager -> areaManager.getUser().getUuid())
+                .toList();
+
+            // 최고 관리자(ADMIN) 사용자들 조회
+            List<User> adminUsers = userRepository.findByRoleInAndDeletedAtIsNull(
+                List.of(UserRole.ADMIN));
+            List<UUID> adminUuids = adminUsers.stream()
+                .map(User::getUuid)
+                .toList();
+
+            // 해당 구역 담당자와 최고 관리자 UUID 합치기
+            List<UUID> allManagerUuids = List.of(areaManagerUuids, adminUuids)
+                .stream()
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
+
+            if (allManagerUuids.isEmpty()) {
+                log.warn("구역 {}의 담당자나 ADMIN이 없습니다.", areaName);
+                return;
+            }
+
+            // 담당자들의 유효한 FCM 토큰 조회 (null이 아닌 토큰만)
+            List<FcmToken> fcmTokens = fcmTokenRepository.findByUserUuidInAndFcmTokenIsNotNull(
+                allManagerUuids);
+
+            if (fcmTokens.isEmpty()) {
+                log.warn("구역 {} 담당자들의 FCM 토큰이 없습니다.", areaName);
+                return;
+            }
+
+            String title = "사고 신고 접수";
+            String body = String.format("[%s] %s에서 %s 사고가 신고되었습니다. (신고자: %s, %s)",
+                areaName, areaName, accidentType, reporterName, companyName);
+
+            // 담당자들에게 알림 전송
+            sendAccidentNotification(fcmTokens, title, body, areaName, accidentType,
+                reporterName, companyName, accidentUuid);
+
+            log.info(
+                "사고 신고 알림 전송 완료: area={}, accidentType={}, areaManagers={}, admins={}, tokens={}",
+                areaName, accidentType, areaManagerUuids.size(), adminUuids.size(),
+                fcmTokens.size());
+
+        } catch (Exception e) {
+            log.error("사고 신고 알림 전송 실패: area={}, accidentType={}", areaName, accidentType, e);
+        }
+    }
+
+    /**
+     * 사고 신고 FCM 알림 전송 (MulticastMessage 사용)
+     */
+    private void sendAccidentNotification(List<FcmToken> tokens, String title, String body,
+        String areaName, String accidentType, String reporterName, String companyName,
+        UUID accidentUuid) {
+
+        if (tokens.isEmpty()) {
+            return;
+        }
+
+        // 토큰 리스트 추출
+        List<String> tokenStrings = tokens.stream()
+            .map(FcmToken::getFcmToken)
+            .toList();
+
+        try {
+            // MulticastMessage 생성
+            MulticastMessage message = MulticastMessage.builder()
+                .setNotification(Notification.builder()
+                    .setTitle(title)
+                    .setBody(body)
+                    .build())
+                .setWebpushConfig(WebpushConfig.builder()
+                    .setFcmOptions(WebpushFcmOptions.builder()
+                        .setLink("/accidents")
+                        .build())
+                    .build())
+                .putData("areaName", areaName)
+                .putData("accidentType", accidentType)
+                .putData("reporterName", reporterName)
+                .putData("companyName", companyName)
+                .putData("accidentUuid", accidentUuid.toString())
+                .putData("type", "ACCIDENT_REPORT")
+                .addAllTokens(tokenStrings)
+                .build();
+
+            // 일괄 전송
+            BatchResponse response = firebaseMessaging.sendEachForMulticast(message);
+
+            log.info("사고 신고 FCM 알림 일괄 전송 완료: 성공={}, 실패={}",
+                response.getSuccessCount(), response.getFailureCount());
+
+            // 실패한 토큰들 처리
+            if (response.getFailureCount() > 0) {
+                List<SendResponse> responses = response.getResponses();
+                for (int i = 0; i < responses.size(); i++) {
+                    SendResponse sendResponse = responses.get(i);
+                    if (!sendResponse.isSuccessful()) {
+                        String token = tokenStrings.get(i);
+                        log.error("사고 신고 FCM 알림 전송 실패: token={}, error={}",
+                            token, sendResponse.getException().getMessage());
+
+                        // 토큰이 유효하지 않은 경우 삭제
+                        if (sendResponse.getException() instanceof FirebaseMessagingException) {
+                            FirebaseMessagingException e = (FirebaseMessagingException) sendResponse.getException();
+                            if (e.getMessagingErrorCode() != null) {
+                                fcmTokenRepository.clearFcmTokenByToken(token);
+                                log.info("유효하지 않은 FCM 토큰 삭제: {}", token);
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (FirebaseMessagingException e) {
+            log.error("사고 신고 FCM 알림 일괄 전송 실패", e);
         }
     }
 }

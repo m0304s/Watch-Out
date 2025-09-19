@@ -127,9 +127,19 @@ pipeline {
                     sh "git fetch --all >/dev/null 2>&1 || true"
                     def changed = sh(script: "git diff --name-only origin/${env.TARGET_BRANCH}...origin/${env.SOURCE_BRANCH}", returnStdout: true).trim()
 
+                    echo "=== 변경된 파일 목록 ==="
+                    echo changed
+                    echo "========================"
+
                     if (changed.contains('backend-repo/'))  env.DO_BACKEND_BUILD = 'true'
                     if (changed.contains('frontend-repo/')) env.DO_FRONTEND_BUILD = 'true'
                     if (changed.contains('docker/edge/'))   env.DO_EDGE_CONFIG_CHANGE = 'true'
+
+                    echo "=== 빌드 결정 사항 ==="
+                    echo "DO_BACKEND_BUILD: ${env.DO_BACKEND_BUILD}"
+                    echo "DO_FRONTEND_BUILD: ${env.DO_FRONTEND_BUILD}"
+                    echo "DO_EDGE_CONFIG_CHANGE: ${env.DO_EDGE_CONFIG_CHANGE}"
+                    echo "====================="
                 }
             }
         }
@@ -349,27 +359,31 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([
-                    string(credentialsId: 'VITE_API_BASE_URL_TEST', variable: 'API_URL_TEST'),
-                    string(credentialsId: 'VITE_API_BASE_URL_PROD', variable: 'API_URL_PROD')
-                ]) {
-                    script {
-                        def branch = (env.MR_STATE == 'merged') ? (env.TARGET_BRANCH ?: '').trim() : (params.BRANCH_TO_BUILD ?: '').trim()
+                script {
+                    def branch = (env.MR_STATE == 'merged') ? (env.TARGET_BRANCH ?: '').trim() : (params.BRANCH_TO_BUILD ?: '').trim()
 
-                        if (branch == 'develop') {
-                            env.FINAL_API_URL = API_URL_TEST
+                    if (branch == 'develop') {
+                        withCredentials([file(credentialsId: '.env.development', variable: 'ENV_FILE')]) {
                             def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
+                            
                             dir('frontend-repo') {
-                                sh "docker build -t ${tag} --build-arg ENV=test --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
+                                sh "cp '${ENV_FILE}' .env"
+                                sh "ls -la .env"
+                                sh "cat .env"
+                                sh "docker build -t ${tag} --build-arg ENV=test ."
                             }
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
                             sh "docker run -d --name ${FE_TEST_CONTAINER} --network ${TEST_NETWORK} ${tag}"
-
-                        } else if (branch == 'master') {
-                            env.FINAL_API_URL = API_URL_PROD
+                        }
+                    } else if (branch == 'master') {
+                        withCredentials([file(credentialsId: '.env.production', variable: 'ENV_FILE')]) {
                             def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
+
                             dir('frontend-repo') {
-                                sh 'docker build -t '"${tag}"' --build-arg ENV=prod --build-arg VITE_API_BASE_URL='"'${env.FINAL_API_URL}'"' .'
+                                sh "cp '${ENV_FILE}' .env"
+                                sh "ls -la .env"
+                                sh "cat .env"
+                                sh "docker build -t ${tag} --build-arg ENV=prod ."
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
                             sh "docker run -d --name ${FE_PROD_CONTAINER} --network ${PROD_NETWORK} ${tag}"

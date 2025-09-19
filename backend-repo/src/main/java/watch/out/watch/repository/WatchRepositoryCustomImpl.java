@@ -34,7 +34,7 @@ public class WatchRepositoryCustomImpl implements WatchRepositoryCustom {
                 watch.status,
                 rentalHistory.createdAt.max(), // 마지막 대여일시
                 watch.note,
-                user.userId
+                user.userName
             ))
             .from(watch)
             .leftJoin(rentalHistory).on(rentalHistory.watch.eq(watch))
@@ -46,7 +46,7 @@ public class WatchRepositoryCustomImpl implements WatchRepositoryCustom {
                 watch.modelName,
                 watch.status,
                 watch.note,
-                user.userId
+                user.userName
             )
             .orderBy(watch.watchId.desc())
             .offset((long) pageRequest.pageNum() * pageRequest.display())

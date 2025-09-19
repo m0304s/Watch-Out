@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import watch.out.accident.dto.request.AccidentReportRequest;
@@ -25,14 +26,17 @@ import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.SecurityUtil;
 import watch.out.user.entity.User;
 import watch.out.user.repository.UserRepository;
+import watch.out.notification.service.FcmService;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AccidentServiceImpl implements AccidentService {
 
     private final AccidentRepository accidentRepository;
     private final UserRepository userRepository;
     private final AreaRepository areaRepository;
+    private final FcmService fcmService;
 
     @Override
     @Transactional(readOnly = true)
@@ -155,6 +159,24 @@ public class AccidentServiceImpl implements AccidentService {
             userWithArea.userName(),
             userWithArea.companyName()
         );
+
+        // FCM 알림 전송
+        try {
+            fcmService.sendAccidentReportNotification(
+                area.getUuid(),
+                area.getAreaName(),
+                savedAccident.getType().getDescription(),
+                userWithArea.userName(),
+                userWithArea.companyName(),
+                savedAccident.getUuid()
+            );
+            log.info("사고 신고 FCM 알림 전송 완료: accidentUuid={}, area={}, reporter={}",
+                savedAccident.getUuid(), area.getAreaName(), userWithArea.userName());
+        } catch (Exception e) {
+            log.error("사고 신고 FCM 알림 전송 실패: accidentUuid={}, error={}",
+                savedAccident.getUuid(), e.getMessage(), e);
+            // FCM 알림 실패해도 사고 신고는 계속 진행
+        }
 
         return AccidentReportResponse.of(
             savedAccident.getUuid().toString(),

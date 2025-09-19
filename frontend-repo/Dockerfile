@@ -8,10 +8,18 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile
 
-# 소스 복사 및 빌드
+# 소스 복사 (.env 파일 포함)
 COPY . .
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+# .env 파일 확인 및 출력
+RUN if [ -f .env ]; then \
+        echo "Found .env file:"; \
+        cat .env; \
+    else \
+        echo "No .env file found"; \
+    fi
+
+# 빌드 실행 (Vite가 .env 파일을 자동으로 읽음)
 RUN pnpm run build
 
 FROM nginx:1.27-alpine

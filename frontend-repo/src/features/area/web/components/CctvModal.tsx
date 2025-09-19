@@ -1,5 +1,5 @@
 import { css } from '@emotion/react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { BaseModal } from '@/components/common/Modal'
 import type { CctvViewAreaItem } from '@/features/area/types/cctv'
 
@@ -20,18 +20,20 @@ const CctvModal: React.FC<CctvModalProps> = ({ cctv, onClose }) => {
       size="fullscreen"
     >
       {cctv && (
-        <div css={modalContentWrapper} ref={modalRef}>
-          <div css={container}>
-            <div css={iframeWrapper}>
-              <img
-                css={iFrameBox}
-                src={`${API_BASE_URL}${cctv.springProxyUrl}`}
-                alt={cctv.name}
-              />
+        <div css={layout}>
+          <div css={modalContentWrapper} ref={modalRef}>
+            <div css={container}>
+              <div css={iframeWrapper}>
+                <img
+                  css={iFrameBox}
+                  src={`${API_BASE_URL}${cctv.springProxyUrl}`}
+                  alt={cctv.name}
+                />
+              </div>
             </div>
-          </div>
-          <div css={titleWrapper}>
-            <p css={titleStyle}>{cctv.name}</p>
+            <div css={titleWrapper}>
+              <p css={titleStyle}>{cctv.name}</p>
+            </div>
           </div>
         </div>
       )}
@@ -41,6 +43,11 @@ const CctvModal: React.FC<CctvModalProps> = ({ cctv, onClose }) => {
 
 export default CctvModal
 
+const layout = css`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`
 const modalContentWrapper = css`
   display: flex;
   flex-direction: column;

@@ -13,7 +13,7 @@ interface MobileBottomNavigationProps {
 const DEFAULT_ITEMS: NavItem[] = [
   { label: '알림', to: '/notification' },
   { label: '현장', to: '/device' },
-  { label: '작업자', to: '/worker' },
+  { label: '작업자', to: '/worker2' },
   { label: '내 정보', to: '/mypage' },
 ]
 

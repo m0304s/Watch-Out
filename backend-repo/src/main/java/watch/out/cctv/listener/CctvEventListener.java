@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -40,7 +41,10 @@ public class CctvEventListener {
     private final FcmService fcmService;
     private final S3Util s3Util;
 
-    @KafkaListener(topics = "${app.kafka.topic}")
+    @KafkaListener(
+        topics = "${app.kafka.topic.cctv-events}",
+        containerFactory = "cctvConsumerKafkaListenerContainerFactory"
+    )
     @Transactional
     public void onMessage(ConsumerRecord<String, String> rec, Acknowledgment ack) {
         try {
@@ -222,7 +226,8 @@ public class CctvEventListener {
 
                 // 저장된 이미지 키를 URL로 변환하여 FCM 알림 전송
                 String imageUrl = s3Util.keyToUrl(savedViolation.getImageKey());
-                sendSafetyViolationNotification(cctv, areaName, violationTypes, imageUrl);
+                sendSafetyViolationNotification(cctv, areaName, violationTypes, imageUrl,
+                    savedViolation.getUuid());
             } catch (Exception e) {
                 log.error("안전장비 위반 내역 저장 실패: types={}, error={}", violationTypes, e.getMessage(),
                     e);
@@ -246,7 +251,7 @@ public class CctvEventListener {
      * 안전장비 위반 FCM 알림 전송 (구역별 담당자에게만)
      */
     private void sendSafetyViolationNotification(Cctv cctv, String areaName,
-        List<SafetyViolationType> violationTypes, String imageUrl) {
+        List<SafetyViolationType> violationTypes, String imageUrl, UUID violationUuid) {
         try {
             // 위반 유형을 문자열 리스트로 변환
             List<String> violationTypeNames = violationTypes.stream()
@@ -259,7 +264,8 @@ public class CctvEventListener {
                 areaName,
                 cctv.getCctvName(),
                 violationTypeNames,
-                imageUrl
+                imageUrl,
+                violationUuid
             );
 
             log.info("FCM 안전장비 위반 알림 전송 완료: area={}, cctv={}, types={}, imageUrl={}",

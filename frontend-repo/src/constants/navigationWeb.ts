@@ -46,7 +46,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 3,
     name: '작업자 관리',
-    path: '/worker',
+    path: '/worker1',
     icon: MdPeopleAlt,
   },
   {
