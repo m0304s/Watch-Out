@@ -1,7 +1,8 @@
+import { css } from '@emotion/react'
+import { useEffect, useState } from 'react'
 import * as Highcharts from 'highcharts'
 import HighchartsReact from 'highcharts-react-official'
 import 'highcharts/highcharts-more'
-import { useEffect, useState } from 'react'
 import { dashboardAPI } from '@/features/dashboard/services/dashboard'
 import type { AreaListItem } from '@/features/area/types/area'
 
@@ -36,7 +37,7 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
       plotBackgroundImage: null,
       plotBorderWidth: 0,
       plotShadow: false,
-      height: '80%',
+      height: 200,
     },
 
     title: {
@@ -64,7 +65,7 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
       labels: {
         distance: 20,
         style: {
-          fontSize: '14px',
+          fontSize: '12px',
         },
       },
       lineWidth: 0,
@@ -72,22 +73,22 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
         {
           from: 0,
           to: 60,
-          color: '#55BF3B',
-          thickness: 20,
+          color: '#DF5353',
+          thickness: 15,
           borderRadius: '50%',
         },
         {
           from: 60,
           to: 80,
           color: '#DDDF0D',
-          thickness: 20,
+          thickness: 15,
           borderRadius: '50%',
         },
         {
           from: 80,
           to: 100,
-          color: '#DF5353',
-          thickness: 20,
+          color: '#55BF3B',
+          thickness: 15,
           borderRadius: '50%',
         },
       ],
@@ -129,11 +130,18 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
   }
 
   return (
-    <div>
+    <div css={container}>
+      <div css={header}>
+        <h3 css={title}>오늘의 안전 지수</h3>
+      </div>
       {score >= 0 && (
         <>
-          <HighchartsReact highcharts={Highcharts} options={chartOption} />
-          {score} 점
+          <div css={chartContainer}>
+            <HighchartsReact highcharts={Highcharts} options={chartOption} />
+          </div>
+          <div css={scoreContainer}>
+            <span css={scoreText}>{score}점</span>
+          </div>
         </>
       )}
     </div>
@@ -141,3 +149,45 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
 }
 
 export default SafetyScore
+
+const container = css`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+`
+
+const header = css`
+  margin-bottom: 16px;
+`
+
+const title = css`
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 4px 0;
+`
+
+const timestamp = css`
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+`
+
+const chartContainer = css`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`
+
+const scoreContainer = css`
+  text-align: center;
+  margin-top: 8px;
+`
+
+const scoreText = css`
+  font-size: 24px;
+  font-weight: 700;
+  color: #374151;
+`
