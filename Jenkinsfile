@@ -367,7 +367,9 @@ pipeline {
                             def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
                             
                             dir('frontend-repo') {
-                                sh "cp ${ENV_FILE} .env"
+                                sh "cp '${ENV_FILE}' .env"
+                                sh "ls -la .env"
+                                sh "cat .env"
                                 sh "docker build -t ${tag} --build-arg ENV=test ."
                             }
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
@@ -378,7 +380,9 @@ pipeline {
                             def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
 
                             dir('frontend-repo') {
-                                sh "cp ${ENV_FILE} .env"
+                                sh "cp '${ENV_FILE}' .env"
+                                sh "ls -la .env"
+                                sh "cat .env"
                                 sh "docker build -t ${tag} --build-arg ENV=prod ."
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
