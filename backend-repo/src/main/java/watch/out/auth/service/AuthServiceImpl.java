@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import watch.out.area.entity.AreaManager;
 import watch.out.area.repository.AreaManagerRepository;
 import watch.out.auth.dto.request.LoginRequest;
@@ -63,6 +64,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public void logout(HttpServletRequest httpServletRequest,
         HttpServletResponse httpServletResponse) {
         Optional<UUID> currentUserUuid = SecurityUtil.getCurrentUserUuid();
