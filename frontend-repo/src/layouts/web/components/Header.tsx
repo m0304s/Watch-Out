@@ -6,6 +6,7 @@ import { GoSidebarExpand } from 'react-icons/go'
 import type { NavItem } from '@/constants/navigationWeb'
 import { NAV_ITEMS } from '@/constants/navigationWeb'
 import { useLayoutStore } from '@/stores/layoutStore'
+import { WeatherWidget } from '@/features/weather'
 
 const Header: React.FC = () => {
   const location = useLocation()
@@ -41,7 +42,9 @@ const Header: React.FC = () => {
         </button>
         <p css={headerText}>{currentPage}</p>
       </div>
-      <div css={weatherBox}>날씨</div>
+      <div css={weatherBox}>
+        <WeatherWidget />
+      </div>
     </div>
   )
 }
@@ -80,4 +83,6 @@ const headerText = css`
 
 const weatherBox = css`
   padding: 0 2rem;
+  display: flex;
+  align-items: center;
 `
