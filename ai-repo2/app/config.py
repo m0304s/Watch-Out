@@ -43,7 +43,7 @@ class Settings(BaseSettings):
 
   # General Settings
   RECOGNITION_THRESHOLD: float = Field(default=1.0)
-  DETECTION_CONFIDENCE: float = Field(default=0.5)
+  DETECTION_CONFIDENCE: float = Field(default=0.7)
   INPUT_SIZE: Tuple[int, int] = (112, 112)
   LOG_COOLDOWN_SECONDS: int = 30
   FRAME_PROCESSING_INTERVAL_SECONDS: float = 1.0

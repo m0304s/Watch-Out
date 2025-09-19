@@ -22,11 +22,13 @@ WEIGHTS  = BASE_DIR / "weights/yolact_resnet101_safety_33_200000.pth"
 SCORE_THRESHOLD = 0.3
 TOP_K = 100
 USE_ALLOWED_FILTER = True
-ALLOWED = {"Helmet off","Belt off","Fork lane", "Payloader", "Forklift", "Dump truck", "Remicon", "Pump car", "Pile driver", "Truck", "Aerial workbench", "Tower crane", "Aerial work platform car", "Gang form", "Al form", "A-type ladder", "Uma", "ELB", "Opening cover", "Dangerous goods storage", "Elevator fall arrester", "Hoist", "Jack support", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Stucco block", "Mixer", "H beam", "High speed cutting machine", "Vibrator", "Fire extinguisher", "Welding machine", "Hand grinder", "Hand car", "Anti-burn"}
+ALLOWED = {"Helmet off","Belt off","Fork lane", "Dump truck", "Remicon", "Pump car", "Truck", "Tower crane", "Dangerous goods storage", "Elevator fall arrester", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Fire extinguisher", "Hand grinder"}
 LABELMAP_PATH = BASE_DIR / "labelmap.txt"
 
 # 스냅샷/알림 설정
-TRIGGERS = {"Helmet off", "Belt off","Fork lane", "Payloader", "Forklift", "Dump truck", "Remicon", "Pump car", "Pile driver", "Truck", "Aerial workbench", "Tower crane", "Aerial work platform car", "Gang form", "Al form", "A-type ladder", "Uma", "ELB", "Opening cover", "Dangerous goods storage", "Elevator fall arrester", "Hoist", "Jack support", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Stucco block", "Mixer", "H beam", "High speed cutting machine", "Vibrator", "Fire extinguisher", "Welding machine", "Hand grinder", "Hand car", "Anti-burn"}
+TRIGGERS = {"Helmet off","Belt off","Fork lane", "Dump truck", "Remicon", "Pump car", "Truck", "Tower crane", "Dangerous goods storage", "Elevator fall arrester", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Fire extinguisher", "Hand grinder"}
+TRIGGERS_EQUIPMENT = {"Helmet off","Belt off"}
+TRIGGERS_HEAVY = {"Fork lane", "Dump truck", "Remicon", "Pump car", "Truck", "Tower crane", "Dangerous goods storage", "Elevator fall arrester", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Fire extinguisher", "Hand grinder"}
 SNAPSHOT_DIR = "./snapshot"
 SNAPSHOT_COOLDOWN = 60.0
 NOTICE_SECS = 5.0
@@ -450,9 +452,67 @@ def detect_loop_streaming(src, mirror=True, company=None, camera=None, on_vis_jp
         logging.error(f"[DetectLoop] open_capture failed: {src}")
         return
 
-    last_shot_ts = 0.0
+    # 그룹별 마지막 전송 시각을 분리해서 관리
+    last_shot_ts_equipment = 0.0
+    last_shot_ts_heavy     = 0.0
+
     last_infer_t = 0.0
     min_interval = (1.0/INFER_MAX_FPS) if INFER_MAX_FPS > 0 else 0.0
+
+    def _make_and_send_event(group_name: str, matched_list: list, vis_img):
+        """그룹별 이벤트 페이로드 구성 + 스냅샷 저장/업로드 + 카프카 전송"""
+        classes_str = "_".join(sorted({d["class"] for d in matched_list}))[:80]
+        ts_ms = int(time.time() * 1000)
+        dt_iso = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+        cfg = _s3_cfg()
+        safe_src = str(src).replace("/", "_")
+        prefix = cfg["prefix"]
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
+        # 파일명/키에 그룹명 표시해서 구분
+        key = (
+            f"{prefix}{dt_iso}_{group_name}_{classes_str}_src-{safe_src}.jpg"
+            if prefix else
+            f"{dt_iso}_{group_name}_{classes_str}_src-{safe_src}.jpg"
+        )
+        local_path = os.path.join(SNAPSHOT_DIR, f"{ts_ms}_{group_name}_{classes_str}.jpg")
+
+        upload_info = _save_jpeg_to_s3(vis_img, key) if cfg["bucket"] else None
+        if upload_info:
+            snap_ref = (
+                upload_info.get("public_url")
+                or upload_info.get("url")
+                or upload_info.get("s3_uri")
+            )
+        else:
+            info = _save_jpeg_local(vis_img, local_path)
+            snap_ref = info.get("path")
+
+        # 그룹 내 디텍션 카운트만 담기
+        counts = Counter(d["class"] for d in matched_list)
+
+        payload = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "src": str(src),
+            "company": company,
+            "camera": camera,
+            "snapshot": snap_ref,
+            "group": group_name,  # 새 필드: 어떤 그룹 이벤트인지 표시
+            "triggers": sorted(list({d["class"] for d in matched_list})),
+            "detections": dict(counts),
+        }
+        base = f"{payload['ts']}|{group_name}|{company}|{camera}|{payload['src']}|{','.join(payload['triggers'])}"
+        payload["eventId"] = hashlib.sha256(base.encode("utf-8")).hexdigest()[:16]
+
+        logging.info(json.dumps(payload, ensure_ascii=False))
+
+        if _kafka_ok:
+            key_part = f"{(company or '')}:{(camera or '')}".strip(":") or str(src)
+            try:
+                send_json(KAFKA_TOPIC_EVENTS, key=key_part, payload=payload)
+            except Exception as e:
+                logging.error(f"Kafka publish failed: {e}")
 
     try:
         while True:
@@ -484,54 +544,25 @@ def detect_loop_streaming(src, mirror=True, company=None, camera=None, on_vis_jp
                     except Exception:
                         pass
 
-            matched = [d for d in dets if d["class"] in TRIGGERS]
-            if matched and (time.time() - last_shot_ts) >= SNAPSHOT_COOLDOWN:
-                last_shot_ts = time.time()
-                classes_str = "_".join(sorted({d["class"] for d in matched}))[:80]
-                ts_ms = int(time.time() * 1000)
-                dt_iso = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            # === 그룹별 매칭 분리 ===
+            matched_equipment = [d for d in dets if d["class"] in TRIGGERS_EQUIPMENT]
+            matched_heavy     = [d for d in dets if d["class"] in TRIGGERS_HEAVY]
 
-                cfg = _s3_cfg()
-                safe_src = str(src).replace("/", "_")
-                prefix = cfg["prefix"]
-                if prefix and not prefix.endswith("/"):
-                    prefix += "/"
-                key = f"{prefix}{dt_iso}_{classes_str}_src-{safe_src}.jpg" if prefix else f"{dt_iso}_{classes_str}_src-{safe_src}.jpg"
-                local_path = os.path.join(SNAPSHOT_DIR, f"{ts_ms}_{classes_str}.jpg")
+            now_ts = time.time()
 
-                upload_info = _save_jpeg_to_s3(vis, key) if cfg["bucket"] else None
-                if upload_info:
-                    snap_ref = (upload_info.get("public_url")
-                                or upload_info.get("url")
-                                or upload_info.get("s3_uri"))
-                else:
-                    info = _save_jpeg_local(vis, local_path)
-                    snap_ref = info.get("path")
+            # EQUIPMENT 독립 쿨다운
+            if matched_equipment and (now_ts - last_shot_ts_equipment) >= SNAPSHOT_COOLDOWN:
+                last_shot_ts_equipment = now_ts
+                _make_and_send_event("EQUIPMENT", matched_equipment, vis)
 
-                counts = Counter(d["class"] for d in dets if d["class"] in TRIGGERS)
-                payload = {
-                    "ts": datetime.now(timezone.utc).isoformat(),
-                    "src": str(src),
-                    "company": company,
-                    "camera": camera,
-                    "snapshot": snap_ref,
-                    "triggers": sorted(list({d["class"] for d in matched})),
-                    "detections": dict(counts)
-                }
-                base = f"{payload['ts']}|{company}|{camera}|{payload['src']}|{','.join(payload['triggers'])}"
-                payload["eventId"] = hashlib.sha256(base.encode("utf-8")).hexdigest()[:16]
-
-                logging.info(json.dumps(payload, ensure_ascii=False))
-
-                if _kafka_ok:
-                    key_part = f"{(company or '')}:{(camera or '')}".strip(":") or str(src)
-                    try:
-                        send_json(KAFKA_TOPIC_EVENTS, key=key_part, payload=payload)
-                    except Exception as e:
-                        logging.error(f"Kafka publish failed: {e}")
+            # HEAVY 독립 쿨다운
+            if matched_heavy and (now_ts - last_shot_ts_heavy) >= SNAPSHOT_COOLDOWN:
+                last_shot_ts_heavy = now_ts
+                _make_and_send_event("HEAVY", matched_heavy, vis)
 
     finally:
         cap.release()
+
 
 # =========================
 # (D) 서버 합성 멀티뷰
