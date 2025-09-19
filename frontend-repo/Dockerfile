@@ -10,8 +10,6 @@ RUN pnpm install --frozen-lockfile
 
 # 소스 복사 및 빌드
 COPY . .
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN pnpm run build
 
 FROM nginx:1.27-alpine

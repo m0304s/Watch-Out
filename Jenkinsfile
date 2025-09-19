@@ -349,27 +349,27 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([
-                    string(credentialsId: 'VITE_API_BASE_URL_TEST', variable: 'API_URL_TEST'),
-                    string(credentialsId: 'VITE_API_BASE_URL_PROD', variable: 'API_URL_PROD')
-                ]) {
-                    script {
-                        def branch = (env.MR_STATE == 'merged') ? (env.TARGET_BRANCH ?: '').trim() : (params.BRANCH_TO_BUILD ?: '').trim()
+                script {
+                    def branch = (env.MR_STATE == 'merged') ? (env.TARGET_BRANCH ?: '').trim() : (params.BRANCH_TO_BUILD ?: '').trim()
 
-                        if (branch == 'develop') {
-                            env.FINAL_API_URL = API_URL_TEST
+                    if (branch == 'develop') {
+                        // 'develop' 브랜치용 Secret file Credential 사용
+                        withCredentials([file(credentialsId: '.env.development', variable: 'ENV_FILE')]) {
                             def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
                             dir('frontend-repo') {
-                                sh "docker build -t ${tag} --build-arg ENV=test --build-arg VITE_API_BASE_URL='${env.FINAL_API_URL}' ."
+                                sh "cp ${ENV_FILE} .env"
+                                sh "docker build -t ${tag} --build-arg ENV=test ."
                             }
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
                             sh "docker run -d --name ${FE_TEST_CONTAINER} --network ${TEST_NETWORK} ${tag}"
-
-                        } else if (branch == 'master') {
-                            env.FINAL_API_URL = API_URL_PROD
+                        }
+                    } else if (branch == 'master') {
+                        // 'master' 브랜치용 Secret file Credential 사용
+                        withCredentials([file(credentialsId: '.env.production', variable: 'ENV_FILE')]) {
                             def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
                             dir('frontend-repo') {
-                                sh 'docker build -t '"${tag}"' --build-arg ENV=prod --build-arg VITE_API_BASE_URL='"'${env.FINAL_API_URL}'"' .'
+                                sh "cp ${ENV_FILE} .env"
+                                sh "docker build -t ${tag} --build-arg ENV=prod ."
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
                             sh "docker run -d --name ${FE_PROD_CONTAINER} --network ${PROD_NETWORK} ${tag}"
