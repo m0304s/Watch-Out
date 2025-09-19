@@ -498,7 +498,6 @@ def detect_loop_streaming(src, mirror=True, company=None, camera=None, on_vis_jp
             "company": company,
             "camera": camera,
             "snapshot": snap_ref,
-            "group": group_name,  # 새 필드: 어떤 그룹 이벤트인지 표시
             "triggers": sorted(list({d["class"] for d in matched_list})),
             "detections": dict(counts),
         }
