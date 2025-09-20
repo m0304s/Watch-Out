@@ -188,6 +188,9 @@ public class FcmService {
                         .setSound("default")
                         .build())
                     .build())
+                .putData("title", title)                                    // 포그라운드용 제목
+                .putData("body", body)                                      // 포그라운드용 내용
+                .putData("image", imageUrl)                                 // 포그라운드용 이미지
                 .putData("areaName", areaName)
                 .putData("cctvName", cctvName)
                 .putData("violationTypes", String.join(",", violationTypes))
@@ -274,6 +277,9 @@ public class FcmService {
                         .setSound("default")
                         .build())
                     .build())
+                .putData("title", title)                                         // 포그라운드용 제목
+                .putData("body", body)                                           // 포그라운드용 내용
+                .putData("image", imageUrl)                                      // 포그라운드용 이미지
                 .putData("areaName", areaName)
                 .putData("cctvName", cctvName)
                 .putData("heavyEquipmentTypes", String.join(",", heavyEquipmentTypes))
@@ -526,8 +532,18 @@ public class FcmService {
                         .setLink("/announcements")
                         .build())
                     .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                    .setNotification(AndroidNotification.builder()
+                        .setTitle(title)
+                        .setBody(content)
+                        .setChannelId("announcements")
+                        .setPriority(AndroidNotification.Priority.HIGH)
+                        .setSound("default")
+                        .build())
+                    .build())
+                .putData("title", title)                                         // 포그라운드용 제목
+                .putData("body", content)                                        // 포그라운드용 내용
                 .putData("type", "ANNOUNCEMENT")
-                .putData("title", title)
                 .putData("content", content)
                 .addAllTokens(tokenStrings)
                 .build();
@@ -594,9 +610,10 @@ public class FcmService {
                         .setSound("default")
                         .build())
                     .build())
+                .putData("title", title)                                         // 포그라운드용 제목
+                .putData("body", content)                                        // 포그라운드용 내용
                 .putData("type", "ANNOUNCEMENT")
                 .putData("areaUuid", areaUuid.toString())
-                .putData("title", title)
                 .putData("content", content)
                 .addAllTokens(tokenStrings)
                 .build();
@@ -723,6 +740,8 @@ public class FcmService {
                         .setSound("default")
                         .build())
                     .build())
+                .putData("title", title)                                         // 포그라운드용 제목
+                .putData("body", body)                                           // 포그라운드용 내용
                 .putData("areaName", areaName)
                 .putData("accidentType", accidentType)
                 .putData("reporterName", reporterName)
