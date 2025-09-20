@@ -99,8 +99,10 @@ public class AreaController {
 
     @PostMapping("/count")
     @PreAuthorize("hasAnyRole('AREA_ADMIN', 'ADMIN')")
-    public ResponseEntity<CountWorkerResponse> getWorkerCount(@RequestBody CountWorkersRequest countWorkersRequest) {
-        CountWorkerResponse countWorkerResponse = areaService.getWorkerCount(countWorkersRequest.areaUuids());
+    public ResponseEntity<CountWorkerResponse> getWorkerCount(
+        @RequestBody CountWorkersRequest countWorkersRequest) {
+        CountWorkerResponse countWorkerResponse = areaService.getWorkerCount(
+            countWorkersRequest.areaUuids());
         return ResponseEntity.ok(countWorkerResponse);
     }
 }
