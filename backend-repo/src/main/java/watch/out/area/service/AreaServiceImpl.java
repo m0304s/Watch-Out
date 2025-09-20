@@ -1,6 +1,7 @@
 package watch.out.area.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,7 @@ import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
 import watch.out.area.dto.response.AreaDetailItemResponse;
-import watch.out.area.dto.response.AreaWorkerResponse;
+import watch.out.area.dto.response.CountWorkerResponse;
 import watch.out.area.dto.response.MyAreaResponse;
 import watch.out.common.dto.PageResponse;
 import watch.out.area.entity.Area;
@@ -228,11 +229,13 @@ public class AreaServiceImpl implements AreaService {
         return areaRepository.findMyAreaDetail(userUuid);
     }
 
-    public AreaWorkerResponse getWorkerCount(UUID areaUuid) {
-        long nowWorkers = redisTemplate.opsForSet().size("area:" + areaUuid);
-        Area area = areaRepository.findById(areaUuid)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        return new AreaWorkerResponse(areaUuid, area.getAreaName(), nowWorkers,
-            userRepository.countByAreaUuid(areaUuid));
+    public CountWorkerResponse getWorkerCount(List<UUID> areaUuids) {
+        long nowWorkers = areaUuids.stream()
+            .map(uuid -> redisTemplate.opsForSet().size("area:" + uuid))
+            .map(size -> size == null ? 0L : size)
+            .mapToLong(Long::longValue)
+            .sum();
+        long totalUsers = userRepository.countUsersByAreaUuids(areaUuids);
+        return new CountWorkerResponse(nowWorkers, totalUsers);
     }
 }

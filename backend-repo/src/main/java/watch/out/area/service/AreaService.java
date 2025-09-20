@@ -1,11 +1,12 @@
 package watch.out.area.service;
 
+import java.util.List;
 import java.util.UUID;
 import watch.out.area.dto.request.AreaRequest;
 import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
-import watch.out.area.dto.response.AreaWorkerResponse;
+import watch.out.area.dto.response.CountWorkerResponse;
 import watch.out.area.dto.response.MyAreaResponse;
 import watch.out.common.dto.PageResponse;
 import watch.out.common.dto.PageRequest;
@@ -26,5 +27,5 @@ public interface AreaService {
 
     MyAreaResponse getMyArea();
 
-    AreaWorkerResponse getWorkerCount(UUID areaUuid);
+    CountWorkerResponse getWorkerCount(List<UUID> areaUuids);
 }

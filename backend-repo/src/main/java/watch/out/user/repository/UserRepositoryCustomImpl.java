@@ -19,6 +19,7 @@ import watch.out.common.dto.PageResponse;
 import watch.out.user.dto.request.ApproveUsersRequest;
 import watch.out.user.dto.response.UserDto;
 import watch.out.user.dto.response.UsersDto;
+import watch.out.user.entity.QUser;
 import watch.out.user.entity.TrainingStatus;
 import watch.out.user.entity.UserRole;
 
@@ -216,5 +217,17 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
 
     private BooleanExpression userRoleEq(UserRole userRole) {
         return userRole != null ? user.role.eq(userRole) : null;
+    }
+
+    @Override
+    public long countUsersByAreaUuids(List<UUID> areaUuids) {
+        QUser user = QUser.user;
+        Long count = queryFactory
+            .select(user.count())
+            .from(user)
+            .where(user.area.uuid.in(areaUuids))
+            .fetchOne();
+
+        return count != null ? count : 0L;
     }
 }
