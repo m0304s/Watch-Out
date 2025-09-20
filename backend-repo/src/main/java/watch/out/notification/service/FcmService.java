@@ -1,5 +1,7 @@
 package watch.out.notification.service;
 
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -164,7 +166,7 @@ public class FcmService {
             .toList();
 
         try {
-            // MulticastMessage 생성
+            // MulticastMessage 생성 (웹과 모바일 모두 지원)
             MulticastMessage.Builder messageBuilder = MulticastMessage.builder()
                 .setNotification(Notification.builder()
                     .setTitle(title)
@@ -174,6 +176,16 @@ public class FcmService {
                 .setWebpushConfig(WebpushConfig.builder()
                     .setFcmOptions(WebpushFcmOptions.builder()
                         .setLink("/dashboard")
+                        .build())
+                    .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                    .setNotification(AndroidNotification.builder()
+                        .setTitle(title)
+                        .setBody(body)
+                        .setImage(imageUrl)
+                        .setChannelId("safety_violations")
+                        .setPriority(AndroidNotification.Priority.HIGH)
+                        .setSound("default")
                         .build())
                     .build())
                 .putData("areaName", areaName)
@@ -240,7 +252,7 @@ public class FcmService {
             .toList();
 
         try {
-            // MulticastMessage 생성
+            // MulticastMessage 생성 (웹과 모바일 모두 지원)
             MulticastMessage message = MulticastMessage.builder()
                 .setNotification(Notification.builder()
                     .setTitle(title)
@@ -250,6 +262,16 @@ public class FcmService {
                 .setWebpushConfig(WebpushConfig.builder()
                     .setFcmOptions(WebpushFcmOptions.builder()
                         .setLink("/dashboard")
+                        .build())
+                    .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                    .setNotification(AndroidNotification.builder()
+                        .setTitle(title)
+                        .setBody(body)
+                        .setImage(imageUrl)
+                        .setChannelId("heavy_equipment")
+                        .setPriority(AndroidNotification.Priority.HIGH)
+                        .setSound("default")
                         .build())
                     .build())
                 .putData("areaName", areaName)
@@ -552,7 +574,7 @@ public class FcmService {
             .toList();
 
         try {
-            // MulticastMessage 생성 (구역별 정보 포함)
+            // MulticastMessage 생성 (웹과 모바일 모두 지원)
             MulticastMessage message = MulticastMessage.builder()
                 .setNotification(Notification.builder()
                     .setTitle(title)
@@ -561,6 +583,15 @@ public class FcmService {
                 .setWebpushConfig(WebpushConfig.builder()
                     .setFcmOptions(WebpushFcmOptions.builder()
                         .setLink("/announcements")
+                        .build())
+                    .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                    .setNotification(AndroidNotification.builder()
+                        .setTitle(title)
+                        .setBody(content)
+                        .setChannelId("announcements")
+                        .setPriority(AndroidNotification.Priority.HIGH)
+                        .setSound("default")
                         .build())
                     .build())
                 .putData("type", "ANNOUNCEMENT")
@@ -672,7 +703,7 @@ public class FcmService {
             .toList();
 
         try {
-            // MulticastMessage 생성
+            // MulticastMessage 생성 (웹과 모바일 모두 지원)
             MulticastMessage message = MulticastMessage.builder()
                 .setNotification(Notification.builder()
                     .setTitle(title)
@@ -681,6 +712,15 @@ public class FcmService {
                 .setWebpushConfig(WebpushConfig.builder()
                     .setFcmOptions(WebpushFcmOptions.builder()
                         .setLink("/accidents")
+                        .build())
+                    .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                    .setNotification(AndroidNotification.builder()
+                        .setTitle(title)
+                        .setBody(body)
+                        .setChannelId("accident_reports")
+                        .setPriority(AndroidNotification.Priority.HIGH)
+                        .setSound("default")
                         .build())
                     .build())
                 .putData("areaName", areaName)
