@@ -15,10 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import watch.out.area.dto.request.AreaRequest;
+import watch.out.area.dto.request.CountWorkersRequest;
 import watch.out.area.dto.response.AreaCountResponse;
 import watch.out.area.dto.response.AreaDetailResponse;
 import watch.out.area.dto.response.AreaListResponse;
-import watch.out.area.dto.response.AreaWorkerResponse;
+import watch.out.area.dto.response.CountWorkerResponse;
 import watch.out.area.dto.response.MyAreaResponse;
 import watch.out.common.dto.PageResponse;
 import watch.out.area.service.AreaService;
@@ -96,10 +97,10 @@ public class AreaController {
         return ResponseEntity.ok(myAreaResponse);
     }
 
-    @GetMapping("/area/{areaUuid}/count")
+    @PostMapping("/count")
     @PreAuthorize("hasAnyRole('AREA_ADMIN', 'ADMIN')")
-    public ResponseEntity<AreaWorkerResponse> getWorkerCount(@PathVariable UUID areaUuid) {
-        AreaWorkerResponse areaWorkerResponse = areaService.getWorkerCount(areaUuid);
-        return ResponseEntity.ok(areaWorkerResponse);
+    public ResponseEntity<CountWorkerResponse> getWorkerCount(@RequestBody CountWorkersRequest countWorkersRequest) {
+        CountWorkerResponse countWorkerResponse = areaService.getWorkerCount(countWorkersRequest.areaUuids());
+        return ResponseEntity.ok(countWorkerResponse);
     }
 }
