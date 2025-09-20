@@ -166,31 +166,11 @@ public class FcmService {
             .toList();
 
         try {
-            // MulticastMessage 생성 (웹과 모바일 모두 지원)
+            // MulticastMessage 생성 (data-only 방식)
             MulticastMessage.Builder messageBuilder = MulticastMessage.builder()
-                .setNotification(Notification.builder()
-                    .setTitle(title)
-                    .setBody(body)
-                    .setImage(imageUrl)
-                    .build())
-                .setWebpushConfig(WebpushConfig.builder()
-                    .setFcmOptions(WebpushFcmOptions.builder()
-                        .setLink("/dashboard")
-                        .build())
-                    .build())
-                .setAndroidConfig(AndroidConfig.builder()
-                    .setNotification(AndroidNotification.builder()
-                        .setTitle(title)
-                        .setBody(body)
-                        .setImage(imageUrl)
-                        .setChannelId("safety_violations")
-                        .setPriority(AndroidNotification.Priority.HIGH)
-                        .setSound("default")
-                        .build())
-                    .build())
-                .putData("title", title)                                    // 포그라운드용 제목
-                .putData("body", body)                                      // 포그라운드용 내용
-                .putData("image", imageUrl)                                 // 포그라운드용 이미지
+                .putData("title", title)                                    // 제목
+                .putData("body", body)                                      // 내용
+                .putData("image", imageUrl)                                 // 이미지
                 .putData("areaName", areaName)
                 .putData("cctvName", cctvName)
                 .putData("violationTypes", String.join(",", violationTypes))
@@ -521,28 +501,10 @@ public class FcmService {
             .toList();
 
         try {
-            // MulticastMessage 생성
+            // MulticastMessage 생성 (data-only 방식)
             MulticastMessage message = MulticastMessage.builder()
-                .setNotification(Notification.builder()
-                    .setTitle(title)
-                    .setBody(content)
-                    .build())
-                .setWebpushConfig(WebpushConfig.builder()
-                    .setFcmOptions(WebpushFcmOptions.builder()
-                        .setLink("/announcements")
-                        .build())
-                    .build())
-                .setAndroidConfig(AndroidConfig.builder()
-                    .setNotification(AndroidNotification.builder()
-                        .setTitle(title)
-                        .setBody(content)
-                        .setChannelId("announcements")
-                        .setPriority(AndroidNotification.Priority.HIGH)
-                        .setSound("default")
-                        .build())
-                    .build())
-                .putData("title", title)                                         // 포그라운드용 제목
-                .putData("body", content)                                        // 포그라운드용 내용
+                .putData("title", title)                                         // 제목
+                .putData("body", content)                                        // 내용
                 .putData("type", "ANNOUNCEMENT")
                 .putData("content", content)
                 .addAllTokens(tokenStrings)
