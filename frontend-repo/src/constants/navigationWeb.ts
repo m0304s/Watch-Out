@@ -57,8 +57,8 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 5,
-    name: '디바이스 관리',
-    path: '/device',
+    name: '워치 관리',
+    path: '/watch',
     icon: TbDeviceWatchCog,
   },
 ]

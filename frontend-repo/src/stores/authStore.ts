@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { clearAllAuthData } from '@/utils/logout'
 import type { LoginResponse } from '@/features/auth/types'
 
 interface AuthState {
   // 인증 상태
   isAuthenticated: boolean
   accessToken: string | null
-  
+
   // 사용자 정보
   userUuid: string | null
   userId: string | null
@@ -14,7 +15,7 @@ interface AuthState {
   userRole: 'WORKER' | 'AREA_ADMIN' | 'ADMIN' | null
   areaUuid: string | null // AREA_ADMIN 사용자만 가지고 있음
   isApproved: boolean
-  
+
   // 로딩 상태
   isLoading: boolean
   error: string | null
@@ -23,17 +24,17 @@ interface AuthState {
 interface AuthActions {
   // 로그인 성공 시 상태 업데이트
   setAuthData: (loginResponse: LoginResponse) => void
-  
+
   // 로그아웃
   logout: () => void
-  
+
   // 토큰 업데이트
   updateToken: (accessToken: string) => void
-  
+
   // 에러 상태 관리
   setError: (error: string | null) => void
   setLoading: (loading: boolean) => void
-  
+
   // 초기화
   clearAuth: () => void
 }
@@ -74,6 +75,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: () => {
+        // 상태만 초기화 (localStorage는 logoutApi에서 제거됨)
         set({
           ...initialState,
         })
@@ -99,6 +101,9 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       clearAuth: () => {
+        // 유틸리티 함수를 사용하여 모든 인증 관련 데이터 완전 제거
+        clearAllAuthData()
+
         set({
           ...initialState,
         })
@@ -116,8 +121,8 @@ export const useAuthStore = create<AuthStore>()(
         areaUuid: state.areaUuid,
         isApproved: state.isApproved,
       }),
-    }
-  )
+    },
+  ),
 )
 
 // 편의 선택자들

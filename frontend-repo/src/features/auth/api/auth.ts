@@ -1,4 +1,6 @@
 import { api } from '@/apis/axios'
+import { useAuthStore } from '@/stores/authStore'
+import { clearAllAuthData } from '@/utils/logout'
 import type {
   LoginRequest,
   LoginResponse,
@@ -46,13 +48,25 @@ export const logout = async (): Promise<ApiResponse<void>> => {
   try {
     const response = await api.post<ApiResponse<void>>(AUTH_ENDPOINTS.LOGOUT)
 
-    // 로그아웃 성공 시 토큰 제거
-    localStorage.removeItem('accessToken')
+    // 로그아웃 성공 시 모든 로컬스토리지 데이터 완전 제거
+    clearAllAuthData()
+
+    // 메모리 스토어도 초기화
+    try {
+      useAuthStore.getState().clearAuth()
+    } catch (_) {
+      // no-op: store 초기화 실패는 무시 (환경 차이 대비)
+    }
 
     return response.data
   } catch (error) {
-    // 에러가 발생해도 로컬 토큰은 제거
-    localStorage.removeItem('accessToken')
+    // 에러가 발생해도 로컬 데이터는 완전 제거
+    clearAllAuthData()
+    try {
+      useAuthStore.getState().clearAuth()
+    } catch (_) {
+      // no-op
+    }
     throw error
   }
 }
@@ -112,17 +126,6 @@ export const getCompanies = async (): Promise<CompanyOption[]> => {
   return []
 }
 
-// 토큰 유효성 검사 (로컬 스토리지에서 토큰 확인)
-export const isAuthenticated = (): boolean => {
-  const token = localStorage.getItem('accessToken')
-  return !!token
-}
-
-// 현재 저장된 토큰 가져오기
-export const getStoredToken = (): string | null => {
-  return localStorage.getItem('accessToken')
-}
-
 // S3 presigned URL 요청 API
 export const getPresignedUrl = async (
   fileName: string,
@@ -170,19 +173,3 @@ export const uploadProfileImage = async (file: File): Promise<string> => {
     throw error
   }
 }
-
-// Auth API 객체로 내보내기 (기존 코드와의 호환성을 위해)
-export const authAPI = {
-  login,
-  logout,
-  refreshToken,
-  signup,
-  getCompanies,
-  isAuthenticated,
-  getStoredToken,
-  getPresignedUrl,
-  uploadImageToS3,
-  uploadProfileImage,
-}
-
-export default authAPI

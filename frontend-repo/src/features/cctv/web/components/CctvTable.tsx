@@ -2,7 +2,7 @@ import { css } from '@emotion/react'
 import { useMemo, useState } from 'react'
 import type { CctvItem } from '@/features/cctv/types'
 import { SelectionCheckbox } from '@/components/common/SelectionCheckbox'
-import { BottomActionBar } from '@/features/cctv/web/components/BottomActionBar'
+import { BottomActionBar } from '@/components/common/BottomActionBar'
 
 interface CctvTableProps {
   rows: CctvItem[]

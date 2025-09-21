@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import type { AreaItem } from '@/features/cctv/types'
 import { SelectionCheckbox } from '@/components/common/SelectionCheckbox'
 import { ManagerDropdown } from '@/features/cctv/web/components/ManagerDropdown'
-import { BottomActionBar } from '@/features/cctv/web/components/BottomActionBar'
+import { BottomActionBar } from '@/components/common/BottomActionBar'
 
 interface AreaTableProps {
   rows: AreaItem[]

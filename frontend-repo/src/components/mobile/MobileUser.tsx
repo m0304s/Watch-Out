@@ -2,7 +2,7 @@ import { css } from '@emotion/react'
 import { useAuth } from '@/stores/authStore'
 import { useLogout } from '@/hooks/useLogout'
 
-export const User = () => {
+export const MobileUser = () => {
   const { user } = useAuth()
   const { handleLogout, isLoggingOut } = useLogout()
 
@@ -10,7 +10,7 @@ export const User = () => {
     <div css={containerStyles}>
       <span css={userNameStyles}>{user.userName}</span>
       <button css={logoutStyles} onClick={handleLogout} disabled={isLoggingOut}>
-        {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
+        {isLoggingOut ? '...' : '로그아웃'}
       </button>
     </div>
   )
@@ -19,21 +19,20 @@ export const User = () => {
 const containerStyles = css`
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  gap: 4px;
+  gap: 8px;
 `
 
 const userNameStyles = css`
   font-family: 'PretendardSemiBold', sans-serif;
-  color: var(--color-gray-900);
-  font-size: 16px;
+  color: var(--color-text-white);
+  font-size: 14px;
   font-weight: 600;
   text-align: center;
 `
 
 const logoutStyles = css`
   font-family: 'PretendardRegular', sans-serif;
-  color: var(--color-gray-600);
+  color: var(--color-text-white);
   font-size: 12px;
   font-weight: 400;
   text-align: center;
@@ -43,14 +42,15 @@ const logoutStyles = css`
   padding: 4px 8px;
   border-radius: 4px;
   transition: all 0.2s ease;
+  opacity: 0.8;
 
   &:hover:not(:disabled) {
-    background-color: var(--color-gray-100);
-    color: var(--color-gray-800);
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
   }
 
   &:active:not(:disabled) {
-    background-color: var(--color-gray-200);
+    background-color: rgba(255, 255, 255, 0.2);
   }
 
   &:disabled {
