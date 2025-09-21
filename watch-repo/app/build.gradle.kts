@@ -9,7 +9,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.watchout"
+        applicationId = "com.ssafy.watchout"
         minSdk = 30
         targetSdk = 35
         versionCode = 1
@@ -37,7 +37,7 @@ android {
 
 dependencies {
     // 워치-폰/워치 간 데이터 통신
-    implementation("com.google.android.gms:play-services-wearable:19.0.0")
+    implementation("com.google.android.gms:play-services-wearable:18.1.0")
     // Wear 핵심(UI 위젯 등) - 이건 M3와 별개로 필요할 수 있습니다.
     implementation("androidx.wear:wear:1.3.0")
 
