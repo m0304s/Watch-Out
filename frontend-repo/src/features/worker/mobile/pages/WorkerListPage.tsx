@@ -1,6 +1,7 @@
 import { css } from '@emotion/react'
 import { useState, useEffect } from 'react'
 import { MobileLayout } from '@/components/mobile/MobileLayout'
+import { MobileUser } from '@/components/mobile/MobileUser'
 import { getEmployees, getAreas } from '@/features/worker/api/workerApi'
 import { WorkerDetailModal } from '@/features/worker/mobile/components/WorkerDetailModal'
 import type {
@@ -58,9 +59,8 @@ export const MobileWorkerListPage = () => {
     setLoading(true)
     try {
       // AREA_ADMIN인 경우 본인의 담당구역을 자동으로 설정
-      const areaUuid = userRole === 'AREA_ADMIN' && userAreaUuid 
-        ? userAreaUuid 
-        : selectedArea
+      const areaUuid =
+        userRole === 'AREA_ADMIN' && userAreaUuid ? userAreaUuid : selectedArea
 
       const response = await getEmployees({
         areaUuid,
@@ -143,9 +143,8 @@ export const MobileWorkerListPage = () => {
     setSelectedWorkerUuid(null)
   }
 
-
   return (
-    <MobileLayout title="작업자 관리">
+    <MobileLayout title="작업자 관리" rightSlot={<MobileUser />}>
       {/* ADMIN 또는 AREA_ADMIN인 경우에만 검색 및 필터링 표시 */}
       {(userRole === 'ADMIN' || userRole === 'AREA_ADMIN') && (
         <section css={ui.section}>

@@ -1,5 +1,7 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosRequestConfig } from 'axios'
+import { useAuthStore } from '@/stores/authStore'
+import { clearAllAuthData } from '@/utils/logout'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const isDevelopment = import.meta.env.DEV
@@ -131,10 +133,14 @@ apiClient.interceptors.response.use(
 
         // 새로운 accessToken을 localStorage에 저장
         if (response.data?.result?.accessToken) {
-          localStorage.setItem('accessToken', response.data.result.accessToken)
+          const newToken = response.data.result.accessToken
+          localStorage.setItem('accessToken', newToken)
+
+          // 메모리 스토어 토큰도 동기화
+          useAuthStore.getState().updateToken(newToken)
 
           // 원래 요청의 Authorization 헤더 업데이트
-          originalRequest.headers.Authorization = `Bearer ${response.data.result.accessToken}`
+          originalRequest.headers.Authorization = `Bearer ${newToken}`
 
           console.log('토큰 갱신 성공')
 
@@ -144,8 +150,15 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         console.error('토큰 갱신 실패:', refreshError)
 
-        // 토큰 갱신 실패 시 localStorage에서 토큰 제거
-        localStorage.removeItem('accessToken')
+        // 토큰 갱신 실패 시 모든 인증 데이터 완전 제거
+        clearAllAuthData()
+
+        // 메모리 스토어도 초기화
+        try {
+          useAuthStore.getState().clearAuth()
+        } catch (_) {
+          // no-op
+        }
 
         // 로그인 페이지로 리다이렉트
         window.location.href = '/login'

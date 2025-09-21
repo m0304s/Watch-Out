@@ -6,6 +6,7 @@ import { SelectedWorkersPage, MobileWorkerListPage } from '@/features/worker'
 import { AreaManagementPage, CctvSettingsPage } from '@/features/cctv'
 import DashBoard from '@/features/dashboard/web/pages/DashBoard'
 import { MobileFaceRegistrationPage } from '@/features/auth'
+import { WatchListPage } from '@/features/watch/web/pages/WatchListPage'
 
 const RouterWeb = () => {
   const isLoggedIn: boolean = true // 개발용
@@ -29,9 +30,10 @@ const RouterWeb = () => {
           <Route path="/area" element={<AreaManagementPage />} />
           <Route path="/dashboard" element={<DashBoard />} />
           <Route path="/cctv/settings" element={<CctvSettingsPage />} />
+          <Route path="/watch" element={<WatchListPage />} />
         </Route>
         <Route path="/worker2" element={<MobileWorkerListPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<LoginPage />} />
       </Routes>
     </>
