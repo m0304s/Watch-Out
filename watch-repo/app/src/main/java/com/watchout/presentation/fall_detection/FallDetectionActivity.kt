@@ -1,6 +1,8 @@
 package com.watchout.presentation.fall_detection
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -13,12 +15,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.Text
 import com.watchout.core.service.TAG
 import com.watchout.domain.fall_detection.HealthServicesManager
+import com.watchout.presentation.main.MainActivity
 import com.watchout.presentation.theme.WatchOutTheme
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.graphics.Color
+import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.ButtonDefaults
+import androidx.wear.compose.material.Icon
+import androidx.wear.compose.material.MaterialTheme
 
 class FallDetectionActivity : ComponentActivity() {
 
@@ -35,6 +45,11 @@ class FallDetectionActivity : ComponentActivity() {
                 if (isGranted) {
                     registerForEvents()
                 }
+                // 사용자가 권한을 허용하든 거부하든, 선택을 했으므로 최초 실행 상태를 업데이트
+                setFirstRunCompleted()
+                // 선택 후 메인 액티비티로 이동
+                startActivity(Intent(this, MainActivity::class.java))
+                finish()
             }
 
         setContent {
@@ -42,11 +57,14 @@ class FallDetectionActivity : ComponentActivity() {
                 FallDetectionScreen(
                     isRegistered = isRegistered.value,
                     onRegisterClick = {
-                        if (isRegistered.value) {
-                            unregisterForEvents()
-                        } else {
-                            permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
-                        }
+                        // "등록하기"를 누르면 권한 요청
+                        permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                    },
+                    onGoToMainClick = {
+                        // "나중에 하기"를 누르면 최초 실행 상태만 업데이트하고 메인으로 이동
+                        setFirstRunCompleted()
+                        startActivity(Intent(this, MainActivity::class.java))
+                        finish()
                     }
                 )
             }
@@ -61,29 +79,70 @@ class FallDetectionActivity : ComponentActivity() {
         }
     }
 
-    private fun unregisterForEvents() {
-        lifecycleScope.launch {
-            healthServicesManager.unregisterForHealthEvents()
-            Log.i(TAG, "Unregistered for fall detection events")
-            isRegistered.value = false
-        }
+    // SharedPreferences에 '최초 실행 완료'를 기록하는 함수
+    private fun setFirstRunCompleted() {
+        val prefs = getSharedPreferences("WatchOutPrefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("isFirstRun", false).apply()
     }
 }
 
 @Composable
-fun FallDetectionScreen(isRegistered: Boolean, onRegisterClick: () -> Unit) {
+fun FallDetectionScreen(
+    isRegistered: Boolean,
+    onRegisterClick: () -> Unit,
+    onGoToMainClick: () -> Unit
+) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // 1. 안내 문구
         Text(
-            text = if (isRegistered) "낙상 감지 기능이 등록되었습니다." else "낙상 감지 기능이 해제되었습니다.",
-            textAlign = TextAlign.Center
+            text = "낙상 감지 기능으로\n안전을 지키시겠습니까?",
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.title3
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRegisterClick) {
-            Text(if (isRegistered) "등록 해제" else "등록하기")
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 2. 버튼들을 좌우로 배치하기 위한 Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // "나중에 하기" 버튼 (왼쪽)
+            Button(
+                onClick = onGoToMainClick,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.DarkGray
+                ),
+                modifier = Modifier.size(ButtonDefaults.SmallButtonSize)
+            ) {
+                // IconSize 오류가 수정된 부분
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "나중에 하기"
+                )
+            }
+
+            // "사용하기" 버튼 (오른쪽)
+            Button(
+                onClick = onRegisterClick,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = MaterialTheme.colors.primary
+                ),
+                modifier = Modifier.size(ButtonDefaults.DefaultButtonSize)
+            ) {
+                // IconSize 오류가 수정된 부분
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "사용하기"
+                )
+            }
         }
     }
 }
