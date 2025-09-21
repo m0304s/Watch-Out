@@ -745,4 +745,127 @@ public class FcmService {
             log.error("사고 신고 FCM 알림 일괄 전송 실패", e);
         }
     }
+
+    /**
+     * 안면인식 성공 알림 전송
+     */
+    public void sendFaceRecognitionSuccessNotification(UUID userUuid, UUID areaUuid,
+        String userName,
+        String areaName, String entryType, String timestamp) {
+        try {
+            // 해당 사용자의 FCM 토큰 조회
+            List<FcmToken> userTokens = fcmTokenRepository.findByUserUuidAndFcmTokenIsNotNull(
+                userUuid);
+
+            // 해당 구역의 AREA_ADMIN 담당자들 조회
+            List<AreaManager> areaManagers = areaManagerRepository.findByAreaUuid(areaUuid);
+            List<UUID> areaManagerUuids = areaManagers.stream()
+                .map(areaManager -> areaManager.getUser().getUuid())
+                .toList();
+
+            // 최고 관리자(ADMIN) 사용자들 조회
+            List<User> adminUsers = userRepository.findByRoleInAndDeletedAtIsNull(
+                List.of(UserRole.ADMIN));
+            List<UUID> adminUuids = adminUsers.stream()
+                .map(User::getUuid)
+                .toList();
+
+            // 모든 대상자 UUID 합치기 (작업자 + 구역 관리자 + 최고 관리자)
+            List<UUID> allTargetUuids = List.of(
+                    List.of(userUuid), // 작업자
+                    areaManagerUuids,  // 구역 관리자
+                    adminUuids         // 최고 관리자
+                )
+                .stream()
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
+
+            if (allTargetUuids.isEmpty()) {
+                log.warn("안면인식 알림을 보낼 대상자가 없습니다. area={}", areaName);
+                return;
+            }
+
+            // 모든 대상자의 FCM 토큰 조회
+            List<FcmToken> allTokens = fcmTokenRepository.findByUserUuidInAndFcmTokenIsNotNull(
+                allTargetUuids);
+
+            if (allTokens.isEmpty()) {
+                log.warn("안면인식 알림을 보낼 FCM 토큰이 없습니다. area={}", areaName);
+                return;
+            }
+
+            // data-only 방식으로 알림 전송
+            sendFaceRecognitionDataOnlyNotification(allTokens, userName, areaName, entryType,
+                timestamp);
+
+            log.info("안면인식 성공 알림 전송 완료: user={}, area={}, entryType={}, 작업자토큰={}, 총토큰={}",
+                userName, areaName, entryType, userTokens.size(), allTokens.size());
+
+        } catch (Exception e) {
+            log.error("안면인식 성공 알림 전송 실패: userUuid={}, area={}", userUuid, areaName, e);
+        }
+    }
+
+    /**
+     * 안면인식 성공 data-only FCM 알림 전송
+     */
+    private void sendFaceRecognitionDataOnlyNotification(List<FcmToken> tokens, String userName,
+        String areaName, String entryType, String timestamp) {
+
+        if (tokens.isEmpty()) {
+            return;
+        }
+
+        // 토큰 리스트 추출
+        List<String> tokenStrings = tokens.stream()
+            .map(FcmToken::getFcmToken)
+            .toList();
+
+        try {
+            // MulticastMessage 생성
+            MulticastMessage message = MulticastMessage.builder()
+                .putData("type", "FACE_RECOGNITION_SUCCESS")
+                .putData("userName", userName)
+                .putData("areaName", areaName)
+                .putData("entryType", entryType)
+                .putData("timestamp", timestamp)
+                .putData("title", "출입 인증 완료")
+                .putData("body", String.format("%s님이 %s에 %s하였습니다.", userName, areaName,
+                    "ENTRY".equals(entryType) ? "출입" : "퇴실"))
+                .addAllTokens(tokenStrings)
+                .build();
+
+            // 일괄 전송
+            BatchResponse response = firebaseMessaging.sendEachForMulticast(message);
+
+            log.info("안면인식 성공 data-only FCM 알림 일괄 전송 완료: 성공={}, 실패={}",
+                response.getSuccessCount(), response.getFailureCount());
+
+            // 실패한 토큰들 처리
+            if (response.getFailureCount() > 0) {
+                List<SendResponse> responses = response.getResponses();
+                for (int i = 0; i < responses.size(); i++) {
+                    SendResponse sendResponse = responses.get(i);
+                    if (!sendResponse.isSuccessful()) {
+                        String token = tokenStrings.get(i);
+                        log.error("안면인식 성공 FCM 알림 전송 실패: token={}, error={}",
+                            token, sendResponse.getException().getMessage());
+
+                        // 토큰이 유효하지 않은 경우 삭제
+                        if (sendResponse.getException() instanceof FirebaseMessagingException) {
+                            FirebaseMessagingException e = (FirebaseMessagingException) sendResponse.getException();
+                            if (e.getMessagingErrorCode() != null) {
+                                fcmTokenRepository.clearFcmTokenByToken(token);
+                                log.info("유효하지 않은 FCM 토큰 삭제: {}", token);
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (FirebaseMessagingException e) {
+            log.error("안면인식 성공 data-only FCM 알림 일괄 전송 실패", e);
+        }
+    }
 }

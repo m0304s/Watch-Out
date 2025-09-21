@@ -3,6 +3,7 @@ package watch.out.user.service;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import watch.out.accident.dto.response.UserWithAreaDto;
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
 import watch.out.user.dto.request.ApproveUsersRequest;
@@ -39,4 +40,9 @@ public interface UserService {
     void approveUsers(@Valid ApproveUsersRequest approveUsersRequest);
 
     void assignAreaAdmin(@Valid AssignAreaAdminRequest assignAreaAdminRequest);
+
+    /**
+     * 사용자 정보와 배정 구역 정보를 함께 조회
+     */
+    UserWithAreaDto getUserWithArea(UUID userUuid);
 }
