@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import watch.out.accident.dto.response.UserWithAreaDto;
 import watch.out.area.entity.Area;
 import watch.out.area.entity.AreaManager;
 import watch.out.area.repository.AreaManagerRepository;
@@ -187,6 +188,12 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void approveUsers(ApproveUsersRequest approveUsersRequest) {
         userRepository.updateIsApprovedForUsers(approveUsersRequest);
+    }
+
+    @Override
+    public UserWithAreaDto getUserWithArea(UUID userUuid) {
+        return userRepository.findUserWithAreaById(userUuid)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 
     @Override
