@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +25,9 @@ import watch.out.common.exception.ErrorCode;
 import watch.out.common.util.SecurityUtil;
 import watch.out.common.util.S3Util;
 import watch.out.dashboard.dto.response.SafetyViolationStatusResponse;
+import watch.out.dashboard.dto.response.SafetyViolationWeeklyResponse;
 import watch.out.dashboard.dto.response.ViolationTypeStatistics;
+import watch.out.dashboard.dto.response.ViolationTypeStatisticsWeekly;
 import watch.out.safety.dto.request.SafetyViolationsRequest;
 import watch.out.safety.dto.response.SafetyViolationResponse;
 import watch.out.safety.entity.SafetyViolation;
@@ -223,4 +226,25 @@ public class SafetyViolationServiceImpl implements SafetyViolationService {
         return SafetyViolationResponse.from(safetyViolation, s3Util);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ViolationTypeStatisticsWeekly> getSafetyViolationWeekly(List<UUID> areaUuids) {
+        LocalDate today = LocalDate.now();
+        List<Area> areas = areaAccessService.getAccessibleAreas(areaUuids);
+        areaAccessService.validateAreas(areaUuids, areas);
+        List<UUID> foundAreaUuids = areas.stream().map(Area::getUuid).toList();
+        List<ViolationTypeStatisticsWeekly> violationTypeStatisticsWeeklyList =
+            java.util.stream.IntStream.rangeClosed(0, 6)
+                .mapToObj(i -> today.minusDays(i))
+                .sorted()
+                .map(d -> {
+                    Map<String, Long> counts =
+                        safetyViolationRepository.getViolationTypeStatisticsByAreas(foundAreaUuids,
+                            d);
+                    List<ViolationTypeStatistics> violationTypeStatisticsList = calculateViolationTypeStatistics(counts);
+                    return new ViolationTypeStatisticsWeekly(d, violationTypeStatisticsList);
+                })
+                .toList();
+        return violationTypeStatisticsWeeklyList;
+    }
 }
