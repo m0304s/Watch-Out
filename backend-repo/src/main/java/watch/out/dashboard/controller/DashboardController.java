@@ -15,6 +15,8 @@ import watch.out.dashboard.dto.request.SafetyViolationStatusRequest;
 import watch.out.dashboard.dto.response.AccidentStatusResponse;
 import watch.out.dashboard.dto.response.SafetyScoreResponse;
 import watch.out.dashboard.dto.response.SafetyViolationStatusResponse;
+import watch.out.dashboard.dto.response.SafetyViolationWeeklyResponse;
+import watch.out.dashboard.dto.response.ViolationTypeStatisticsWeekly;
 import watch.out.dashboard.service.AccidentStatusService;
 import watch.out.dashboard.service.SafetyScoreService;
 import java.util.List;
@@ -75,5 +77,16 @@ public class DashboardController {
         AccidentStatusResponse accidentStatusResponse = accidentStatusService.getAccidentStatus(
             accidentStatusRequest);
         return ResponseEntity.ok(accidentStatusResponse);
+    }
+
+    @PostMapping("/safety-violation-weekly")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AREA_ADMIN')")
+    public ResponseEntity<SafetyViolationWeeklyResponse> getSafetyViolationWeekly(
+        @RequestBody SafetyViolationStatusRequest safetyViolationStatusRequest) {
+        List<ViolationTypeStatisticsWeekly> dailyViolationTypeStatisticsList =
+            safetyViolationService.getSafetyViolationWeekly(
+                safetyViolationStatusRequest.areaUuids());
+        return ResponseEntity.ok(
+            new SafetyViolationWeeklyResponse(dailyViolationTypeStatisticsList));
     }
 }

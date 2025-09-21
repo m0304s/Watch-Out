@@ -5,6 +5,7 @@ import java.util.UUID;
 import watch.out.common.dto.PageRequest;
 import watch.out.common.dto.PageResponse;
 import watch.out.dashboard.dto.response.SafetyViolationStatusResponse;
+import watch.out.dashboard.dto.response.ViolationTypeStatisticsWeekly;
 import watch.out.safety.dto.request.SafetyViolationsRequest;
 import watch.out.safety.dto.response.SafetyViolationResponse;
 import watch.out.safety.entity.SafetyViolation;
@@ -60,4 +61,6 @@ public interface SafetyViolationService {
      * @return 안전장비 미착용 상세 정보
      */
     SafetyViolationResponse getViolationDetail(UUID violationUuid);
+
+    List<ViolationTypeStatisticsWeekly> getSafetyViolationWeekly(List<UUID> areaUuids);
 }
