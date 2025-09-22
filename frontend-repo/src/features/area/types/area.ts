@@ -58,3 +58,10 @@ export interface AreaDetailResponse {
 export interface AreaCountResponse {
   areaCount: number
 }
+
+export interface MyAreaResponse {
+  areaUuid: string
+  areaName: string
+  managerUuid: string
+  managerName: string
+}
