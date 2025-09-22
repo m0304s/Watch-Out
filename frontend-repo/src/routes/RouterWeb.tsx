@@ -7,6 +7,7 @@ import { AreaManagementPage, CctvSettingsPage } from '@/features/cctv'
 import DashBoard from '@/features/dashboard/web/pages/DashBoard'
 import { MobileFaceRegistrationPage } from '@/features/auth'
 import { WatchListPage } from '@/features/watch/web/pages/WatchListPage'
+import MobileCctvMonitoring from '@/features/area/mobile/MobileCctvMonitoring'
 
 const RouterWeb = () => {
   const isLoggedIn: boolean = true // 개발용
@@ -33,6 +34,7 @@ const RouterWeb = () => {
           <Route path="/watch" element={<WatchListPage />} />
         </Route>
         <Route path="/worker2" element={<MobileWorkerListPage />} />
+        <Route path="/cctv2" element={<MobileCctvMonitoring />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<LoginPage />} />
       </Routes>
