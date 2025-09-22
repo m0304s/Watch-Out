@@ -46,7 +46,6 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area, areaList }) => {
       plotBorderWidth: 0,
       plotShadow: false,
       height: 200,
-      height: 200,
     },
 
     title: {
