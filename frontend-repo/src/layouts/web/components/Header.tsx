@@ -77,7 +77,6 @@ const toggleButton = css`
 
 const headerText = css`
   padding: 0 1rem;
-  font-weight: 600;
   font-size: 18px;
 `
 

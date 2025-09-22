@@ -31,6 +31,7 @@ const GlobalStyles = () => (
       :root {
         /* Primary */
         --color-primary: #1a73e8;
+        --color-primary-medium: #dde9f8;
         --color-primary-light: #eaf1fe;
         --color-secondary: #e8f0fe;
 
@@ -56,7 +57,7 @@ const GlobalStyles = () => (
 
         /* Base */
         --color-background: #fff;
-        --color-text: #333;
+        --color-text: #000;
         --color-text-white: #fff;
         --color-text-black: #000;
       }
