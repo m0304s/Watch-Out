@@ -5,6 +5,7 @@ import type {
   AreaCountResponse,
   AreaDetailRequest,
   AreaDetailResponse,
+  MyAreaResponse,
 } from '@/features/area/types/area'
 
 export const areaAPI = {
@@ -28,4 +29,9 @@ export const areaAPI = {
     })
     return response.data
   },
+
+  getMyArea: async (): Promise<MyAreaResponse> => {
+    const response = await apiClient.get(`/area/mine`)
+    return response.data
+  }
 }
