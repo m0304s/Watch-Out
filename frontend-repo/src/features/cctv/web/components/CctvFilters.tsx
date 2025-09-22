@@ -27,49 +27,45 @@ export const CctvFilters = ({
   }
 
   return (
-    <div css={section.container}>
+    <div css={styles.container}>
       {/* AREA_ADMIN이 아닌 경우에만 구역 필터링 표시 */}
       {userRole !== 'AREA_ADMIN' && (
-        <>
-          <div css={section.row}>
-            <span css={section.label}>구역</span>
-            <button
-              css={section.chip(selectedAreaUuid === '')}
-              onClick={() => onChangeArea('')}
-              type="button"
-            >
-              전체
-            </button>
-            {areas.map((area) => {
-              const label = area.areaAlias || area.areaName
-              return (
-                <button
-                  key={area.areaUuid}
-                  css={section.chip(selectedAreaUuid === area.areaUuid)}
-                  onClick={() => onChangeArea(area.areaUuid)}
-                  type="button"
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-
-          <div css={section.divider} />
-        </>
+        <div css={styles.areaFilter}>
+          <span css={styles.label}>구역</span>
+          <button
+            css={styles.chip(selectedAreaUuid === '')}
+            onClick={() => onChangeArea('')}
+            type="button"
+          >
+            전체
+          </button>
+          {areas.map((area) => {
+            const label = area.areaAlias || area.areaName
+            return (
+              <button
+                key={area.areaUuid}
+                css={styles.chip(selectedAreaUuid === area.areaUuid)}
+                onClick={() => onChangeArea(area.areaUuid)}
+                type="button"
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
       )}
 
-      <div css={section.toolbar}>
-        <div css={section.searchGroup}>
-          <span css={section.label}>검색</span>
+      <div css={styles.toolbar}>
+        <div css={styles.searchGroup}>
+          <span css={styles.label}>검색</span>
           <input
             value={search}
             onChange={(e) => onChangeSearch(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="CCTV 이름 검색"
-            css={section.input}
+            css={styles.input}
           />
-          <button type="button" onClick={onSearch} css={searchButtonStyles}>
+          <button type="button" onClick={onSearch} css={styles.searchBtn}>
             검색
           </button>
         </div>
@@ -80,7 +76,7 @@ export const CctvFilters = ({
             <button
               type="button"
               onClick={onCreateCctv}
-              css={createButtonStyles}
+              css={styles.primaryBtn}
             >
               CCTV 등록
             </button>
@@ -91,17 +87,17 @@ export const CctvFilters = ({
   )
 }
 
-const section = {
+const styles = {
   container: css`
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px;
+    gap: 16px;
     background-color: var(--color-bg-white);
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    padding: 12px 16px;
   `,
-  row: css`
+  areaFilter: css`
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
@@ -152,36 +148,29 @@ const section = {
       opacity: 0.9;
     }
   `,
-  divider: css`
-    height: 1px;
-    background-color: var(--color-gray-200);
-    margin: 8px 0;
+  searchBtn: css`
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--color-primary);
+    color: var(--color-text-white);
+    font-size: 14px;
+    font-family: 'PretendardSemiBold', sans-serif;
+    cursor: pointer;
+  `,
+  primaryBtn: css`
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--color-primary);
+    color: var(--color-text-white);
+    font-size: 14px;
+    font-family: 'PretendardSemiBold', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      opacity: 0.9;
+    }
   `,
 }
-
-const searchButtonStyles = css`
-  padding: 10px 12px;
-  border: none;
-  border-radius: 8px;
-  background-color: var(--color-primary);
-  color: var(--color-text-white);
-  font-size: 14px;
-  font-family: 'PretendardSemiBold', sans-serif;
-  cursor: pointer;
-`
-
-const createButtonStyles = css`
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: none;
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  font-size: 14px;
-  font-family: 'PretendardSemiBold', sans-serif;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    opacity: 0.9;
-  }
-`

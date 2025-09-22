@@ -213,7 +213,7 @@ const pageStyles = {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding: 16px;
+    padding: 24px;
   `,
   toolbar: css`
     display: flex;
