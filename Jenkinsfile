@@ -369,7 +369,7 @@ pipeline {
                             dir('frontend-repo') {
                                 def originalPerms = ''
                                 try {
-                                    originalPerms = sh(script: 'stat -f "%p" .', returnStdout: true).trim()
+                                    originalPerms = sh(script: 'stat -c "%a" .', returnStdout: true).trim()
                                     sh 'chmod 777 .'
                                     
                                     sh "cp '${ENV_FILE}' .env"
