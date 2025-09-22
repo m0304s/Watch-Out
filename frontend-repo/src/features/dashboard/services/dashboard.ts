@@ -6,6 +6,8 @@ import type {
   ViolationStatusResponse,
   AccidentStatusRequest,
   AccidentStatusResponse,
+  WorkerCountRequest,
+  WorkerCountResponse,
 } from '@/features/dashboard/types/dashboard'
 
 export const dashboardAPI = {
@@ -23,7 +25,7 @@ export const dashboardAPI = {
     requestData: ViolationStatusRequest,
   ): Promise<ViolationStatusResponse> => {
     const response = await apiClient.post(
-      '/dashboard/safety-violation-status',
+      '/dashboard/safety-violation-weekly',
       requestData,
     )
     return response.data
@@ -36,6 +38,13 @@ export const dashboardAPI = {
       '/dashboard/accident-status',
       requestData,
     )
+    return response.data
+  },
+
+  postWorkerCount: async (
+    requestData: WorkerCountRequest,
+  ): Promise<WorkerCountResponse> => {
+    const response = await apiClient.post('/area/count', requestData)
     return response.data
   },
 }

@@ -1,12 +1,13 @@
 import { css } from '@emotion/react'
-import { useEffect, useState, useMemo } from 'react'
-import type { AreaListItem } from '@/features/area/types/area'
-import { dashboardAPI } from '@/features/dashboard/services/dashboard'
 import Highcharts from 'highcharts'
+import { useEffect, useState, useMemo } from 'react'
 import HighchartsReact from 'highcharts-react-official'
+import type { AreaListItem, AreaListResponse } from '@/features/area/types/area'
+import { dashboardAPI } from '@/features/dashboard/services/dashboard'
 
 interface AccidentProps {
-  area: AreaListItem
+  area: AreaListItem | 'all'
+  areaList: AreaListResponse | null
 }
 
 interface ChartData {
@@ -15,7 +16,13 @@ interface ChartData {
   labels: string[]
 }
 
-const Accident: React.FC<AccidentProps> = ({ area }) => {
+interface StatData {
+  todayCurrent: number
+  last7Days: number
+}
+
+const Accident: React.FC<AccidentProps> = ({ area, areaList }) => {
+  const [statData, setStatData] = useState<StatData | null>(null)
   const [chartData, setChartData] = useState<ChartData | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
@@ -24,10 +31,21 @@ const Accident: React.FC<AccidentProps> = ({ area }) => {
 
     const fetchAccidentData = async () => {
       try {
+        let areaUuids: string[] = []
+        if (areaList && area === 'all') {
+          areaUuids = areaList.data.map((area) => area.areaUuid)
+        } else if (area !== 'all') {
+          areaUuids = [area.areaUuid]
+        }
         const response = await dashboardAPI.postAccidentStatus({
-          areaUuids: [area.areaUuid],
+          areaUuids: areaUuids,
         })
+
         if (response) {
+          setStatData({
+            todayCurrent: response.todayCurrent,
+            last7Days: response.last7Days,
+          })
           setChartData({
             current: response.hourlyTrends.map((item) => item.currnet),
             previous: response.hourlyTrends.map((item) => item.previous),
@@ -43,7 +61,7 @@ const Accident: React.FC<AccidentProps> = ({ area }) => {
     }
 
     fetchAccidentData()
-  }, [area.areaUuid])
+  }, [area])
 
   const chartOptions: Highcharts.Options = useMemo(() => {
     if (!chartData) {
@@ -53,7 +71,7 @@ const Accident: React.FC<AccidentProps> = ({ area }) => {
     return {
       chart: {
         type: 'spline',
-        backgroundColor: 'transparent',
+        backgroundColor: '#F8F8F8',
       },
       title: {
         text: '',
@@ -62,18 +80,18 @@ const Accident: React.FC<AccidentProps> = ({ area }) => {
       xAxis: {
         categories: chartData.labels,
         title: {
-          text: '시간',
+          text: '',
         },
       },
       yAxis: {
         title: {
-          text: '사고 건수',
+          text: '',
         },
       },
       legend: {
         symbolWidth: 30,
-        verticalAlign: 'top',
-        align: 'right',
+        verticalAlign: 'bottom',
+        align: 'left',
       },
       tooltip: {
         valueSuffix: ' 건',
@@ -133,22 +151,30 @@ const Accident: React.FC<AccidentProps> = ({ area }) => {
   }
 
   return (
-    <div css={container}>
-      <div css={header}>
-        <h3 css={title}>사고 발생 현황</h3>
-      </div>
-      <div css={statsContainer}>
-        <div css={statItem}>
-          <span css={statLabel}>오늘 현재</span>
-        </div>
-        <div css={statItem}>
-          <span css={statLabel}>지난 7일</span>
-        </div>
-      </div>
-      <div css={chartContainer}>
-        <HighchartsReact highcharts={Highcharts} options={chartOptions} />
-      </div>
-    </div>
+    <>
+      {statData && chartData && (
+        <>
+          <div css={container}>
+            <div css={header}>
+              <h3 css={title}>사고 발생 현황</h3>
+            </div>
+            <div css={statsContainer}>
+              <div css={currentStatItem}>
+                <span css={currentStatLabel}>오늘 현재</span>
+                <span css={currentStatCaseData}>{statData.todayCurrent}</span>
+              </div>
+              <div css={previousStatItem}>
+                <span css={previousStatLabel}>지난 7일</span>
+                <span css={previousStatCaseData}>{statData.last7Days}</span>
+              </div>
+            </div>
+            <div css={chartContainer}>
+              <HighchartsReact highcharts={Highcharts} options={chartOptions} />
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -159,6 +185,7 @@ const container = css`
   height: 100%;
   display: flex;
   flex-direction: column;
+  background-color: '#F8F8F8';
 `
 
 const header = css`
@@ -168,25 +195,59 @@ const header = css`
 const title = css`
   font-size: 18px;
   font-weight: 600;
-  color: #374151;
   margin: 0;
 `
 
 const statsContainer = css`
   display: flex;
   gap: 16px;
-  margin-bottom: 24px;
 `
 
-const statItem = css`
+const statItemBase = css`
   display: flex;
   flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
   gap: 4px;
 `
 
-const statLabel = css`
-  font-size: 14px;
-  color: #6b7280;
+const statLabelBase = css`
+  font-size: 18px;
+`
+
+const statCaseDataBase = css`
+  font-weight: 1000;
+  font-size: 2rem;
+`
+
+const currentStatItem = css`
+  ${statItemBase};
+  background-color: var(--color-primary-medium);
+  color: var(--color-primary);
+  border-top: 5px solid var(--color-primary);
+`
+
+const previousStatItem = statItemBase
+
+const currentStatLabel = css`
+  ${statLabelBase};
+  font-weight: 700;
+`
+
+const previousStatLabel = css`
+  ${statLabelBase};
+  color: var(--color-gray-700);
+`
+
+const currentStatCaseData = css`
+  ${statCaseDataBase};
+  color: var(--color-text-black);
+`
+
+const previousStatCaseData = css`
+  ${statCaseDataBase};
+  color: var(--color-gray-700);
 `
 
 const chartContainer = css`

@@ -4,20 +4,27 @@ import * as Highcharts from 'highcharts'
 import HighchartsReact from 'highcharts-react-official'
 import 'highcharts/highcharts-more'
 import { dashboardAPI } from '@/features/dashboard/services/dashboard'
-import type { AreaListItem } from '@/features/area/types/area'
+import type { AreaListItem, AreaListResponse } from '@/features/area/types/area'
 
 interface SafetyScoreProps {
-  area: AreaListItem
+  area: AreaListItem | 'all'
+  areaList: AreaListResponse | null
 }
 
-const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
+const SafetyScore: React.FC<SafetyScoreProps> = ({ area, areaList }) => {
   const [score, setScore] = useState<number>(0)
 
   useEffect(() => {
     const fetchSafetyScore = async () => {
       try {
+        let areaUuids: string[] = []
+        if (areaList && area === 'all') {
+          areaUuids = areaList.data.map((area) => area.areaUuid)
+        } else if (area !== 'all') {
+          areaUuids = [area.areaUuid]
+        }
         const response = await dashboardAPI.getSafetyScore({
-          areaUuids: [area.areaUuid],
+          areaUuids: areaUuids,
         })
         const safetyScore = response
         if (safetyScore) {
@@ -33,10 +40,12 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
   const chartOption = {
     chart: {
       type: 'gauge',
+      backgroundColor: '#F8F8F8',
       plotBackgroundColor: null,
       plotBackgroundImage: null,
       plotBorderWidth: 0,
       plotShadow: false,
+      height: 200,
       height: 200,
     },
 
@@ -58,7 +67,7 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
       tickInterval: 15,
       tickPixelInterval: 72,
       tickPosition: 'inside',
-      tickColor: 'var(--highcharts-background-color, #FFFFFF)',
+      tickColor: '#F8F8F8',
       tickLength: 20,
       tickWidth: 2,
       minorTickInterval: null,
@@ -73,21 +82,21 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
         {
           from: 0,
           to: 60,
-          color: '#DF5353',
+          color: '#ff1818',
           thickness: 15,
           borderRadius: '50%',
         },
         {
           from: 60,
           to: 80,
-          color: '#DDDF0D',
+          color: '#f1c40f',
           thickness: 15,
           borderRadius: '50%',
         },
         {
           from: 80,
           to: 100,
-          color: '#55BF3B',
+          color: '#57ad5a',
           thickness: 15,
           borderRadius: '50%',
         },
@@ -106,10 +115,9 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
           format: '',
           borderWidth: 0,
           color:
-            (Highcharts.defaultOptions.title &&
-              Highcharts.defaultOptions.title.style &&
-              Highcharts.defaultOptions.title.style.color) ||
-            '#333333',
+            Highcharts.defaultOptions.title &&
+            Highcharts.defaultOptions.title.style &&
+            Highcharts.defaultOptions.title.style.color,
           style: {
             fontSize: '16px',
           },
@@ -131,14 +139,10 @@ const SafetyScore: React.FC<SafetyScoreProps> = ({ area }) => {
 
   return (
     <div css={container}>
-      <div css={header}>
-        <h3 css={title}>오늘의 안전 지수</h3>
-      </div>
+      <h3 css={title}>오늘의 안전 지수</h3>
       {score >= 0 && (
         <>
-          <div css={chartContainer}>
-            <HighchartsReact highcharts={Highcharts} options={chartOption} />
-          </div>
+          <HighchartsReact highcharts={Highcharts} options={chartOption} />
           <div css={scoreContainer}>
             <span css={scoreText}>{score}점</span>
           </div>
@@ -157,37 +161,17 @@ const container = css`
   flex-direction: column;
 `
 
-const header = css`
-  margin-bottom: 16px;
-`
-
 const title = css`
   font-size: 16px;
   font-weight: 600;
-  color: #374151;
   margin: 0 0 4px 0;
-`
-
-const timestamp = css`
-  font-size: 12px;
-  color: #6b7280;
-  margin: 0;
-`
-
-const chartContainer = css`
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 `
 
 const scoreContainer = css`
   text-align: center;
-  margin-top: 8px;
 `
 
 const scoreText = css`
-  font-size: 24px;
-  font-weight: 700;
-  color: #374151;
+  font-weight: 1000;
+  font-size: 2rem;
 `

@@ -4,13 +4,20 @@ import AreaFilter from '@/components/common/AreaFilter'
 import { areaAPI } from '@/features/area/services/area'
 import type { AreaListItem, AreaListResponse } from '@/features/area/types/area'
 import SafetyScore from '@/features/dashboard/web/components/SafetyScore'
-import Violation from '@/features/dashboard/web/components/Violtaion'
+import Violation from '@/features/dashboard/web/components/Violation'
+import Worker from '@/features/dashboard/web/components/Worker'
 import Accident from '@/features/dashboard/web/components/Accident'
 
 const DashBoard = () => {
   const [areaCount, setAreaCount] = useState<number>(0) // 구역 총 개수
-  const [selectedArea, setSelectedArea] = useState<AreaListItem | null>(null)
+  const [selectedArea, setSelectedArea] = useState<AreaListItem | 'all' | null>(
+    'all',
+  )
   const [areaList, setAreaList] = useState<AreaListResponse | null>(null)
+
+  const handleSelectAllArea = () => {
+    setSelectedArea('all')
+  }
 
   useEffect(() => {
     const fetchArea = async () => {
@@ -25,10 +32,6 @@ const DashBoard = () => {
             pageNum: 0,
           })
           setAreaList(areaResponse)
-
-          if (areaResponse && areaResponse.data.length > 0) {
-            setSelectedArea(areaResponse.data[0]) // 목록을 받아온 후 첫번째 구역을 임의로 지정
-          }
         }
       } catch (error) {
         console.log('구역 개수', error)
@@ -40,30 +43,38 @@ const DashBoard = () => {
   const handleAreaChange = (area: AreaListItem) => {
     setSelectedArea(area)
   }
+
   return (
     <div css={dashboardContainer}>
       {areaList && selectedArea ? (
         <>
-          <AreaFilter
-            areaList={areaList.data}
-            selectedArea={selectedArea}
-            onAreaChange={handleAreaChange}
-          />
+          <div css={filterContainer}>
+            <button
+              css={[button, selectedArea === 'all' && activeButtonStyle]}
+              onClick={handleSelectAllArea}
+            >
+              전체
+            </button>
+            <AreaFilter
+              areaList={areaList.data}
+              selectedArea={selectedArea}
+              onAreaChange={handleAreaChange}
+            />
+          </div>
           <div css={topCardsContainer}>
             <div css={card}>
-              <SafetyScore area={selectedArea} />
+              <SafetyScore area={selectedArea} areaList={areaList} />
             </div>
             <div css={card}>
-              <div css={cardTitle}>작업 인원</div>
-              <div css={cardContent}></div>
+              <Worker area={selectedArea} areaList={areaList} />
             </div>
             <div css={card}>
-              <Violation area={selectedArea} />
+              <Violation area={selectedArea} areaList={areaList} />
             </div>
           </div>
           <div css={bottomCardContainer}>
             <div css={largeCard}>
-              <Accident area={selectedArea} />
+              <Accident area={selectedArea} areaList={areaList} />
             </div>
           </div>
         </>
@@ -77,15 +88,38 @@ const DashBoard = () => {
 export default DashBoard
 
 const dashboardContainer = css`
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+`
+
+const filterContainer = css`
+  display: flex;
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #dfe1e2;
+`
+
+const button = css`
+  border: none;
+  outline: none;
+  background-color: inherit;
+  cursor: pointer;
+  border: 1px solid var(--color-gray-500);
+  border-radius: 25px;
+  padding: 0.1rem 1rem;
+  color: var(--color-gray-500);
+  margin: 0.5rem 1rem 0.5rem 0;
+`
+
+const activeButtonStyle = css`
+  border: 1px solid var(--color-primary);
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
 `
 
 const topCardsContainer = css`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
   margin-bottom: 24px;
 `
 
@@ -94,19 +128,21 @@ const bottomCardContainer = css`
 `
 
 const card = css`
-  background: white;
-  border-radius: 12px;
+  flex-grow: 1;
+  background: #f8f8f8;
+  border-radius: 20px;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.1),
     0 1px 2px rgba(0, 0, 0, 0.06);
-  padding: 24px;
-  height: 320px;
+  padding: 1rem;
+  margin: 0 1rem;
   display: flex;
   flex-direction: column;
+  height: 300px;
 `
 
 const largeCard = css`
-  background: white;
+  background: #f8f8f8;
   border-radius: 12px;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.1),
@@ -114,18 +150,4 @@ const largeCard = css`
   padding: 24px;
   min-height: 400px;
   width: 100%;
-`
-
-const cardTitle = css`
-  font-size: 16px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 16px;
-`
-
-const cardContent = css`
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 `

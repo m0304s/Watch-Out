@@ -3,7 +3,7 @@ import type { AreaListItem } from '@/features/area/types/area'
 
 interface AreaFilterProps {
   areaList: AreaListItem[]
-  selectedArea: AreaListItem
+  selectedArea: AreaListItem | 'all'
   onAreaChange: (area: AreaListItem) => void
 }
 
@@ -20,7 +20,9 @@ const AreaFilter: React.FC<AreaFilterProps> = ({
             onClick={() => onAreaChange(area)}
             css={[
               button,
-              selectedArea.areaUuid === area.areaUuid && activeButtonStyle,
+              typeof selectedArea === 'object' &&
+                selectedArea.areaUuid === area.areaUuid &&
+                activeButtonStyle,
             ]}
           >
             {area.areaName}
