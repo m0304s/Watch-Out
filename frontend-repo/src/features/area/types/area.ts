@@ -8,7 +8,6 @@ export interface AreaListItem {
   areaUuid: string
   areaName: string
   areaAlias: string
-  managerUuid: string
   managerName: string
 }
 
@@ -29,10 +28,7 @@ export interface Pagination {
 
 export interface AreaListResponse {
   data: AreaListItem[]
-  workers: {
-    data: Worker[]
-    pagination: Pagination
-  }
+  pagination: Pagination
 }
 
 export interface AreaDetailRequest {

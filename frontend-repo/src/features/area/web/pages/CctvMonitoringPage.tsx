@@ -9,12 +9,12 @@ import AreaInfo from '@/features/area/web/components/AreaInfo'
 import CctvModal from '@/features/area/web/components/CctvModal'
 
 const CctvMonitoringPage = () => {
+  const ITEM_PER_PAGE = 4
   const [areaCount, setAreaCount] = useState<number>(0) // 구역 총 개수
   const [areaList, setAreaList] = useState<AreaListResponse | null>(null)
   const [selectedArea, setSelectedArea] = useState<AreaListItem | null>(null)
   const [cctvCount, setCctvCount] = useState<number>(0) // 선택된 구역의 cctv 총 개수
   const [pageNum, setPageNum] = useState<number>(0) // 현재 페이지
-  const ITEM_PER_PAGE = 4
   const [selectedCctv, setSelectedCctv] = useState<CctvViewAreaItem | null>(
     null,
   )
