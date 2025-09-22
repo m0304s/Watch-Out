@@ -1,12 +1,12 @@
 package com.watchout.core.service
 
+import android.content.Intent
 import android.util.Log
 import androidx.health.services.client.PassiveListenerService
 import androidx.health.services.client.data.DataPointContainer
 import androidx.health.services.client.data.HealthEvent
-import kotlinx.coroutines.runBlocking
-import android.content.Intent
 import com.watchout.presentation.fall_detection.FallDetectedFeedbackActivity
+import kotlinx.coroutines.runBlocking
 
 class PassiveHealthEventService : PassiveListenerService() {
 
