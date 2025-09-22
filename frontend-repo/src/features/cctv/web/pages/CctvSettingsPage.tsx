@@ -177,7 +177,7 @@ export const CctvSettingsPage = () => {
 
 const pageStyles = {
   container: css`
-    padding: 24px 32px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
     gap: 16px;

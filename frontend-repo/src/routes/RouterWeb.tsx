@@ -8,6 +8,7 @@ import DashBoard from '@/features/dashboard/web/pages/DashBoard'
 import { MobileFaceRegistrationPage } from '@/features/auth'
 import { WatchListPage } from '@/features/watch/web/pages/WatchListPage'
 import MobileCctvMonitoring from '@/features/area/mobile/MobileCctvMonitoring'
+import { SOSPage } from '@/features/sos'
 
 const RouterWeb = () => {
   const isLoggedIn: boolean = true // 개발용
@@ -20,6 +21,8 @@ const RouterWeb = () => {
           path="/face-registration"
           element={<MobileFaceRegistrationPage />}
         />
+        <Route path="/worker2" element={<MobileWorkerListPage />} />
+        <Route path="/sos" element={<SOSPage />} />
         <Route
           path="/"
           element={

@@ -1,5 +1,7 @@
 import { css } from '@emotion/react'
+import { useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
+import { useUserRole } from '@/stores/authStore'
 
 interface NavItem {
   label: string
@@ -10,19 +12,43 @@ interface MobileBottomNavigationProps {
   items?: NavItem[]
 }
 
-const DEFAULT_ITEMS: NavItem[] = [
-  { label: '알림', to: '/notification' },
-  { label: '현장', to: '/device' },
-  { label: '작업자', to: '/worker2' },
-  { label: '내 정보', to: '/mypage' },
-]
+const getNavListStyles = (count: number) => css`
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(${count}, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+`
 
-export const MobileBottomNavigation = ({
-  items = DEFAULT_ITEMS,
-}: MobileBottomNavigationProps) => {
+export const MobileBottomNavigation = ({ items: itemsProp }: MobileBottomNavigationProps) => {
+  const userRole = useUserRole()
+
+  const roleItems: NavItem[] = useMemo(() => {
+    if (userRole === 'ADMIN' || userRole === 'AREA_ADMIN') {
+      return [
+        { label: 'SOS', to: '/sos' },
+        { label: '알림', to: '/notification' },
+        { label: '현장', to: '/cctv/monitoring' },
+        { label: '작업자', to: '/worker2' },
+      ]
+    }
+    if (userRole === 'WORKER') {
+      return [
+        { label: 'SOS', to: '/sos' },
+        { label: '알림', to: '/notification' },
+      ]
+    }
+    return []
+  }, [userRole])
+
+  const items = itemsProp ?? roleItems
+
+  if (!items.length) return null
+
   return (
     <nav css={navStyles}>
-      <ul css={navListStyles}>
+      <ul css={getNavListStyles(items.length)}>
         {items.map((item) => (
           <li key={item.to} css={navItemStyles}>
             <NavLink to={item.to} css={linkStyles} end>
@@ -47,15 +73,6 @@ const navStyles = css`
   height: 60px;
   background-color: var(--color-bg-white);
   border-top: 1px solid var(--color-gray-300);
-`
-
-const navListStyles = css`
-  height: 100%;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  list-style: none;
-  margin: 0;
-  padding: 0;
 `
 
 const navItemStyles = css`

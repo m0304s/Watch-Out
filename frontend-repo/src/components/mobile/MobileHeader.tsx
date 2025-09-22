@@ -1,35 +1,16 @@
 import { css } from '@emotion/react'
-import { Link } from 'react-router-dom'
 
 interface MobileHeaderProps {
   title: string
-  showBack?: boolean
-  backTo?: string
   rightSlot?: React.ReactNode
 }
 
-export const MobileHeader = ({
-  title,
-  showBack = false,
-  backTo = '/dashboard',
-  rightSlot,
-}: MobileHeaderProps) => {
+export const MobileHeader = ({ title, rightSlot }: MobileHeaderProps) => {
   return (
     <header css={headerStyles}>
       <div css={headerInnerStyles}>
-        <div css={leftAreaStyles}>
-          {showBack ? (
-            <Link to={backTo} css={backButtonStyles} aria-label="뒤로가기">
-              ←
-            </Link>
-          ) : (
-            <span css={backPlaceholderStyles} />
-          )}
-        </div>
-
         <h1 css={titleStyles}>{title}</h1>
-
-        <div css={rightAreaStyles}>{rightSlot}</div>
+        {rightSlot && <div css={rightAreaStyles}>{rightSlot}</div>}
       </div>
     </header>
   )
@@ -48,42 +29,24 @@ const headerInnerStyles = css`
   height: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 16px;
-`
-
-const leftAreaStyles = css`
-  width: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-`
-
-const backButtonStyles = css`
-  text-decoration: none;
-  color: var(--color-text-white);
-  font-family: 'PretendardRegular', sans-serif;
-  font-size: 24px;
-  line-height: 1;
-`
-
-const backPlaceholderStyles = css`
-  display: inline-block;
-  width: 16px;
+  position: relative;
 `
 
 const titleStyles = css`
-  flex: 1;
-  text-align: center;
   font-family: 'PretendardSemiBold', sans-serif;
   font-size: 18px;
   color: var(--color-text-white);
+  text-align: center;
 `
 
 const rightAreaStyles = css`
-  width: 32px;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   color: var(--color-text-white);
 `

@@ -5,6 +5,9 @@ import {
   MobileFaceRegistrationPage,
 } from '@/features/auth'
 import { MobileWorkerListPage } from '@/features/worker'
+import CctvMonitoringPage from '@/features/area/web/pages/CctvMonitoringPage'
+import { SOSPage } from '@/features/sos'
+import Notification from '@/notification/web/pages/NotificationPage'
 
 const RouterMobile = () => {
   return (
@@ -17,7 +20,10 @@ const RouterMobile = () => {
         element={<MobileFaceRegistrationPage />}
       />
 
-      {/* Worker Routes */}
+      {/* Mobile Routes */}
+      <Route path="/sos" element={<SOSPage />} />
+      <Route path="/notification" element={<Notification />} />
+      <Route path="/cctv/monitoring" element={<CctvMonitoringPage />} />
       <Route path="/worker" element={<MobileWorkerListPage />} />
 
       {/* Default redirect */}
