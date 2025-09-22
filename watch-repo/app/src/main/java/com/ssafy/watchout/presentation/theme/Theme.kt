@@ -1,4 +1,4 @@
-package com.watchout.presentation.theme
+package com.ssafy.watchout.presentation.theme
 
 import androidx.compose.runtime.Composable
 import androidx.wear.compose.material.MaterialTheme
