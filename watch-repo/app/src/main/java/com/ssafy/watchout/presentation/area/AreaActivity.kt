@@ -21,7 +21,7 @@ import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.MaterialTheme as WearTheme
-import com.ssafy.watchout.data.AreaResponse
+import com.ssafy.watchout.data.area.AreaResponse
 import com.ssafy.watchout.presentation.requestAreaRefresh
 
 @Composable

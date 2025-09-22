@@ -70,4 +70,18 @@ dependencies {
     // 아이콘(Compose 공용 아이콘 벡터)
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.material:material-icons-extended")
+
+    // Health Services (낙상 감지)
+    implementation("androidx.health:health-services-client:1.0.0-beta01")
+
+    // WorkManager for background tasks (백그라운드 작업)
+    implementation("androidx.work:work-runtime-ktx:2.7.1")
+
+    // Lifecycle components
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.1")
+    implementation("androidx.lifecycle:lifecycle-service:2.5.1")
+
+    // Guava (Health Services에 필요)
+    implementation("com.google.guava:guava:30.1.1-android")
+    implementation("androidx.concurrent:concurrent-futures-ktx:1.1.0")
 }
