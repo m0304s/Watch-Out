@@ -1,4 +1,4 @@
-package com.ssafy.watchout.data
+package com.ssafy.watchout.data.area
 
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer

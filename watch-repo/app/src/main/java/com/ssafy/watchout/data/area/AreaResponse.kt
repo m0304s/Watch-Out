@@ -1,4 +1,4 @@
-package com.ssafy.watchout.data
+package com.ssafy.watchout.data.area
 
 import android.util.Log
 import com.squareup.moshi.Json
