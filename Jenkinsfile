@@ -351,6 +351,7 @@ pipeline {
         }
 
         /******************** 프론트엔드 배포  ********************/
+        /******************** 프론트엔드 배포  ********************/
         stage('Deploy Frontend') {
             when {
                 anyOf {
@@ -365,22 +366,18 @@ pipeline {
                     if (branch == 'develop') {
                         withCredentials([file(credentialsId: '.env.development', variable: 'ENV_FILE')]) {
                             def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
-                            
+
                             dir('frontend-repo') {
-                                def originalPerms = ''
-                                try {
-                                    originalPerms = sh(script: 'stat -c "%a" .', returnStdout: true).trim()
-                                    sh 'chmod 777 .'
-                                    
-                                    sh "cp '${ENV_FILE}' .env"
-                                    sh "ls -la .env"
-                                    sh "cat .env"
-                                    sh "docker build -t ${tag} --build-arg ENV=test ."
-                                } finally {
-                                    if (originalPerms) {
-                                        sh "chmod ${originalPerms} ."
-                                    }
-                                }
+                                sh '''
+                                  set -eux
+                                  rm -rf _docker_ctx
+                                  mkdir -p _docker_ctx
+                                  tar -cf - --exclude=.git . | (cd _docker_ctx && tar -xf -)
+                                  cp "$ENV_FILE" _docker_ctx/.env
+                                  ls -la _docker_ctx/.env
+                                  cat _docker_ctx/.env
+                                  docker build -t '"${tag}"' --build-arg ENV=test _docker_ctx
+                                '''
                             }
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
                             sh "docker run -d --name ${FE_TEST_CONTAINER} --network ${TEST_NETWORK} ${tag}"
@@ -390,19 +387,16 @@ pipeline {
                             def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
 
                             dir('frontend-repo') {
-                                def originalPerms = ''
-                                try {
-                                    originalPerms = sh(script: 'stat -f "%p" .', returnStdout: true).trim()
-                                    sh 'chmod 777 .'
-                                    sh "cp '${ENV_FILE}' .env"
-                                    sh "ls -la .env"
-                                    sh "cat .env"
-                                    sh "docker build -t ${tag} --build-arg ENV=prod ."
-                                } finally {
-                                    if (originalPerms) {
-                                        sh "chmod ${originalPerms} ."
-                                    }
-                                }
+                                sh '''
+                                  set -eux
+                                  rm -rf _docker_ctx
+                                  mkdir -p _docker_ctx
+                                  tar -cf - --exclude=.git . | (cd _docker_ctx && tar -xf -)
+                                  cp "$ENV_FILE" _docker_ctx/.env
+                                  ls -la _docker_ctx/.env
+                                  cat _docker_ctx/.env
+                                  docker build -t '"${tag}"' --build-arg ENV=prod _docker_ctx
+                                '''
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
                             sh "docker run -d --name ${FE_PROD_CONTAINER} --network ${PROD_NETWORK} ${tag}"
