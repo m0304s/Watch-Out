@@ -1,5 +1,6 @@
 package com.watchout.presentation.fall_detection
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
@@ -39,6 +40,7 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.contentColorFor
 import com.google.android.gms.wearable.Wearable
 import com.watchout.core.service.TAG
+import com.watchout.presentation.main.MainActivity
 import com.watchout.presentation.theme.WatchOutTheme
 import kotlinx.coroutines.delay
 
@@ -49,7 +51,14 @@ class FallDetectedFeedbackActivity : ComponentActivity() {
             WatchOutTheme {
                 WatchRoot(
                     onCancel = { finish() },
-                    onReport = { sendDataToPhone() }
+                    onReport = { sendDataToPhone() },
+                    onDone = {
+                        val intent = Intent(this, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                        startActivity(intent)
+                        finish()
+                    }
                 )
             }
         }
@@ -71,7 +80,7 @@ class FallDetectedFeedbackActivity : ComponentActivity() {
 }
 
 @Composable
-fun WatchRoot(onCancel: () -> Unit, onReport: () -> Unit) {
+fun WatchRoot(onCancel: () -> Unit, onReport: () -> Unit, onDone: () -> Unit) {
     var currentScreen by remember { mutableStateOf("fall") }
 
     when (currentScreen) {
@@ -82,12 +91,12 @@ fun WatchRoot(onCancel: () -> Unit, onReport: () -> Unit) {
                 currentScreen = "check"
             }
         )
-        "check" -> CheckDoneScreen()
+        "check" -> CheckDoneScreen(onDoneClick = onDone)
     }
 }
 
 @Composable
-fun CheckDoneScreen(modifier: Modifier = Modifier) {
+fun CheckDoneScreen(modifier: Modifier = Modifier, onDoneClick: () -> Unit) {
 
     val backgroundColor = Color(0xFFD32F2F) // 진한 붉은색
     val contentColor = Color.White
@@ -101,14 +110,9 @@ fun CheckDoneScreen(modifier: Modifier = Modifier) {
         ),
         label = "IconScaleAnimation"
     )
-    
+
     LaunchedEffect(Unit) {
-        while (true) {
-            isVisible = true      // 아이콘을 크게 만듦
-            delay(1500)           // 1.5초 동안 유지
-            isVisible = false     // 아이콘을 작게 만듦
-            delay(500)            // 0.5초 대기 후 반복
-        }
+            isVisible = true
     }
 
     ScreenScaffold(
@@ -120,7 +124,7 @@ fun CheckDoneScreen(modifier: Modifier = Modifier) {
             contentAlignment = Alignment.Center
         ) {
             Card(
-                onClick = { /* 클릭 효과 없음 */ },
+                onClick = onDoneClick,
                 shape = CircleShape,
                 colors = CardDefaults.cardColors(containerColor = backgroundColor),
                 modifier = Modifier.size(130.dp)
@@ -148,14 +152,13 @@ fun CheckDoneScreen(modifier: Modifier = Modifier) {
 @Composable
 fun FallDetectedScreen(
     modifier: Modifier = Modifier,
-    totalSeconds: Int = 30,
+    totalSeconds: Int = 5,
     onCancel: () -> Unit,
     onTimeout: () -> Unit
 ) {
     val danger = Color(0xFFB00020)
     val contentColor = contentColorFor(danger)
     var secondsLeft by remember { mutableStateOf(totalSeconds) }
-    // 'progress' 변수를 여기서 선언할 필요가 없습니다.
 
     LaunchedEffect(Unit) {
         while (secondsLeft > 0) {
@@ -244,6 +247,6 @@ fun FallDetectedScreenPreview() {
 @Composable
 fun CheckDoneScreenPreview() {
     WatchOutTheme {
-        CheckDoneScreen()
+        CheckDoneScreen(onDoneClick = {})
     }
 }

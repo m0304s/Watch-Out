@@ -88,39 +88,39 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config
 
     // 401 Unauthorized 에러 처리 (토큰 만료)
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
+    // if (error.response?.status === 401 && !originalRequest._retry) {
+    //   originalRequest._retry = true
 
-      try {
-        console.log('토큰 갱신 시도...')
+    //   try {
+    //     console.log('토큰 갱신 시도...')
 
-        // 토큰 갱신 API 호출 (refreshToken은 쿠키로 자동 전송됨)
-        const response = await apiClient.post('/auth/reissue', undefined, { withCredentials: true })
+    //     // 토큰 갱신 API 호출 (refreshToken은 쿠키로 자동 전송됨)
+    //     const response = await apiClient.post('/auth/reissue', undefined, { withCredentials: true })
 
-        // 새로운 accessToken을 localStorage에 저장
-        if (response.data?.result?.accessToken) {
-          localStorage.setItem('accessToken', response.data.result.accessToken)
+    //     // 새로운 accessToken을 localStorage에 저장
+    //     if (response.data?.result?.accessToken) {
+    //       localStorage.setItem('accessToken', response.data.result.accessToken)
 
-          // 원래 요청의 Authorization 헤더 업데이트
-          originalRequest.headers.Authorization = `Bearer ${response.data.result.accessToken}`
+    //       // 원래 요청의 Authorization 헤더 업데이트
+    //       originalRequest.headers.Authorization = `Bearer ${response.data.result.accessToken}`
 
-          console.log('토큰 갱신 성공')
+    //       console.log('토큰 갱신 성공')
 
-          // 원래 요청 재시도
-          return apiClient(originalRequest)
-        }
-      } catch (refreshError) {
-        console.error('토큰 갱신 실패:', refreshError)
+    //       // 원래 요청 재시도
+    //       return apiClient(originalRequest)
+    //     }
+    //   } catch (refreshError) {
+    //     console.error('토큰 갱신 실패:', refreshError)
 
-        // 토큰 갱신 실패 시 localStorage에서 토큰 제거
-        localStorage.removeItem('accessToken')
+    //     // 토큰 갱신 실패 시 localStorage에서 토큰 제거
+    //     localStorage.removeItem('accessToken')
 
-        // 로그인 페이지로 리다이렉트
-        window.location.href = '/login'
-      }
-    }
+    //     // 로그인 페이지로 리다이렉트
+    //     window.location.href = '/login'
+    //   }
+    // }
 
-    return Promise.reject(error)
+    // return Promise.reject(error)
   },
 )
 
