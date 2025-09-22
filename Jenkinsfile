@@ -377,7 +377,7 @@ pipeline {
                                 ls -la _docker_ctx/.env
                                 cat _docker_ctx/.env
 
-                                docker build -t '"${tag}"' --build-arg ENV=test _docker_ctx
+                                docker build -t ${tag} --build-arg ENV=test _docker_ctx
                                 '''
                             }
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
@@ -398,7 +398,7 @@ pipeline {
                                 ls -la _docker_ctx/.env
                                 cat _docker_ctx/.env
 
-                                docker build -t '"${tag}"' --build-arg ENV=prod _docker_ctx
+                                docker build -t ${tag} --build-arg ENV=test _docker_ctx
                                 '''
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
