@@ -367,7 +367,7 @@ pipeline {
                             def tag = "${FE_IMAGE_NAME}:test-${BUILD_NUMBER}"
 
                             dir('frontend-repo') {
-                                sh '''
+                                sh """
                                 set -eux
                                 rm -rf _docker_ctx
                                 mkdir -p _docker_ctx
@@ -376,9 +376,8 @@ pipeline {
                                 cp "$ENV_FILE" _docker_ctx/.env
                                 ls -la _docker_ctx/.env
                                 cat _docker_ctx/.env
-
                                 docker build -t ${tag} --build-arg ENV=test _docker_ctx
-                                '''
+                                """
                             }
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
                             sh "docker run -d --name ${FE_TEST_CONTAINER} --network ${TEST_NETWORK} ${tag}"
@@ -388,7 +387,7 @@ pipeline {
                             def tag = "${FE_IMAGE_NAME}:prod-${BUILD_NUMBER}"
 
                             dir('frontend-repo') {
-                                sh '''
+                                sh """
                                 set -eux
                                 rm -rf _docker_ctx
                                 mkdir -p _docker_ctx
@@ -397,9 +396,8 @@ pipeline {
                                 cp "$ENV_FILE" _docker_ctx/.env
                                 ls -la _docker_ctx/.env
                                 cat _docker_ctx/.env
-
-                                docker build -t ${tag} --build-arg ENV=test _docker_ctx
-                                '''
+                                docker build -t ${tag} --build-arg ENV=prod _docker_ctx
+                                """
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
                             sh "docker run -d --name ${FE_PROD_CONTAINER} --network ${PROD_NETWORK} ${tag}"
@@ -408,7 +406,8 @@ pipeline {
                 }
             }
         }
-    }
+
+
 
     post {
         always {
