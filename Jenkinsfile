@@ -351,7 +351,6 @@ pipeline {
         }
 
         /******************** 프론트엔드 배포  ********************/
-        /******************** 프론트엔드 배포  ********************/
         stage('Deploy Frontend') {
             when {
                 anyOf {
@@ -369,14 +368,16 @@ pipeline {
 
                             dir('frontend-repo') {
                                 sh '''
-                                  set -eux
-                                  rm -rf _docker_ctx
-                                  mkdir -p _docker_ctx
-                                  tar -cf - --exclude=.git . | (cd _docker_ctx && tar -xf -)
-                                  cp "$ENV_FILE" _docker_ctx/.env
-                                  ls -la _docker_ctx/.env
-                                  cat _docker_ctx/.env
-                                  docker build -t '"${tag}"' --build-arg ENV=test _docker_ctx
+                                set -eux
+                                rm -rf _docker_ctx
+                                mkdir -p _docker_ctx
+                                tar --no-same-owner -cf - --exclude=.git --exclude=_docker_ctx . | (cd _docker_ctx && tar -xf -)
+                                chmod -R 755 _docker_ctx
+                                cp "$ENV_FILE" _docker_ctx/.env
+                                ls -la _docker_ctx/.env
+                                cat _docker_ctx/.env
+
+                                docker build -t '"${tag}"' --build-arg ENV=test _docker_ctx
                                 '''
                             }
                             sh "docker rm -f ${FE_TEST_CONTAINER} || true"
@@ -388,14 +389,16 @@ pipeline {
 
                             dir('frontend-repo') {
                                 sh '''
-                                  set -eux
-                                  rm -rf _docker_ctx
-                                  mkdir -p _docker_ctx
-                                  tar -cf - --exclude=.git . | (cd _docker_ctx && tar -xf -)
-                                  cp "$ENV_FILE" _docker_ctx/.env
-                                  ls -la _docker_ctx/.env
-                                  cat _docker_ctx/.env
-                                  docker build -t '"${tag}"' --build-arg ENV=prod _docker_ctx
+                                set -eux
+                                rm -rf _docker_ctx
+                                mkdir -p _docker_ctx
+                                tar --no-same-owner -cf - --exclude=.git --exclude=_docker_ctx . | (cd _docker_ctx && tar -xf -)
+                                chmod -R 755 _docker_ctx
+                                cp "$ENV_FILE" _docker_ctx/.env
+                                ls -la _docker_ctx/.env
+                                cat _docker_ctx/.env
+
+                                docker build -t '"${tag}"' --build-arg ENV=prod _docker_ctx
                                 '''
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
