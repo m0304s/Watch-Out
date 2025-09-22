@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.watchout"
+    namespace = "com.ssafy.watchout"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.watchout"
+        applicationId = "com.ssafy.watchout"
         minSdk = 30
         targetSdk = 35
         versionCode = 1
@@ -49,11 +49,16 @@ dependencies {
     implementation(libs.activity.compose)
 
     // Wear Compose
-    implementation("androidx.wear.compose:compose-material:1.3.0")
-    implementation("androidx.wear.compose:compose-foundation:1.3.0")
+    implementation("androidx.wear.compose:compose-material:1.5.0")
+    implementation("androidx.wear.compose:compose-material3:1.5.0")
+    implementation("androidx.wear.compose:compose-foundation:1.5.0")
 
     // 스플래시 스크린
     implementation("androidx.core:core-splashscreen:1.0.1")
+
+    // Moshi
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
+    implementation("com.squareup.moshi:moshi:1.15.0")
 
     // 프리뷰/테스트
     androidTestImplementation(platform(libs.compose.bom))
@@ -61,4 +66,8 @@ dependencies {
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
     implementation(libs.wear.tooling.preview)
+
+    // 아이콘(Compose 공용 아이콘 벡터)
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
 }
