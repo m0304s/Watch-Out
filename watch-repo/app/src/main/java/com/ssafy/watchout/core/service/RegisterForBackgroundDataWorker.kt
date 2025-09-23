@@ -3,7 +3,7 @@ package com.ssafy.watchout.core.service
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.ssafy.watchout.domain.fall_detection.HealthServicesManager
+import com.ssafy.watchout.domain.fallDetection.HealthServicesManager
 
 class RegisterForBackgroundDataWorker(
     appContext: Context,

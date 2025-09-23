@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.health.services.client.PassiveListenerService
 import androidx.health.services.client.data.DataPointContainer
 import androidx.health.services.client.data.HealthEvent
-import com.ssafy.watchout.presentation.fall_detection.FallDetectedFeedbackActivity
+import com.ssafy.watchout.presentation.fallDetection.FallDetectedFeedbackActivity
 import kotlinx.coroutines.runBlocking
 
 class PassiveHealthEventService : PassiveListenerService() {
