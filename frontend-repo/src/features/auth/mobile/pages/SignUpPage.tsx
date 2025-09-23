@@ -3,17 +3,20 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MobileHeader } from '@/components/mobile/MobileHeader'
 import { MobileSignUpForm } from '@/features/auth/mobile/components/SignUpForm'
-import { signup } from '@/features/auth/api/auth'
+import { signup, login } from '@/features/auth/api/auth'
+import { useAuthStore } from '@/stores/authStore'
 import type {
   SignUpFormData,
   ABOType,
   RhFactor,
   SignUpRequest,
+  LoginRequest,
 } from '@/features/auth'
 
 export const MobileSignUpPage = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const { setAuthData } = useAuthStore()
 
   // FullBloodType을 ABOType과 RhFactor로 분리하는 함수
   const parseBloodType = (
@@ -44,17 +47,36 @@ export const MobileSignUpPage = () => {
         gender: data.gender,
       }
 
-      const response = await signup(signupRequest)
+      // 1. 회원가입 요청
+      const signupResponse = await signup(signupRequest)
 
-      if (response.success) {
-        alert('회원가입이 완료되었습니다!')
-        // 얼굴 사진 등록 페이지로 이동
-        navigate('/face-registration')
+      if (signupResponse.success) {
+        // 2. 회원가입 성공 후 자동 로그인
+        const loginRequest: LoginRequest = {
+          userId: data.userId,
+          password: data.password,
+        }
+
+        const loginResponse = await login(loginRequest)
+
+        if (loginResponse.success && loginResponse.result) {
+          // 3. 로그인 성공 시 인증 스토어에 데이터 저장
+          setAuthData(loginResponse.result)
+
+          alert('회원가입 및 로그인이 완료되었습니다!')
+          // 얼굴 사진 등록 페이지로 이동
+          navigate('/face-registration')
+        } else {
+          alert(
+            '회원가입은 완료되었지만 자동 로그인에 실패했습니다. 다시 로그인해주세요.',
+          )
+          navigate('/login')
+        }
       } else {
-        alert(response.message || '회원가입에 실패했습니다.')
+        alert(signupResponse.message || '회원가입에 실패했습니다.')
       }
     } catch (error) {
-      console.error('회원가입 실패:', error)
+      console.error('회원가입 또는 로그인 실패:', error)
       alert('회원가입 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
