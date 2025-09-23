@@ -6,9 +6,9 @@ import path from 'node:path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
-    babel({
-      babelConfig: {
+    react({
+      jsxImportSource: '@emotion/react',
+      babel: {
         plugins: ['@emotion/babel-plugin'],
       },
     }),

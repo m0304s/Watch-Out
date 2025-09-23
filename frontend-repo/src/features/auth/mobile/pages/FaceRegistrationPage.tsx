@@ -1,9 +1,10 @@
 import { css } from '@emotion/react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MobileHeader } from '@/components/mobile/MobileHeader'
 import { FacePhotoCapture } from '@/features/auth/mobile/components/FacePhotoCapture'
 import { uploadFaceImages } from '@/features/auth/api/faceApi'
+import { useAuth } from '@/stores/authStore'
 import type {
   FacePhotos,
   CapturedPhotos,
@@ -12,9 +13,18 @@ import type {
 
 export const MobileFaceRegistrationPage = () => {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
   const [photos, setPhotos] = useState<FacePhotos>({})
   const [capturedPhotos, setCapturedPhotos] = useState<CapturedPhotos>({})
   const [isUploading, setIsUploading] = useState(false)
+
+  // 인증 상태 확인
+  useEffect(() => {
+    if (!isAuthenticated) {
+      alert('로그인이 필요합니다.')
+      navigate('/login')
+    }
+  }, [isAuthenticated, navigate])
 
   const handlePhotoCapture = (type: 'front' | 'left' | 'right', file: File) => {
     setPhotos((prev) => ({ ...prev, [type]: file }))
