@@ -1,4 +1,4 @@
-package com.ssafy.watchout.presentation.fall_detection
+package com.ssafy.watchout.presentation.fallDetection
 
 import android.content.Intent
 import android.os.Bundle
@@ -50,6 +50,7 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.contentColorFor
 import com.google.android.gms.wearable.Wearable
+import com.ssafy.watchout.core.WearContract
 import com.ssafy.watchout.presentation.main.MainActivity
 import com.ssafy.watchout.presentation.theme.WatchOutTheme
 import com.ssafy.watchout.core.service.TAG
@@ -80,7 +81,7 @@ class FallDetectedFeedbackActivity : ComponentActivity() {
         Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
             nodes.firstOrNull()?.let { node ->
                 val nodeId = node.id
-                val messagePath = "/fall-detected"
+                val messagePath = WearContract.PATH_FALL_DETECTED
                 val payload = System.currentTimeMillis().toString().toByteArray()
                 Wearable.getMessageClient(this).sendMessage(nodeId, messagePath, payload)
                     .addOnSuccessListener { Log.d(TAG, "폰으로 메시지 전송 성공") }

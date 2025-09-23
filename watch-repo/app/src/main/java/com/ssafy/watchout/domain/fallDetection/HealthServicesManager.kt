@@ -1,4 +1,4 @@
-package com.ssafy.watchout.domain.fall_detection
+package com.ssafy.watchout.domain.fallDetection
 
 import android.content.Context
 import android.util.Log

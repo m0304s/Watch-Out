@@ -16,7 +16,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
@@ -38,7 +37,6 @@ fun AreaScreen() {
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        TimeText()
         ScreenScaffold() { innerPadding ->
             Column(
                 modifier = Modifier

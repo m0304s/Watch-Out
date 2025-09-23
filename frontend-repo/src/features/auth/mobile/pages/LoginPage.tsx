@@ -1,12 +1,22 @@
 import { css } from '@emotion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
+import { registerPlugin } from '@capacitor/core'
+
 
 import type { LoginFormData, LoginRequest } from '@/features/auth/types'
 import { MobileAppHeader } from '@/features/auth/mobile/components/AppHeader'
 import { MobileLoginForm } from '@/features/auth/mobile/components/LoginForm'
 import { login } from '@/features/auth/api/auth'
 import { useAuthStore } from '@/stores/authStore'
+
+interface TokenPlugin {
+  saveToken(options: { token: string }): Promise<void>;
+}
+
+const Token = registerPlugin<TokenPlugin>('Token');
+
 
 export const MobileLoginPage = () => {
   const [loading, setLoading] = useState(false)
@@ -27,6 +37,15 @@ export const MobileLoginPage = () => {
       if (response.success && response.result) {
         // Auth 스토어에 로그인 정보 저장
         setAuthData(response.result)
+        
+        if (Capacitor.isNativePlatform()) {
+            try {
+                await Token.saveToken({ token: response.result.accessToken });
+                console.log('Token saved successfully to native storage.');
+            } catch (error) {
+                console.error('Failed to save token to native storage:', error);
+            }
+        }
 
         alert('로그인 성공!')
         console.log('모바일 로그인 성공:', response.result)

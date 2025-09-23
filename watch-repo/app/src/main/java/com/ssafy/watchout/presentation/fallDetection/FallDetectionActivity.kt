@@ -1,4 +1,4 @@
-package com.ssafy.watchout.presentation.fall_detection
+package com.ssafy.watchout.presentation.fallDetection
 
 import android.Manifest
 import android.content.Context
@@ -34,7 +34,7 @@ import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material3.Text
 import com.ssafy.watchout.core.service.TAG
-import com.ssafy.watchout.domain.fall_detection.HealthServicesManager
+import com.ssafy.watchout.domain.fallDetection.HealthServicesManager
 import com.ssafy.watchout.presentation.main.MainActivity
 import com.ssafy.watchout.presentation.theme.WatchOutTheme
 import kotlinx.coroutines.launch
