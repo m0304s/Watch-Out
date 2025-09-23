@@ -18,26 +18,27 @@ const RouterWeb = () => {
       <Routes>
         <Route path="/signup" element={<MobileSignUpPage />} />
         <Route
-          path="/face-registration"
-          element={<MobileFaceRegistrationPage />}
-        />
-        <Route path="/worker2" element={<MobileWorkerListPage />} />
-        <Route path="/sos" element={<SOSPage />} />
-        <Route
           path="/"
           element={
             isLoggedIn ? <LayoutPage /> : <Navigate to="/login" replace />
           }
         >
           <Route path="/cctv/monitoring" element={<CctvMonitoringPage />} />
-          <Route path="/worker1" element={<SelectedWorkersPage />} />
+          <Route path="/worker" element={<SelectedWorkersPage />} />
           <Route path="/area" element={<AreaManagementPage />} />
           <Route path="/dashboard" element={<DashBoard />} />
           <Route path="/cctv/settings" element={<CctvSettingsPage />} />
           <Route path="/watch" element={<WatchListPage />} />
         </Route>
+        {/* 모바일 테스트 */}
+        <Route path="/sos" element={<SOSPage />} />
+        <Route
+          path="/face-registration"
+          element={<MobileFaceRegistrationPage />}
+        />
         <Route path="/worker2" element={<MobileWorkerListPage />} />
         <Route path="/cctv2" element={<MobileCctvMonitoring />} />
+
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<LoginPage />} />
       </Routes>

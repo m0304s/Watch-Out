@@ -64,8 +64,8 @@ const Violation = ({ area, areaList }: ViolationProps) => {
     chart: {
       type: 'spline',
       backgroundColor: 'transparent',
-      margin: [0, 0, 0, 0],
-      spacing: [0, 0, 0, 0],
+      spacing: [0, 0, 20, 0],
+      height: 100,
     },
     title: {
       text: null,
@@ -75,11 +75,13 @@ const Violation = ({ area, areaList }: ViolationProps) => {
     },
     xAxis: {
       visible: false,
+      minPadding: 0.1,
+      maxPadding: 0.1,
     },
     yAxis: {
       visible: false,
-      minPadding: 0,
-      maxPadding: 0,
+      minPadding: 0.1,
+      maxPadding: 0.1,
       startOnTick: false,
       endOnTick: false,
     },
@@ -232,4 +234,6 @@ const chartWrapper = css`
   flex: 1;
   height: 100px;
   z-index: 99;
+  overflow: hidden;
+  min-width: 0;
 `

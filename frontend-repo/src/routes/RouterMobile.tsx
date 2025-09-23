@@ -5,7 +5,7 @@ import {
   MobileFaceRegistrationPage,
 } from '@/features/auth'
 import { MobileWorkerListPage } from '@/features/worker'
-import CctvMonitoringPage from '@/features/area/web/pages/CctvMonitoringPage'
+import MobileCctvMonitoring from '@/features/area/mobile/MobileCctvMonitoring'
 import { SOSPage } from '@/features/sos'
 import Notification from '@/notification/web/pages/NotificationPage'
 
@@ -23,7 +23,7 @@ const RouterMobile = () => {
       {/* Mobile Routes */}
       <Route path="/sos" element={<SOSPage />} />
       <Route path="/notification" element={<Notification />} />
-      <Route path="/cctv/monitoring" element={<CctvMonitoringPage />} />
+      <Route path="/cctv/monitoring" element={<MobileCctvMonitoring />} />
       <Route path="/worker" element={<MobileWorkerListPage />} />
 
       {/* Default redirect */}

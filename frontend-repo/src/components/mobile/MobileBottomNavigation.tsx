@@ -21,7 +21,9 @@ const getNavListStyles = (count: number) => css`
   padding: 0;
 `
 
-export const MobileBottomNavigation = ({ items: itemsProp }: MobileBottomNavigationProps) => {
+export const MobileBottomNavigation = ({
+  items: itemsProp,
+}: MobileBottomNavigationProps) => {
   const userRole = useUserRole()
 
   const roleItems: NavItem[] = useMemo(() => {
