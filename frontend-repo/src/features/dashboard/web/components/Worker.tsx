@@ -56,6 +56,8 @@ const Worker = ({ area, areaList }: WorkerProps) => {
       chart: {
         type: 'pie',
         backgroundColor: '#F8F8F8',
+        width: 250,
+        height: 250,
       },
       accessibility: {
         point: {
@@ -66,7 +68,6 @@ const Worker = ({ area, areaList }: WorkerProps) => {
         text: `${chartData.nowWorkers}명`,
         align: 'center',
         verticalAlign: 'middle',
-        x: -6,
         style: {
           fontSize: '2rem',
           fontWeight: 'bold',
@@ -85,17 +86,10 @@ const Worker = ({ area, areaList }: WorkerProps) => {
           borderRadius: 0,
           dataLabels: [
             {
-              enabled: true,
+              enabled: false,
               distance: 20,
               format: '{point.name}',
-            },
-            {
-              enabled: false,
-              distance: -15,
-              format: '{point.y}명',
-              style: {
-                fontSize: '0.9em',
-              },
+              textOutline: 'none',
             },
           ],
           showInLegend: true,
