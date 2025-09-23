@@ -8,6 +8,7 @@ type AsyncVoid = () => Promise<void> | void
 const COOLDOWN_MS = 10_000
 let wired = false
 let lastSync = 0
+let pending: Promise<void> | null = null
 
 export function initWatchSync(opts: { sync: AsyncVoid }): () => void {
   if (
@@ -21,11 +22,17 @@ export function initWatchSync(opts: { sync: AsyncVoid }): () => void {
 
   const doSync = async () => {
     const now = Date.now()
-    if (now - lastSync < COOLDOWN_MS) return
-    try {
-      await opts.sync()
-      lastSync = now
-    } catch {}
+    if (now - lastSync < COOLDOWN_MS) return pending ?? undefined
+    if (pending) return pending
+    pending = (async () => {
+      try {
+        await opts.sync()
+      } finally {
+        lastSync = Date.now()
+        pending = null
+      }
+    })()
+    return pending
   }
 
   const disposers: Array<() => void> = []

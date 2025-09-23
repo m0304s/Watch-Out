@@ -6,8 +6,7 @@ import { ToastContainer } from 'react-toastify'
 import App from '@/App'
 import GlobalStyles from '@/styles/GlobalStyles'
 import { toastStyles } from '@/styles/ToastStyles'
-import { initWatchSync } from '@/utils/native/watchSync'
-import { syncMyAreaToWatch } from '@/features/device/services/areaWatchSync'
+import AuthWatchSyncGate from '@/bootstrap/AuthWatchSyncGate'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -20,6 +19,7 @@ createRoot(document.getElementById('root')!).render(
         hideProgressBar={true}
         pauseOnFocusLoss={false}
       />
+      <AuthWatchSyncGate />
       <App />
     </BrowserRouter>
   </StrictMode>,
@@ -30,5 +30,3 @@ if ('serviceWorker' in navigator) {
     .getRegistrations()
     .then((rs) => rs.forEach((r) => r.unregister()))
 }
-
-initWatchSync({ sync: syncMyAreaToWatch })
