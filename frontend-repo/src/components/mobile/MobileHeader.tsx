@@ -17,12 +17,20 @@ export const MobileHeader = ({ title, rightSlot }: MobileHeaderProps) => {
 }
 
 const headerStyles = css`
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 10;
+  left: 0;
+  right: 0;
+  z-index: 200;
   height: 60px;
   background-color: var(--color-primary);
   color: var(--color-text-white);
+
+  /* 갤럭시 기기에서의 최적화 */
+  padding-top: env(safe-area-inset-top, 0px);
+
+  /* 헤더 그림자 효과로 고정감 강화 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 `
 
 const headerInnerStyles = css`

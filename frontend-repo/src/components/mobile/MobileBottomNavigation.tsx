@@ -70,11 +70,23 @@ export const MobileBottomNavigation = ({
 }
 
 const navStyles = css`
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   height: 60px;
   background-color: var(--color-bg-white);
   border-top: 1px solid var(--color-gray-300);
+  z-index: 100;
+
+  /* 갤럭시 화면 버튼 3개를 고려한 여백 */
+  padding: 24px 0;
+
+  /* 갤럭시 기기에서의 최적화 */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    // margin-bottom: 24px;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 48px);
+  }
 `
 
 const navItemStyles = css`

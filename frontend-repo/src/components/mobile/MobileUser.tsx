@@ -1,14 +1,11 @@
 import { css } from '@emotion/react'
-import { useAuth } from '@/stores/authStore'
 import { useLogout } from '@/hooks/useLogout'
 
 export const MobileUser = () => {
-  const { user } = useAuth()
   const { handleLogout, isLoggingOut } = useLogout()
 
   return (
     <div css={containerStyles}>
-      <span css={userNameStyles}>{user.userName}</span>
       <button css={logoutStyles} onClick={handleLogout} disabled={isLoggingOut}>
         {isLoggingOut ? '...' : '로그아웃'}
       </button>
@@ -20,14 +17,6 @@ const containerStyles = css`
   display: flex;
   align-items: center;
   gap: 8px;
-`
-
-const userNameStyles = css`
-  font-family: 'PretendardSemiBold', sans-serif;
-  color: var(--color-text-white);
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
 `
 
 const logoutStyles = css`
