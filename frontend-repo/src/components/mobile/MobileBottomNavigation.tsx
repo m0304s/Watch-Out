@@ -31,7 +31,7 @@ export const MobileBottomNavigation = ({
       return [
         { label: 'SOS', to: '/sos' },
         { label: '알림', to: '/notification' },
-        { label: '현장', to: '/cctv/monitoring' },
+        { label: '현장', to: '/cctv2' },
         { label: '작업자', to: '/worker2' },
       ]
     }
