@@ -153,7 +153,6 @@ export const useFCM = () => {
           : 'notification')
 
       if (messageType === 'ANNOUNCEMENT') {
-        // 공지사항 처리 - notices와 notifications 둘 다에 추가
         const notice: NoticeMessage = {
           id: payload.data?.id || Date.now().toString(),
           title:
@@ -172,7 +171,7 @@ export const useFCM = () => {
 
         console.log('📢 공지사항 처리:', notice.title, '-', notice.content)
 
-        // 1. notices 상태에 추가 (기존 로직 유지)
+        // 1. notices 상태에 추가 (웹용)
         setNotices((prev) => {
           const isDuplicate = prev.some(
             (existing) =>
@@ -190,7 +189,7 @@ export const useFCM = () => {
           return [notice, ...prev]
         })
 
-        // 2. notifications 상태에도 추가 (긴급 호출 목록에 표시하기 위해)
+        // 2. notifications 상태에도 추가 (모바일용)
         const notification: NotificationMessage = {
           id: generateNotificationId(),
           title: notice.title,
@@ -206,10 +205,7 @@ export const useFCM = () => {
           },
         }
 
-        console.log(
-          '📢 공지사항을 긴급 호출 목록에도 추가:',
-          notification.title,
-        )
+        console.log('📢 공지사항을 알림 목록에도 추가 (모바일용):', notification.title)
 
         setNotifications((prev) => {
           console.log('📝 공지사항 알림 - 기존 알림 개수:', prev.length)
@@ -235,7 +231,6 @@ export const useFCM = () => {
           console.log('✅ 새 공지사항 알림 추가됨!')
           const newList = [notification, ...prev]
           console.log('📝 업데이트된 알림 목록 개수:', newList.length)
-          console.log('🔥🔥🔥 공지사항 알림 상태 업데이트 완료! 🔥🔥🔥')
           return newList
         })
       } else {

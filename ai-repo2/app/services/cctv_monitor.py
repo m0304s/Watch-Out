@@ -143,6 +143,22 @@ def process_camera_stream(camera_info, thread_shutdown_event):
       if confidence > settings.DETECTION_CONFIDENCE:
         box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
         (startX, startY, endX, endY) = box.astype("int")
+        
+        # 바운딩박스 크기 필터링
+        if settings.ENABLE_BBOX_SIZE_FILTER:
+          face_width = endX - startX
+          face_height = endY - startY
+          face_area = face_width * face_height
+          
+          # 크기 조건 확인
+          if (face_width < settings.MIN_FACE_WIDTH or 
+              face_height < settings.MIN_FACE_HEIGHT or 
+              face_area < settings.MIN_FACE_AREA):
+            logger.debug(f"[{cam_name}] 얼굴 크기가 너무 작음: {face_width}x{face_height} (면적: {face_area}) - 최소: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} (면적: {settings.MIN_FACE_AREA})")
+            continue
+          else:
+            logger.debug(f"[{cam_name}] 얼굴 크기 조건 만족: {face_width}x{face_height} (면적: {face_area}) - 인식 진행")
+        
         face_roi = frame[startY:endY, startX:endX]
         if face_roi.size == 0: continue
 

@@ -110,7 +110,11 @@ const NotificationPanel: React.FC = () => {
     setSendError(null)
     
     try {
-      const areaUuids = formData.isAllTarget ? [] : formData.targetAreas
+      // 전체 발송인 경우 모든 구역 UUID 배열, 구역별 발송인 경우 선택된 구역 UUID 배열
+      const areaUuids = formData.isAllTarget 
+        ? areas?.map(area => area.id) || []  // 전체 선택 시 모든 구역 UUID
+        : formData.targetAreas               // 구역별 선택 시 선택된 구역 UUID
+      
       
       const result = await noticeApi.sendNotice({
         title: formData.title,
@@ -178,11 +182,13 @@ const NotificationPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 알림 목록 */}
+        {/* 알림 목록 (공지사항 제외) */}
         <div css={notificationsContainer}>
-          {notifications.length > 0 ? (
+          {notifications.filter(notification => notification.data?.type !== 'ANNOUNCEMENT').length > 0 ? (
             <div css={notificationList}>
-                     {notifications.map((notification) => (
+                     {notifications
+                       .filter(notification => notification.data?.type !== 'ANNOUNCEMENT')
+                       .map((notification) => (
                        <div key={notification.id} css={noticeItemWithHover}>
                   <NotificationItem
                     notification={notification}
