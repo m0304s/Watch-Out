@@ -5,7 +5,14 @@ from fastapi import FastAPI
 # --- 로깅 설정 ---
 # 다른 모듈보다 먼저 설정하여 일관된 로깅 포맷을 유지합니다.
 # colorlog를 사용하면 더 보기 좋습니다 (requirements.txt에 추가 필요)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('face_recognition.log', encoding='utf-8')
+    ]
+)
 
 
 # --- 모듈 임포트 ---
@@ -67,6 +74,31 @@ async def health_check():
   로드 밸런서 등에서 사용될 수 있습니다.
   """
   return {"status": "ok", "message": "API server is running."}
+
+@app.get("/monitoring/status", summary="실시간 모니터링 상태 확인", tags=["Monitoring"])
+async def get_monitoring_status():
+  """
+  현재 CCTV 모니터링 상태와 바운딩박스 크기 설정을 확인합니다.
+  """
+  from app.services.cctv_monitor import running_camera_threads, known_embeddings
+  from app.config import settings
+  
+  return {
+    "monitoring_active": len(running_camera_threads) > 0,
+    "active_cameras": len(running_camera_threads),
+    "registered_faces": len(known_embeddings),
+    "bbox_settings": {
+      "min_width": settings.MIN_FACE_WIDTH,
+      "min_height": settings.MIN_FACE_HEIGHT,
+      "min_area": settings.MIN_FACE_AREA,
+      "filter_enabled": settings.ENABLE_BBOX_SIZE_FILTER
+    },
+    "recognition_settings": {
+      "threshold": settings.RECOGNITION_THRESHOLD,
+      "confidence": settings.DETECTION_CONFIDENCE,
+      "frame_interval": settings.FRAME_PROCESSING_INTERVAL_SECONDS
+    }
+  }
 
 
 # --- API 라우터 포함 ---

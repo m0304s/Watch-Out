@@ -144,20 +144,22 @@ def process_camera_stream(camera_info, thread_shutdown_event):
         box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
         (startX, startY, endX, endY) = box.astype("int")
         
-        # 바운딩박스 크기 필터링
+        # 바운딩박스 크기 필터링 (자동 인식을 위한 크기 조건 확인)
+        face_width = endX - startX
+        face_height = endY - startY
+        face_area = face_width * face_height
+        
         if settings.ENABLE_BBOX_SIZE_FILTER:
-          face_width = endX - startX
-          face_height = endY - startY
-          face_area = face_width * face_height
-          
-          # 크기 조건 확인
+          # 크기 조건 확인 - 조건을 만족하지 않으면 인식하지 않음
           if (face_width < settings.MIN_FACE_WIDTH or 
               face_height < settings.MIN_FACE_HEIGHT or 
               face_area < settings.MIN_FACE_AREA):
-            logger.debug(f"[{cam_name}] 얼굴 크기가 너무 작음: {face_width}x{face_height} (면적: {face_area}) - 최소: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} (면적: {settings.MIN_FACE_AREA})")
+            logger.debug(f"[{cam_name}] 🚫 인식 스킵 - 얼굴 크기 부족: {face_width}x{face_height} (면적: {face_area}) < 최소: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} (면적: {settings.MIN_FACE_AREA})")
             continue
           else:
-            logger.debug(f"[{cam_name}] 얼굴 크기 조건 만족: {face_width}x{face_height} (면적: {face_area}) - 인식 진행")
+            logger.info(f"[{cam_name}] ✅ 인식 진행 - 얼굴 크기 조건 만족: {face_width}x{face_height} (면적: {face_area})")
+        else:
+          logger.debug(f"[{cam_name}] 🔍 크기 필터링 비활성화 - 인식 진행: {face_width}x{face_height} (면적: {face_area})")
         
         face_roi = frame[startY:endY, startX:endX]
         if face_roi.size == 0: continue
@@ -166,7 +168,8 @@ def process_camera_stream(camera_info, thread_shutdown_event):
           _, img_encoded = cv2.imencode('.jpg', face_roi)
           image_bytes = img_encoded.tobytes()
           live_embedding = face_embedding_service.generate_embedding(image_bytes)
-        except ValueError:
+        except ValueError as e:
+          logger.debug(f"[{cam_name}] 임베딩 생성 실패: {e}")
           continue
 
         with known_embeddings_lock:
@@ -175,6 +178,7 @@ def process_camera_stream(camera_info, thread_shutdown_event):
         found_user_uuid = find_best_match(live_embedding, current_known_embeddings)
 
         if found_user_uuid:
+          logger.info(f"[{cam_name}] 🎯 얼굴 인식 성공! 크기: {face_width}x{face_height} (면적: {face_area})")
           try:
             user_name = current_known_embeddings.get(found_user_uuid, {}).get('name', 'Unknown')
             log_user_info = f"{user_name}({found_user_uuid[:8]})"
@@ -211,6 +215,8 @@ def process_camera_stream(camera_info, thread_shutdown_event):
 
           except Exception as e:
             logger.error(f"Redis 또는 Kafka 전송 중 오류 발생: {e}")
+        else:
+          logger.debug(f"[{cam_name}] ❌ 얼굴 인식 실패 - 등록된 사용자와 일치하지 않음 (크기: {face_width}x{face_height})")
 
   update_cctv_status(cam_uuid, False)
   cap.release()

@@ -27,11 +27,12 @@ def capture_face_and_get_bytes():
   print("\n📷 웹캠을 시작합니다. 화면에 얼굴을 맞춰주세요.")
   print("   얼굴이 녹색 사각형 안에 명확하게 보일 때 'c' 키를 누르면 촬영됩니다.")
   print("   'q' 키를 누르면 프로그램을 종료합니다.")
-  print(f"\n🔍 근거리 인식 설정:")
-  print(f"   - 최소 얼굴 크기: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} 픽셀")
-  print(f"   - 최소 면적: {settings.MIN_FACE_AREA} 픽셀²")
+  print(f"\n🔍 얼굴 등록 설정:")
   print(f"   - 탐지 신뢰도: {settings.DETECTION_CONFIDENCE}")
   print(f"   - 인식 임계값: {settings.RECOGNITION_THRESHOLD}")
+  print(f"\n📝 참고: 바운딩박스 크기 필터링은 입출입 체크할 때만 적용됩니다.")
+  print(f"   - 입출입 체크 최소 크기: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} 픽셀")
+  print(f"   - 입출입 체크 최소 면적: {settings.MIN_FACE_AREA} 픽셀²")
 
   while True:
     ret, frame = cap.read()
@@ -54,16 +55,8 @@ def capture_face_and_get_bytes():
         box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
         (startX, startY, endX, endY) = box.astype("int")
         
-        # 바운딩박스 크기 필터링
-        if settings.ENABLE_BBOX_SIZE_FILTER:
-          face_width = endX - startX
-          face_height = endY - startY
-          face_area = face_width * face_height
-          
-          if (face_width < settings.MIN_FACE_WIDTH or 
-              face_height < settings.MIN_FACE_HEIGHT or 
-              face_area < settings.MIN_FACE_AREA):
-            continue  # 크기가 작으면 스킵
+        # 등록 시에는 바운딩박스 크기 필터링을 하지 않음
+        # 입출입 체크할 때만 바운딩박스 크기를 확인함
         
         best_confidence = confidence
         best_box = box.astype("int")
@@ -82,8 +75,8 @@ def capture_face_and_get_bytes():
       cv2.putText(display_frame, size_text, (startX, startY - 10), 
                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
       
-      # 최소 크기 요구사항 표시
-      min_text = f"Min: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} (Area: {settings.MIN_FACE_AREA})"
+      # 입출입 체크용 크기 요구사항 표시 (참고용)
+      min_text = f"Entry Check Min: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} (Area: {settings.MIN_FACE_AREA})"
       cv2.putText(display_frame, min_text, (10, 30), 
                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
       
