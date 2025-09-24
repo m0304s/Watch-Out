@@ -68,7 +68,7 @@ const NotificationList: React.FC = () => {
     })
   }, [notifications])
 
-  // 권한에 따른 알림 필터링
+  // 권한에 따른 알림 필터링 (모바일에서는 모든 알림 표시)
   const filteredNotifications = useMemo(() => {
     if (!userRole) return notifications
 
@@ -79,7 +79,7 @@ const NotificationList: React.FC = () => {
         notification.data?.type === 'ANNOUNCEMENT'
       )
     } else if (userRole === 'ADMIN' || userRole === 'AREA_ADMIN') {
-      // 관리자/구역 관리자: 모든 알림 표시 (긴급 호출 + 출입 알림)
+      // 관리자/구역 관리자: 모든 알림 표시 (긴급 호출 + 출입 알림 + 공지사항)
       return notifications
     }
 

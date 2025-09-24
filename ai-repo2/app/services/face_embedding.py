@@ -53,6 +53,18 @@ class FaceEmbeddingService:
 
       box = detections[0, 0, best_detection_idx, 3:7] * np.array([w, h, w, h])
       (startX, startY, endX, endY) = box.astype("int")
+      
+      # 바운딩박스 크기 필터링 (등록 시에도 적용)
+      if settings.ENABLE_BBOX_SIZE_FILTER:
+        face_width = endX - startX
+        face_height = endY - startY
+        face_area = face_width * face_height
+        
+        if (face_width < settings.MIN_FACE_WIDTH or 
+            face_height < settings.MIN_FACE_HEIGHT or 
+            face_area < settings.MIN_FACE_AREA):
+          raise ValueError(f"얼굴 크기가 너무 작습니다: {face_width}x{face_height} (면적: {face_area}). 최소 크기: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} (면적: {settings.MIN_FACE_AREA})")
+      
       face_roi = image[startY:endY, startX:endX]
       if face_roi.size == 0:
         raise ValueError("얼굴 영역이 유효하지 않습니다.")
