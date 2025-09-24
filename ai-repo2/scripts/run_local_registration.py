@@ -27,6 +27,11 @@ def capture_face_and_get_bytes():
   print("\n📷 웹캠을 시작합니다. 화면에 얼굴을 맞춰주세요.")
   print("   얼굴이 녹색 사각형 안에 명확하게 보일 때 'c' 키를 누르면 촬영됩니다.")
   print("   'q' 키를 누르면 프로그램을 종료합니다.")
+  print(f"\n🔍 근거리 인식 설정:")
+  print(f"   - 최소 얼굴 크기: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} 픽셀")
+  print(f"   - 최소 면적: {settings.MIN_FACE_AREA} 픽셀²")
+  print(f"   - 탐지 신뢰도: {settings.DETECTION_CONFIDENCE}")
+  print(f"   - 인식 임계값: {settings.RECOGNITION_THRESHOLD}")
 
   while True:
     ret, frame = cap.read()
@@ -46,13 +51,42 @@ def capture_face_and_get_bytes():
     for i in range(0, detections.shape[2]):
       confidence = detections[0, 0, i, 2]
       if confidence > settings.DETECTION_CONFIDENCE and confidence > best_confidence:
-        best_confidence = confidence
         box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+        (startX, startY, endX, endY) = box.astype("int")
+        
+        # 바운딩박스 크기 필터링
+        if settings.ENABLE_BBOX_SIZE_FILTER:
+          face_width = endX - startX
+          face_height = endY - startY
+          face_area = face_width * face_height
+          
+          if (face_width < settings.MIN_FACE_WIDTH or 
+              face_height < settings.MIN_FACE_HEIGHT or 
+              face_area < settings.MIN_FACE_AREA):
+            continue  # 크기가 작으면 스킵
+        
+        best_confidence = confidence
         best_box = box.astype("int")
 
     if best_box is not None:
       (startX, startY, endX, endY) = best_box
+      face_width = endX - startX
+      face_height = endY - startY
+      face_area = face_width * face_height
+      
+      # 바운딩박스 그리기
       cv2.rectangle(display_frame, (startX, startY), (endX, endY), (0, 255, 0), 2)
+      
+      # 크기 정보 표시
+      size_text = f"Size: {face_width}x{face_height} (Area: {face_area})"
+      cv2.putText(display_frame, size_text, (startX, startY - 10), 
+                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+      
+      # 최소 크기 요구사항 표시
+      min_text = f"Min: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} (Area: {settings.MIN_FACE_AREA})"
+      cv2.putText(display_frame, min_text, (10, 30), 
+                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+      
       face_roi = frame[startY:endY, startX:endX]
 
     cv2.imshow("Face Registration - Press 'c' to capture, 'q' to quit", display_frame)
