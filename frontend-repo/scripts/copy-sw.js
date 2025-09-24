@@ -4,8 +4,12 @@
  * Service Worker 파일을 루트로 복사하는 스크립트
  */
 
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const sourceFile = path.join(__dirname, '../public/firebase-messaging-sw.js')
 const targetFile = path.join(__dirname, '../dist/firebase-messaging-sw.js')
