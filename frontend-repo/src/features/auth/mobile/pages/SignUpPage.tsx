@@ -12,9 +12,11 @@ import type {
   SignUpRequest,
   LoginRequest,
 } from '@/features/auth'
+import { useToast } from '@/hooks/useToast'
 
 export const MobileSignUpPage = () => {
   const navigate = useNavigate()
+  const toast = useToast()
   const [loading, setLoading] = useState(false)
   const { setAuthData } = useAuthStore()
 
@@ -63,21 +65,21 @@ export const MobileSignUpPage = () => {
           // 3. 로그인 성공 시 인증 스토어에 데이터 저장
           setAuthData(loginResponse.result)
 
-          alert('회원가입 및 로그인이 완료되었습니다!')
+          toast.success('회원가입 및 로그인이 완료되었습니다!')
           // 얼굴 사진 등록 페이지로 이동
           navigate('/face-registration')
         } else {
-          alert(
+          toast.error(
             '회원가입은 완료되었지만 자동 로그인에 실패했습니다. 다시 로그인해주세요.',
           )
           navigate('/login')
         }
       } else {
-        alert(signupResponse.message || '회원가입에 실패했습니다.')
+        toast.error(signupResponse.message || '회원가입에 실패했습니다.')
       }
     } catch (error) {
       console.error('회원가입 또는 로그인 실패:', error)
-      alert('회원가입 중 오류가 발생했습니다.')
+      toast.error('회원가입 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }

@@ -11,10 +11,12 @@ import type {
 import { CctvFilters } from '@/features/cctv/web/components/CctvFilters'
 import { CctvTable } from '@/features/cctv/web/components/CctvTable'
 import { CctvFormModal } from '@/features/cctv/web/components/CctvFormModal'
+import { useToast } from '@/hooks/useToast'
 
 const DISPLAY = 10
 
 export const CctvSettingsPage = () => {
+  const toast = useToast()
   const role = useUserRole()
   const userAreaUuid = useAreaUuid()
 
@@ -113,10 +115,10 @@ export const CctvSettingsPage = () => {
       await fetchCctvs({ page: pageNum })
 
       // 성공 메시지 표시
-      alert('선택한 CCTV가 성공적으로 삭제되었습니다.')
-    } catch (error) {
-      console.error('CCTV 삭제 중 오류 발생:', error)
-      alert('CCTV 삭제 중 오류가 발생했습니다. 다시 시도해주세요.')
+      toast.success('선택한 CCTV가 성공적으로 삭제되었습니다.')
+    } catch (err) {
+      console.error('CCTV 삭제 중 오류 발생:', err)
+      toast.error('CCTV 삭제 중 오류가 발생했습니다. 다시 시도해주세요.')
     }
   }
 

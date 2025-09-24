@@ -40,14 +40,13 @@ const Accident: React.FC<AccidentProps> = ({ area, areaList }) => {
         const response = await dashboardAPI.postAccidentStatus({
           areaUuids: areaUuids,
         })
-
         if (response) {
           setStatData({
             todayCurrent: response.todayCurrent,
             last7Days: response.last7Days,
           })
           setChartData({
-            current: response.hourlyTrends.map((item) => item.currnet),
+            current: response.hourlyTrends.map((item) => item.current),
             previous: response.hourlyTrends.map((item) => item.previous),
             labels: response.hourlyTrends.map((item) => item.timeLabel),
           })
@@ -94,7 +93,7 @@ const Accident: React.FC<AccidentProps> = ({ area, areaList }) => {
         align: 'left',
       },
       tooltip: {
-        valueSuffix: ' 건',
+        valueSuffix: '건',
         stickOnContact: true,
         shared: true,
         crosshairs: true,
@@ -217,7 +216,7 @@ const statLabelBase = css`
 `
 
 const statCaseDataBase = css`
-  font-weight: 1000;
+  font-family: 'PretendardBold';
   font-size: 2rem;
 `
 

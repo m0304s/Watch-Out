@@ -12,6 +12,7 @@ import type {
   AreaOption,
 } from '@/features/worker/types'
 import { useUserRole, useAreaUuid } from '@/stores/authStore'
+import { useToast } from '@/hooks/useToast'
 
 // 교육상태 라벨 매핑
 const trainingStatusLabels: Record<TrainingStatus, string> = {
@@ -24,6 +25,8 @@ const roleLabel = (role: UserRole): string =>
   role === 'AREA_ADMIN' ? '현장 관리자' : '작업자'
 
 export const MobileWorkerListPage = () => {
+  const toast = useToast()
+
   // 사용자 권한 확인
   const userRole = useUserRole()
   const userAreaUuid = useAreaUuid()
@@ -76,7 +79,7 @@ export const MobileWorkerListPage = () => {
       setPagination(response.pagination)
     } catch (error) {
       console.error('작업자 목록 조회 실패:', error)
-      alert('작업자 목록을 불러오는 중 오류가 발생했습니다.')
+      toast.error('작업자 목록을 불러오는 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }

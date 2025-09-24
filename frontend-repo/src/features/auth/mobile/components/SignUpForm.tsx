@@ -7,6 +7,7 @@ import type {
   SignUpFormData,
 } from '@/features/auth'
 import { getCompanies, uploadProfileImage } from '@/features/auth/api/auth'
+import { useToast } from '@/hooks/useToast'
 
 interface SignUpFormProps {
   onSubmit?: (data: SignUpFormData) => void
@@ -39,6 +40,7 @@ export const MobileSignUpForm = ({
     companyUuid: '',
     gender: 'MALE',
   })
+  const toast = useToast()
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showCompanyModal, setShowCompanyModal] = useState(false)
   const [companyQuery, setCompanyQuery] = useState('')
@@ -113,13 +115,13 @@ export const MobileSignUpForm = ({
 
     // 이미지 파일 타입 검증
     if (!file.type.startsWith('image/')) {
-      alert('이미지 파일만 업로드 가능합니다.')
+      toast.info('이미지 파일만 업로드 가능합니다.')
       return
     }
 
     // 파일 크기 검증 (10MB 제한)
     if (file.size > 10 * 1024 * 1024) {
-      alert('파일 크기는 10MB 이하여야 합니다.')
+      toast.info('파일 크기는 10MB 이하여야 합니다.')
       return
     }
 
@@ -158,7 +160,7 @@ export const MobileSignUpForm = ({
         onSubmit?.(updatedForm)
       } catch (error) {
         console.error('이미지 업로드 실패:', error)
-        alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.')
+        toast.error('이미지 업로드에 실패했습니다. 다시 시도해주세요.')
       } finally {
         setImageUploading(false)
       }

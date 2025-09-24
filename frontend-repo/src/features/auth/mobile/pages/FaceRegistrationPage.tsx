@@ -10,9 +10,11 @@ import type {
   CapturedPhotos,
   FaceRegistrationError,
 } from '@/features/auth/types'
+import { useToast } from '@/hooks/useToast'
 
 export const MobileFaceRegistrationPage = () => {
   const navigate = useNavigate()
+  const toast = useToast()
   const { isAuthenticated } = useAuth()
   const [photos, setPhotos] = useState<FacePhotos>({})
   const [capturedPhotos, setCapturedPhotos] = useState<CapturedPhotos>({})
@@ -21,7 +23,7 @@ export const MobileFaceRegistrationPage = () => {
   // 인증 상태 확인
   useEffect(() => {
     if (!isAuthenticated) {
-      alert('로그인이 필요합니다.')
+      toast.info('로그인이 필요합니다.')
       navigate('/login')
     }
   }, [isAuthenticated, navigate])
@@ -40,7 +42,7 @@ export const MobileFaceRegistrationPage = () => {
 
   const handleComplete = async () => {
     if (!isAllPhotosCaptured()) {
-      alert('모든 사진을 촬영해주세요.')
+      toast.info('모든 사진을 촬영해주세요.')
       return
     }
 
@@ -53,17 +55,17 @@ export const MobileFaceRegistrationPage = () => {
         right: photos.right!,
       })
 
-      alert('얼굴 사진 등록이 완료되었습니다!')
+      toast.success('얼굴 사진 등록이 완료되었습니다!')
       navigate('/worker')
-    } catch (error) {
-      console.error('얼굴 사진 업로드 실패:', error)
+    } catch (err) {
+      console.error('얼굴 사진 업로드 실패:', err)
 
       // FaceRegistrationError인 경우 구체적인 메시지 표시
-      if (error && typeof error === 'object' && 'code' in error) {
-        const faceError = error as FaceRegistrationError
-        alert(faceError.message)
+      if (err && typeof err === 'object' && 'code' in err) {
+        const faceError = err as FaceRegistrationError
+        toast.error(faceError.message)
       } else {
-        alert('사진 업로드 중 오류가 발생했습니다. 다시 시도해주세요.')
+        toast.error('사진 업로드 중 오류가 발생했습니다. 다시 시도해주세요.')
       }
     } finally {
       setIsUploading(false)

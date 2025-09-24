@@ -3,14 +3,15 @@ import { useState, useEffect, type ChangeEvent } from 'react'
 import type { AreaListItem } from '@/features/area/types/area'
 import type { CctvViewAreaItem } from '@/features/area/types/cctv'
 import { MobileLayout } from '@/components/mobile/MobileLayout'
+import { MobileUser } from '@/components/mobile'
 import { areaAPI } from '@/features/area/services/area'
-import { useToast } from '@/hooks'
 import { cctvAPI } from '@/features/area/services/cctv'
-import MobileCctvModal from './MobileCctvModal'
+import MobileCctvModal from '@/features/area/mobile/MobileCctvModal'
+import { useToast } from '@/hooks/useToast'
 
 const MobileCctvMonitoring = () => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-  const { error } = useToast()
+  const toast = useToast()
   const [selectedArea, setSelectedArea] = useState<string>('')
   const [areaList, setAreaList] = useState<AreaListItem[]>([])
   const [cctvList, setCctvList] = useState<CctvViewAreaItem[] | null>(null)
@@ -49,7 +50,7 @@ const MobileCctvMonitoring = () => {
           }
         }
       } catch (err) {
-        error('구역 목록을 가져오는 데 실패했습니다.')
+        toast.error('구역 목록을 가져오는 데 실패했습니다.')
         console.error('구역 목록 조회 에러:', err)
       }
     }
@@ -66,7 +67,7 @@ const MobileCctvMonitoring = () => {
           })
           setCctvList(cctvResponse.items)
         } catch (err) {
-          error('CCTV 목록을 가져오는 데 실패했습니다.')
+          toast.error('CCTV 목록을 가져오는 데 실패했습니다.')
           console.error('CCTV 조회 에러:', err)
         }
       }
@@ -75,7 +76,7 @@ const MobileCctvMonitoring = () => {
   }, [selectedArea])
 
   return (
-    <MobileLayout title="현장 관리">
+    <MobileLayout title="현장 관리" rightSlot={<MobileUser />}>
       <div css={container}>
         <div css={sectionTitle}>구역별 CCTV 영상</div>
         <div>

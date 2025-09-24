@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createArea, updateArea } from '@/features/cctv/api/areaApi'
 import { FormModal } from '@/components/common/Modal'
 import type { AreaItem, CreateAreaRequest } from '@/features/cctv/types'
+import { useToast } from '@/hooks/useToast'
 
 interface AreaFormModalProps {
   isOpen: boolean
@@ -18,6 +19,7 @@ export const AreaFormModal = ({
   editingArea,
 }: AreaFormModalProps) => {
   const isEditMode = !!editingArea
+  const toast = useToast()
 
   const [formData, setFormData] = useState<CreateAreaRequest>({
     areaName: '',
@@ -78,14 +80,14 @@ export const AreaFormModal = ({
           areaName: formData.areaName.trim(),
           areaAlias: formData.areaAlias.trim(),
         })
-        alert('구역이 성공적으로 수정되었습니다.')
+        toast.success('구역이 성공적으로 수정되었습니다.')
       } else {
         // 생성 모드
         await createArea({
           areaName: formData.areaName.trim(),
           areaAlias: formData.areaAlias.trim(),
         })
-        alert('구역이 성공적으로 생성되었습니다.')
+        toast.success('구역이 성공적으로 생성되었습니다.')
       }
 
       // 성공 시 폼 초기화 및 모달 닫기
@@ -93,9 +95,9 @@ export const AreaFormModal = ({
       setErrors({})
       onSuccess()
       onClose()
-    } catch (error) {
-      console.error(`${isEditMode ? '구역 수정' : '구역 생성'} 실패:`, error)
-      alert(
+    } catch (err) {
+      console.error(`${isEditMode ? '구역 수정' : '구역 생성'} 실패:`, err)
+      toast.error(
         `${isEditMode ? '구역 수정' : '구역 생성'}에 실패했습니다. 다시 시도해주세요.`,
       )
     } finally {
