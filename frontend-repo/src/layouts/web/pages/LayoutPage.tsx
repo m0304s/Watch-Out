@@ -10,6 +10,7 @@ import NotificationPage from '@/notification/web/pages/NotificationPage'
 
 const Layout: React.FC = () => {
   const { isNavOpen } = useLayoutStore()
+
   return (
     <>
       <div css={layoutContainer}>
@@ -78,6 +79,7 @@ const mainContainer = css`
 `
 
 const notiContainer = css`
-  width: 18%;
+  width: 25%;
   border-left: 1px solid var(--color-gray-400);
+  flex-shrink: 0;
 `

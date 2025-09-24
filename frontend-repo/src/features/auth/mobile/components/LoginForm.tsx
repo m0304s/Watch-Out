@@ -2,6 +2,7 @@ import { css } from '@emotion/react'
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { LoginFormData } from '@/features/auth/types'
+import { Button } from '@/components/common/Button'
 
 interface MobileLoginFormProps {
   onSubmit: (data: LoginFormData) => void

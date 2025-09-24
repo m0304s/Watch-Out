@@ -1,4 +1,4 @@
-import apiClient from '@/apis/axios'
+import { apiClient } from '@/api/client'
 import type {
   AreaListRequest,
   AreaListResponse,
@@ -33,5 +33,5 @@ export const areaAPI = {
   getMyArea: async (): Promise<MyAreaResponse> => {
     const response = await apiClient.get(`/area/mine`)
     return response.data
-  }
+  },
 }

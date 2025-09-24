@@ -1,5 +1,6 @@
+import type { UserRole, PaginatedResponse, BaseEntity } from '@/types/common'
+
 export type TrainingStatus = 'COMPLETED' | 'EXPIRED' | 'NOT_COMPLETED'
-export type UserRole = 'WORKER' | 'AREA_ADMIN'
 export type Gender = 'MALE' | 'FEMALE'
 export type BloodType = 'A' | 'B' | 'AB' | 'O'
 export type RhFactor = 'PLUS' | 'MINUS'
@@ -16,19 +17,7 @@ export interface Employee {
   photoUrl: string
 }
 
-export interface Pagination {
-  pageNum: number
-  display: number
-  totalItems: number
-  totalPages: number
-  first: boolean
-  last: boolean
-}
-
-export interface PaginatedResponse<T> {
-  data: T[]
-  pagination: Pagination
-}
+// PaginatedResponse는 공통 타입에서 import
 
 export interface WorkerFilterState {
   search: string
