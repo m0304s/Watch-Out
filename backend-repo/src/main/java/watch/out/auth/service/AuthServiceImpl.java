@@ -82,7 +82,7 @@ public class AuthServiceImpl implements AuthService {
         fcmService.clearUserFcmToken(userUuid);
 
         // 쿠키에서 refresh token 삭제
-        cookieUtil.deleteCookie(httpServletRequest, httpServletResponse, "refresh_token");
+        cookieUtil.deleteCookie(httpServletResponse, "refresh_token");
     }
 
     @Override

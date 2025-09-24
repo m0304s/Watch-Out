@@ -1,4 +1,4 @@
-import apiClient from '@/apis/axios'
+import { apiClient } from '@/api/client'
 import type {
   SafetyScoreRequest,
   SafetyScoreResponse,

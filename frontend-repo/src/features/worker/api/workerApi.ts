@@ -1,4 +1,4 @@
-import { api } from '@/apis/axios'
+import { api } from '@/api/client'
 import type {
   Employee,
   PaginatedResponse,

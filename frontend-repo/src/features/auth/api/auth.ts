@@ -1,4 +1,4 @@
-import { api } from '@/apis/axios'
+import { api } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
 import { clearAllAuthData } from '@/utils/logout'
 import type {
@@ -46,6 +46,7 @@ export const login = async (
 // 로그아웃 API
 export const logout = async (): Promise<ApiResponse<void>> => {
   try {
+    // FCM 토큰 제거를 위한 로그아웃 요청
     const response = await api.post<ApiResponse<void>>(AUTH_ENDPOINTS.LOGOUT)
 
     // 로그아웃 성공 시 모든 로컬스토리지 데이터 완전 제거

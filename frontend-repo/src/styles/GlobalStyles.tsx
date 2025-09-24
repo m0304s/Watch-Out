@@ -70,7 +70,6 @@ const GlobalStyles = () => (
 
       body {
         font-family: 'PretendardRegular', sans-serif;
-
         color: var(--color-text);
         line-height: 1.6;
       }

@@ -6,10 +6,12 @@ import { AreaFormModal } from '@/features/cctv/web/components/AreaFormModal'
 import { AreaDetailModal } from '@/features/cctv/web/components/AreaDetailModal'
 import { getAreas, deleteArea } from '@/features/cctv/api/areaApi'
 import type { AreaItem, PaginatedResponse } from '@/features/cctv/types'
+import { useToast } from '@/hooks/useToast'
 
 const DISPLAY = 10
 
 export const AreaManagementPage = () => {
+  const toast = useToast()
   const role = useUserRole()
 
   // 권한 가드: ADMIN만 접근 허용
@@ -80,10 +82,10 @@ export const AreaManagementPage = () => {
       await fetchList({ page: pageNum })
 
       // 성공 메시지 표시
-      alert('선택한 구역이 성공적으로 삭제되었습니다.')
-    } catch (error) {
-      console.error('구역 삭제 중 오류 발생:', error)
-      alert('구역 삭제 중 오류가 발생했습니다. 다시 시도해주세요.')
+      toast.success('선택한 구역이 성공적으로 삭제되었습니다.')
+    } catch (err) {
+      console.error('구역 삭제 중 오류 발생:', err)
+      toast.error('구역 삭제 중 오류가 발생했습니다. 다시 시도해주세요.')
     }
   }
 

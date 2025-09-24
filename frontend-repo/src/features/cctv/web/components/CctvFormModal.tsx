@@ -8,6 +8,7 @@ import type {
   CreateCctvRequest,
   CctvItem,
 } from '@/features/cctv/types'
+import { useToast } from '@/hooks/useToast'
 
 interface CctvFormModalProps {
   isOpen: boolean
@@ -22,6 +23,7 @@ export const CctvFormModal = ({
   onSuccess,
   editingCctv,
 }: CctvFormModalProps) => {
+  const toast = useToast()
   const [formData, setFormData] = useState<CreateCctvRequest>({
     cctvName: '',
     cctvUrl: '',
@@ -103,7 +105,7 @@ export const CctvFormModal = ({
           type: formData.type,
           areaUuid: formData.areaUuid,
         })
-        alert('CCTV가 성공적으로 수정되었습니다.')
+        toast.success('CCTV가 성공적으로 수정되었습니다.')
       } else {
         // 생성 모드
         await createCctv({
@@ -113,7 +115,7 @@ export const CctvFormModal = ({
           type: formData.type,
           areaUuid: formData.areaUuid,
         })
-        alert('CCTV가 성공적으로 생성되었습니다.')
+        toast.success('CCTV가 성공적으로 생성되었습니다.')
       }
 
       // 성공 시 폼 초기화 및 모달 닫기
@@ -127,9 +129,9 @@ export const CctvFormModal = ({
       setErrors({})
       onSuccess()
       onClose()
-    } catch (error) {
-      console.error('CCTV 처리 실패:', error)
-      alert(
+    } catch (err) {
+      console.error('CCTV 처리 실패:', err)
+      toast.error(
         `CCTV ${editingCctv ? '수정' : '생성'}에 실패했습니다. 다시 시도해주세요.`,
       )
     } finally {

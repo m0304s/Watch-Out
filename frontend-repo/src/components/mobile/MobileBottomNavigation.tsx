@@ -21,7 +21,9 @@ const getNavListStyles = (count: number) => css`
   padding: 0;
 `
 
-export const MobileBottomNavigation = ({ items: itemsProp }: MobileBottomNavigationProps) => {
+export const MobileBottomNavigation = ({
+  items: itemsProp,
+}: MobileBottomNavigationProps) => {
   const userRole = useUserRole()
 
   const roleItems: NavItem[] = useMemo(() => {
@@ -29,7 +31,7 @@ export const MobileBottomNavigation = ({ items: itemsProp }: MobileBottomNavigat
       return [
         { label: 'SOS', to: '/sos' },
         { label: '알림', to: '/notification' },
-        { label: '현장', to: '/cctv/monitoring' },
+        { label: '현장', to: '/cctv2' },
         { label: '작업자', to: '/worker2' },
       ]
     }
@@ -68,11 +70,14 @@ export const MobileBottomNavigation = ({ items: itemsProp }: MobileBottomNavigat
 }
 
 const navStyles = css`
-  position: sticky;
+  position: fixed;
   bottom: 0;
-  height: 60px;
+  left: 0;
+  right: 0;
+  height: calc(60px + env(safe-area-inset-bottom));
   background-color: var(--color-bg-white);
   border-top: 1px solid var(--color-gray-300);
+  z-index: 100;
 `
 
 const navItemStyles = css`
@@ -91,7 +96,6 @@ const innerContainerStyles = css`
   width: 100%;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 4px;
   color: var(--color-gray-500);
   font-family: 'PretendardRegular', sans-serif;
@@ -104,4 +108,5 @@ const activeColorStyles = css`
 
 const labelStyles = css`
   line-height: 1;
+  padding-top: 2rem;
 `

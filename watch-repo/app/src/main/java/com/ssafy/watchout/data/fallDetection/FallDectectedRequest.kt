@@ -1,4 +1,4 @@
-package com.ssafy.watchout.data.fall_detection.model
+package com.ssafy.watchout.data.fallDetection.model
 
 data class FallDectectedRequest(
     val type: String,

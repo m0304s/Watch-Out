@@ -1,15 +1,42 @@
 import axios from 'axios'
-import type { AxiosInstance, AxiosRequestConfig } from 'axios'
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 import { clearAllAuthData } from '@/utils/logout'
+import type { ApiResponse } from '@/types/common'
+import { logger } from '@/utils/logger'
 
+// 모바일 환경 감지 (Capacitor 사용)
+const isMobile =
+  window.location.protocol === 'capacitor:' ||
+  (window as any).Capacitor?.isNativePlatform()
+
+// API URL 설정 (웹과 모바일 모두 배포 서버 사용)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+
+logger.info(
+  'API 클라이언트 초기화',
+  {
+    isMobile,
+    protocol: window.location.protocol,
+    hostname: window.location.hostname,
+    port: window.location.port,
+    isProd: import.meta.env.PROD,
+    isDev: import.meta.env.DEV,
+    viteMobileUrl: import.meta.env.VITE_MOBILE_API_URL,
+    viteApiUrl: import.meta.env.VITE_API_BASE_URL,
+    baseURL: API_BASE_URL,
+  },
+  'API',
+  'initialize',
+)
+
 const isDevelopment = import.meta.env.DEV
+const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT) || 10000
 
 // axios 인스턴스 생성 (기본 설정 포함)
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL, // 절대 경로로 명시
-  timeout: 30000,
+  baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT,
   withCredentials: true, // 쿠키 자동 전송을 위해 true로 설정
   headers: {
     'Content-Type': 'application/json',
@@ -17,41 +44,42 @@ export const apiClient: AxiosInstance = axios.create({
 })
 
 // 생성된 axios 인스턴스의 baseURL 확인 로그
-console.log('🔧 apiClient baseURL:', apiClient.defaults.baseURL)
+logger.debug(
+  'API 클라이언트 baseURL 설정',
+  { baseURL: apiClient.defaults.baseURL },
+  'API',
+  'config',
+)
 
 // 🐛 개발 환경에서 요청/응답 로깅
 if (isDevelopment) {
   // 요청 로그
   apiClient.interceptors.request.use((request) => {
-    console.log('🚀 API Request:', request.method?.toUpperCase(), request.url)
-    console.log('🌐 Full URL:', `${request.baseURL}${request.url}`)
-    if (request.data) {
-      console.log('📤 Request Data:', request.data)
-    }
+    logger.apiRequest(
+      request.method?.toUpperCase() || 'UNKNOWN',
+      request.url || '',
+      request.data,
+    )
     return request
   })
 
   // 응답 로그
   apiClient.interceptors.response.use(
     (response) => {
-      console.log('✅ API Response:', response.status, response.config.url)
-      console.log('📥 Response Data:', response.data)
+      logger.apiResponse(
+        response.config.method?.toUpperCase() || 'UNKNOWN',
+        response.config.url || '',
+        response.status,
+        response.data,
+      )
       return response
     },
     (error) => {
-      console.log(
-        '❌ API Error:',
-        error.response?.status,
-        error.config?.url,
-        error.message,
+      logger.apiError(
+        error.config?.method?.toUpperCase() || 'UNKNOWN',
+        error.config?.url || '',
+        error,
       )
-      if (error.response?.data) {
-        console.log('📥 Error Data:', error.response.data)
-        console.log(
-          '📥 Error Details:',
-          JSON.stringify(error.response.data, null, 2),
-        )
-      }
       return Promise.reject(error)
     },
   )
@@ -117,14 +145,19 @@ apiClient.interceptors.response.use(
       )
 
       if (isPublicEndpoint) {
-        console.log('공개 엔드포인트 401 에러 - 토큰 갱신 시도하지 않음:', url)
+        logger.warn(
+          '공개 엔드포인트 401 에러 - 토큰 갱신 시도하지 않음',
+          { url },
+          'API',
+          'auth',
+        )
         return Promise.reject(error)
       }
 
       originalRequest._retry = true
 
       try {
-        console.log('토큰 갱신 시도...')
+        logger.info('토큰 갱신 시도', { url }, 'API', 'token-refresh')
 
         // 토큰 갱신 API 호출 (refreshToken은 쿠키로 자동 전송됨)
         const response = await apiClient.post('/auth/reissue', undefined, {
@@ -142,13 +175,13 @@ apiClient.interceptors.response.use(
           // 원래 요청의 Authorization 헤더 업데이트
           originalRequest.headers.Authorization = `Bearer ${newToken}`
 
-          console.log('토큰 갱신 성공')
+          logger.info('토큰 갱신 성공', { url }, 'API', 'token-refresh')
 
           // 원래 요청 재시도
           return apiClient(originalRequest)
         }
       } catch (refreshError) {
-        console.error('토큰 갱신 실패:', refreshError)
+        logger.error('토큰 갱신 실패', refreshError, 'API', 'token-refresh')
 
         // 토큰 갱신 실패 시 모든 인증 데이터 완전 제거
         clearAllAuthData()
@@ -190,6 +223,55 @@ export const api = {
   delete<T = any>(url: string, config?: AxiosRequestConfig) {
     return apiClient.delete<T>(url, config)
   },
+}
+
+// 공통 에러 처리 함수
+export const handleApiError = (error: any): string => {
+  logger.error('API 에러 발생', error, 'API', 'error-handling')
+
+  // 네트워크 에러
+  if (!error.response) {
+    return '네트워크 연결을 확인해주세요.'
+  }
+
+  // 서버 응답 에러
+  const { status, data } = error.response
+
+  // 서버에서 제공하는 에러 메시지
+  if (data?.message) {
+    return data.message
+  }
+
+  // HTTP 상태 코드별 에러 메시지
+  switch (status) {
+    case 400:
+      return '잘못된 요청입니다.'
+    case 401:
+      return '인증이 필요합니다. 다시 로그인해주세요.'
+    case 403:
+      return '접근 권한이 없습니다.'
+    case 404:
+      return '요청한 리소스를 찾을 수 없습니다.'
+    case 409:
+      return '데이터 충돌이 발생했습니다.'
+    case 422:
+      return '입력 데이터를 확인해주세요.'
+    case 429:
+      return '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
+    case 500:
+      return '서버 내부 오류가 발생했습니다.'
+    case 502:
+      return '서버가 일시적으로 사용할 수 없습니다.'
+    case 503:
+      return '서버가 점검 중입니다.'
+    case 504:
+      return '요청 시간이 초과되었습니다.'
+    default:
+      if (status >= 500) {
+        return '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      }
+      return error.message || '알 수 없는 오류가 발생했습니다.'
+  }
 }
 
 export default apiClient

@@ -1,5 +1,6 @@
 import { css } from '@emotion/react'
 import { MobileLayout } from '@/components/mobile/MobileLayout'
+import { MobileUser } from '@/components/mobile'
 import { useToast } from '@/hooks/useToast'
 import { useAccident } from '@/features/sos/hooks/useAccident'
 
@@ -20,7 +21,7 @@ export const SOSPage = () => {
   }
 
   return (
-    <MobileLayout title="SOS" showBack>
+    <MobileLayout title="SOS" showBack rightSlot={<MobileUser />}>
       <div css={container}>
         <div css={imageContainer}>
           <div

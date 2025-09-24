@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { clearAllAuthData } from '@/utils/logout'
 import type { LoginResponse } from '@/features/auth/types'
+import { logout as authLogout } from '@/features/auth/api/auth'
+import { logger } from '@/utils/logger'
 
 interface AuthState {
   // 인증 상태
@@ -60,6 +62,19 @@ export const useAuthStore = create<AuthStore>()(
       ...initialState,
 
       setAuthData: (loginResponse: LoginResponse) => {
+        logger.storeAction('authStore', 'setAuthData', {
+          userUuid: loginResponse.userUuid,
+          userId: loginResponse.userId,
+          userRole: loginResponse.userRole,
+        })
+
+        // localStorage에 토큰 저장 (라우터에서 사용)
+        localStorage.setItem('accessToken', loginResponse.accessToken)
+        localStorage.setItem('userUuid', loginResponse.userUuid)
+        localStorage.setItem('userId', loginResponse.userId)
+        localStorage.setItem('userName', loginResponse.userName)
+        localStorage.setItem('userRole', loginResponse.userRole)
+
         set({
           isAuthenticated: true,
           accessToken: loginResponse.accessToken,
@@ -74,20 +89,41 @@ export const useAuthStore = create<AuthStore>()(
         })
       },
 
-      logout: () => {
-        // 상태만 초기화 (localStorage는 logoutApi에서 제거됨)
+      logout: async () => {
+        logger.storeAction('authStore', 'logout')
+
+        try {
+          // 백엔드에 로그아웃 요청 (FCM 토큰 제거 포함)
+          await authLogout()
+          logger.info('로그아웃 성공', undefined, 'authStore', 'logout')
+        } catch (error) {
+          logger.storeError('authStore', 'logout', error)
+        }
+
+        // localStorage 정리
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('userUuid')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('userName')
+        localStorage.removeItem('userRole')
+        localStorage.removeItem('fcm-token')
+
         set({
           ...initialState,
         })
       },
 
       updateToken: (accessToken: string) => {
+        logger.storeAction('authStore', 'updateToken')
         set({
           accessToken,
         })
       },
 
       setError: (error: string | null) => {
+        if (error) {
+          logger.storeError('authStore', 'setError', error)
+        }
         set({
           error,
           isLoading: false,
@@ -101,6 +137,8 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       clearAuth: () => {
+        logger.storeAction('authStore', 'clearAuth')
+
         // 유틸리티 함수를 사용하여 모든 인증 관련 데이터 완전 제거
         clearAllAuthData()
 

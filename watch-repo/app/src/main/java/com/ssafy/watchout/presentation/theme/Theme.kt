@@ -1,7 +1,7 @@
 package com.ssafy.watchout.presentation.theme
 
 import androidx.compose.runtime.Composable
-import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material3.MaterialTheme
 
 @Composable
 fun WatchOutTheme(
@@ -12,6 +12,8 @@ fun WatchOutTheme(
      * See: https://developer.android.com/jetpack/compose/designsystems/custom
      */
     MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
         content = content
     )
 }

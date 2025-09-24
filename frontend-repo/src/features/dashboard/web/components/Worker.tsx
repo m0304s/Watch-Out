@@ -13,7 +13,7 @@ interface WorkerProps {
 }
 
 const Worker = ({ area, areaList }: WorkerProps) => {
-  const { error } = useToast()
+  const toast = useToast()
   const [chartData, setChartData] = useState<WorkerCountResponse | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
@@ -38,14 +38,14 @@ const Worker = ({ area, areaList }: WorkerProps) => {
           })
         }
       } catch (err) {
-        error('작업 인원을 불러오는 데 실패했습니다.')
+        toast.error('작업 인원을 불러오는 데 실패했습니다.')
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchWorkerCount()
-  }, [area, areaList, error])
+  }, [area, areaList, toast.error])
 
   const chartOptions: Highcharts.Options = useMemo(() => {
     if (!chartData) {
@@ -56,6 +56,8 @@ const Worker = ({ area, areaList }: WorkerProps) => {
       chart: {
         type: 'pie',
         backgroundColor: '#F8F8F8',
+        width: 250,
+        height: 250,
       },
       accessibility: {
         point: {
@@ -66,10 +68,10 @@ const Worker = ({ area, areaList }: WorkerProps) => {
         text: `${chartData.nowWorkers}명`,
         align: 'center',
         verticalAlign: 'middle',
-        x: -6,
         style: {
           fontSize: '2rem',
           fontWeight: 'bold',
+          fontFamily: 'PretendardBold',
         },
       },
       tooltip: {
@@ -79,26 +81,30 @@ const Worker = ({ area, areaList }: WorkerProps) => {
         enabled: false,
       },
       plotOptions: {
+        pie: {
+          innerSize: '80%',
+          borderColor: 'transparent',
+          borderWidth: 0,
+        },
         series: {
           allowPointSelect: true,
           cursor: 'pointer',
           borderRadius: 0,
           dataLabels: [
             {
-              enabled: true,
+              enabled: false,
               distance: 20,
               format: '{point.name}',
-            },
-            {
-              enabled: false,
-              distance: -15,
-              format: '{point.y}명',
-              style: {
-                fontSize: '0.9em',
-              },
+              textOutline: 'none',
             },
           ],
           showInLegend: true,
+          shadow: {
+            color: 'rgba(0,0,0,0.3)',
+            width: 10,
+            offsetX: 0,
+            offsetY: 2,
+          },
         },
       },
       series: [
@@ -115,7 +121,7 @@ const Worker = ({ area, areaList }: WorkerProps) => {
             {
               name: '결원',
               y: chartData.allWorkers - chartData.nowWorkers,
-              color: '#a0a0a0',
+              color: '#bfbfbf',
             },
           ],
         },
@@ -125,7 +131,7 @@ const Worker = ({ area, areaList }: WorkerProps) => {
       },
     }
   }, [chartData])
-  console.log('차트데이터', chartData)
+
   return (
     <>
       {isLoading ? (
@@ -133,7 +139,9 @@ const Worker = ({ area, areaList }: WorkerProps) => {
       ) : (
         <div css={container}>
           <h3 css={title}>작업 인원</h3>
-          <HighchartsReact highcharts={Highcharts} options={chartOptions} />
+          <div css={chartWrapper}>
+            <HighchartsReact highcharts={Highcharts} options={chartOptions} />
+          </div>
         </div>
       )}
     </>
@@ -153,4 +161,10 @@ const title = css`
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 4px 0;
+`
+
+const chartWrapper = css`
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `

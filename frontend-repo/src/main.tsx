@@ -8,6 +8,19 @@ import GlobalStyles from '@/styles/GlobalStyles'
 import { toastStyles } from '@/styles/ToastStyles'
 import AuthWatchSyncGate from '@/bootstrap/AuthWatchSyncGate'
 
+// 서비스 워커 등록
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then((registration) => {
+        console.log('SW registered: ', registration)
+      })
+      .catch((registrationError) => {
+        console.log('SW registration failed: ', registrationError)
+      })
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

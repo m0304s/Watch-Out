@@ -2,6 +2,7 @@ import { css } from '@emotion/react'
 import { useState, useEffect, useRef } from 'react'
 import { searchAreaAdmins, assignManager } from '@/features/cctv/api/areaApi'
 import type { AreaAdminUser, AssignManagerRequest } from '@/features/cctv/types'
+import { useToast } from '@/hooks/useToast'
 
 interface ManagerDropdownProps {
   areaUuid: string
@@ -14,6 +15,7 @@ export const ManagerDropdown = ({
   currentManagerName,
   onManagerAssigned,
 }: ManagerDropdownProps) => {
+  const toast = useToast()
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [admins, setAdmins] = useState<AreaAdminUser[]>([])
   const [loading, setLoading] = useState<boolean>(false)
@@ -46,7 +48,7 @@ export const ManagerDropdown = ({
       setAdmins(response.data)
     } catch (error) {
       console.error('담당자 목록 로드 실패:', error)
-      alert('담당자 목록을 불러오는데 실패했습니다.')
+      toast.error('담당자 목록을 불러오는데 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -72,10 +74,10 @@ export const ManagerDropdown = ({
       await assignManager(request)
       onManagerAssigned()
       setIsOpen(false)
-      alert(`${admin.userName}님이 담당자로 지정되었습니다.`)
-    } catch (error) {
-      console.error('담당자 지정 실패:', error)
-      alert('담당자 지정에 실패했습니다. 다시 시도해주세요.')
+      toast.success(`${admin.userName}님이 담당자로 지정되었습니다.`)
+    } catch (err) {
+      console.error('담당자 지정 실패:', err)
+      toast.error('담당자 지정에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setAssigning(false)
     }

@@ -2,7 +2,6 @@ import type { ComponentType } from 'react'
 import { TiHome } from 'react-icons/ti'
 import { IoMdCrop } from 'react-icons/io'
 import { MdPeopleAlt } from 'react-icons/md'
-import { GiPieChart } from 'react-icons/gi'
 import { TbDeviceWatchCog } from 'react-icons/tb'
 
 export interface NavItem {
@@ -46,17 +45,11 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 3,
     name: '작업자 관리',
-    path: '/worker1',
+    path: '/worker',
     icon: MdPeopleAlt,
   },
   {
     id: 4,
-    name: '통계 및 분석',
-    path: '/statistics',
-    icon: GiPieChart,
-  },
-  {
-    id: 5,
     name: '워치 관리',
     path: '/watch',
     icon: TbDeviceWatchCog,

@@ -1,4 +1,4 @@
-package com.ssafy.watchout.domain.fall_detection
+package com.ssafy.watchout.domain.fallDetection
 
 import androidx.health.services.client.data.HealthEvent
 import kotlinx.coroutines.flow.MutableStateFlow

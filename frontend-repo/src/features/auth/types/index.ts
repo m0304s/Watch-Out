@@ -1,3 +1,5 @@
+import type { ApiResponse, UserRole } from '@/types/common'
+
 export interface LoginRequest {
   userId: string
   password: string
@@ -8,7 +10,7 @@ export interface LoginResponse {
   userUuid: string
   userId: string
   userName: string
-  userRole: 'WORKER' | 'AREA_ADMIN' | 'ADMIN'
+  userRole: UserRole
   areaUuid?: string
   isApproved: boolean
 }
@@ -66,14 +68,6 @@ export interface SignUpRequest {
 export interface CompanyOption {
   companyUuid: string
   companyName: string
-}
-
-// API Response 타입 정의
-export interface ApiResponse<T = unknown> {
-  success: boolean
-  result?: T
-  message?: string
-  code?: string
 }
 
 // 토큰 재발급 응답 타입
