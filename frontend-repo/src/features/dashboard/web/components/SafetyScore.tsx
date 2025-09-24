@@ -171,6 +171,6 @@ const scoreContainer = css`
 `
 
 const scoreText = css`
-  font-weight: 1000;
+  font-family: 'PretendardBold';
   font-size: 2rem;
 `

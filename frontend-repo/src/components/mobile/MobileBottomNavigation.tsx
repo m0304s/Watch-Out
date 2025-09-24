@@ -74,19 +74,10 @@ const navStyles = css`
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: calc(60px + env(safe-area-inset-bottom));
   background-color: var(--color-bg-white);
   border-top: 1px solid var(--color-gray-300);
   z-index: 100;
-
-  /* 갤럭시 화면 버튼 3개를 고려한 여백 */
-  padding: 24px 0;
-
-  /* 갤럭시 기기에서의 최적화 */
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    // margin-bottom: 24px;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 48px);
-  }
 `
 
 const navItemStyles = css`
@@ -105,7 +96,6 @@ const innerContainerStyles = css`
   width: 100%;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 4px;
   color: var(--color-gray-500);
   font-family: 'PretendardRegular', sans-serif;
@@ -118,4 +108,5 @@ const activeColorStyles = css`
 
 const labelStyles = css`
   line-height: 1;
+  padding-top: 2rem;
 `

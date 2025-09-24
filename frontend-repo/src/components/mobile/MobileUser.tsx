@@ -28,7 +28,7 @@ const logoutStyles = css`
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 40px 8px 4px 8px;
   border-radius: 4px;
   transition: all 0.2s ease;
   opacity: 0.8;

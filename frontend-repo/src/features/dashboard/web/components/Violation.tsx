@@ -18,7 +18,7 @@ interface violationDataType {
 }
 
 const Violation = ({ area, areaList }: ViolationProps) => {
-  const { error } = useToast()
+  const toast = useToast()
   const [violationData, setViolationData] = useState<violationDataType | null>(
     null,
   )
@@ -54,11 +54,11 @@ const Violation = ({ area, areaList }: ViolationProps) => {
           })
         }
       } catch (err) {
-        error('안전장비 미착용 api 호출 오류')
+        toast.error('안전장비 미착용 api 호출 오류')
       }
     }
     fetchViolation()
-  }, [area, areaList, error])
+  }, [area, areaList, toast.error])
 
   const chart = (data: number[], labels: string[]) => ({
     chart: {
@@ -99,10 +99,16 @@ const Violation = ({ area, areaList }: ViolationProps) => {
     },
     plotOptions: {
       spline: {
-        lineWidth: 2,
+        shadow: {
+          color: '#1A73E8',
+          width: 3,
+          offsetX: 0,
+          offsetY: 3,
+        },
+        lineWidth: 3,
         states: {
           hover: {
-            lineWidth: 5,
+            lineWidth: 4,
           },
         },
         marker: {
@@ -226,12 +232,17 @@ const violationContent = css`
 `
 
 const violationCount = css`
-  font-weight: 1000;
+  /* padding-left: 3px; */
+  font-family: 'PretendardBold';
+
   font-size: 2rem;
+  flex: 1;
+  display: flex;
+  justify-content: center;
 `
 
 const chartWrapper = css`
-  flex: 1;
+  flex: 1.5;
   height: 100px;
   z-index: 99;
   overflow: hidden;

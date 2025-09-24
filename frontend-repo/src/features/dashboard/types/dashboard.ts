@@ -31,7 +31,7 @@ export interface AccidentStatusRequest {
 
 export interface AccidentStatusItem {
   timeLabel: string
-  currnet: number
+  current: number
   previous: number
 }
 
