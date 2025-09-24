@@ -1,8 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import babel from 'vite-plugin-babel'
 import path from 'node:path'
-import { copyFileSync } from 'fs'
+import { copyFileSync } from 'node:fs'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -51,12 +50,13 @@ export default defineConfig({
       '/firebase-messaging-sw.js': {
         target: 'http://localhost:5173',
         changeOrigin: true,
-        rewrite: (path) => '/public/firebase-messaging-sw.js',
+        rewrite: () => '/public/firebase-messaging-sw.js',
       },
     },
   },
   build: {
     outDir: 'dist',
+    chunkSizeWarningLimit: 1000, // 청크 크기 경고 임계값을 1MB로 증가
     rollupOptions: {
       output: {
         // Service Worker 파일을 루트에 복사
@@ -65,6 +65,13 @@ export default defineConfig({
             return 'firebase-messaging-sw.js'
           }
           return 'assets/[name]-[hash][extname]'
+        },
+        // 수동 청크 분할로 번들 크기 최적화
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['@emotion/react', 'react-icons'],
+          'chart-vendor': ['highcharts', 'highcharts-react-official'],
+          'utils-vendor': ['axios', 'zustand', 'react-toastify'],
         },
       },
     },
