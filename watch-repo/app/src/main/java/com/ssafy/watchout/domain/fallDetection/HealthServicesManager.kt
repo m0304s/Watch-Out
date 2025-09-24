@@ -18,15 +18,23 @@ class HealthServicesManager(context: Context) {
     private val healthEventTypes = setOf(HealthEvent.Type.FALL_DETECTED)
 
     suspend fun registerForHealthEvents() {
-        Log.i(TAG, "Registering listener")
+        Log.i(TAG, "Registering listener for health events")
+        Log.i(TAG, "Health event types: $healthEventTypes")
+
         val passiveListenerConfig = PassiveListenerConfig.builder()
             .setHealthEventTypes(healthEventTypes)
             .build()
 
-        healthServicesClient.passiveMonitoringClient.setPassiveListenerServiceAsync(
-            PassiveHealthEventService::class.java,
-            passiveListenerConfig
-        ).await()
+        try {
+            healthServicesClient.passiveMonitoringClient.setPassiveListenerServiceAsync(
+                PassiveHealthEventService::class.java,
+                passiveListenerConfig
+            ).await()
+            Log.i(TAG, "Successfully registered for health events")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register for health events", e)
+            throw e
+        }
     }
 
     suspend fun unregisterForHealthEvents() {

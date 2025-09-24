@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +62,7 @@ import com.ssafy.watchout.core.service.TAG
 import com.ssafy.watchout.data.area.AreaResponse
 import com.ssafy.watchout.presentation.area.AreaScreen
 import com.ssafy.watchout.presentation.fallDetection.FallDetectionActivity
+import com.ssafy.watchout.presentation.fallDetection.FallDetectedScreen
 import com.ssafy.watchout.presentation.requestAreaRefresh
 import com.ssafy.watchout.presentation.theme.WatchOutTheme
 import kotlinx.coroutines.Job
@@ -68,15 +70,39 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
+// 전역 낙상 감지 상태
+var isFallDetected = false
+
 class MainActivity : ComponentActivity() {
 
     private val dataHandlers: Map<String, (String) -> Unit> = mapOf(
         WearContract.PATH_AREA_INFO to { json -> AreaResponse.updateFromJson(json) }
     )
 
+    // 낙상 감지 브로드캐스트 수신자 (사용하지 않음 - Intent 방식으로 대체)
+    // private val fallDetectionReceiver = object : BroadcastReceiver() {
+    //     override fun onReceive(context: Context?, intent: Intent?) {
+    //         if (intent?.action == "com.ssafy.watchout.FALL_DETECTED") {
+    //             Log.i(TAG, "낙상 감지 브로드캐스트 수신됨")
+    //             isFallDetected = true
+    //         }
+    //     }
+    // }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // 브로드캐스트 방식 제거 - Intent 방식만 사용
+        // val filter = IntentFilter("com.ssafy.watchout.FALL_DETECTED")
+        // registerReceiver(fallDetectionReceiver, filter)
+
+        // Intent에서 낙상 감지 플래그 확인
+//        val isFallDetectedFromIntent = intent.getBooleanExtra("FALL_DETECTED", false)
+//        if (isFallDetectedFromIntent) {
+//            Log.i(TAG, "Intent에서 낙상 감지 플래그 확인됨")
+//            isFallDetected = true
+//        }
 
         val prefs = getSharedPreferences("WatchOutPrefs", Context.MODE_PRIVATE)
         val isFirstRun = prefs.getBoolean("isFirstRun", true)
@@ -88,10 +114,20 @@ class MainActivity : ComponentActivity() {
             setTheme(android.R.style.Theme_DeviceDefault)
             setContent {
                 WatchOutTheme {
-                    PagerScreen()
+                    MainScreenWithFallDetection()
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 브로드캐스트 수신자 해제 (사용하지 않음)
+        // try {
+        //     unregisterReceiver(fallDetectionReceiver)
+        // } catch (e: Exception) {
+        //     Log.w(TAG, "브로드캐스트 수신자 해제 실패", e)
+        // }
     }
 
     override fun onStart() {
@@ -127,6 +163,124 @@ class MainActivity : ComponentActivity() {
             .addOnFailureListener { exception ->
                 Log.e(TAG, "데이터를 가져오는데 실패했습니다: $path", exception)
             }
+    }
+}
+
+// 낙상 감지 메시지를 폰으로 전송하는 함수
+fun sendFallDetectionToPhone(context: Context) {
+    Log.d(TAG, "폰으로 낙상 감지 데이터 전송 요청 실행")
+    Wearable.getNodeClient(context).connectedNodes.addOnSuccessListener { nodes ->
+        Log.d(TAG, "연결된 노드 개수: ${nodes.size}")
+        if (nodes.isEmpty()) {
+            Log.w(TAG, "연결된 노드가 없습니다. 폰과 워치가 연결되어 있는지 확인하세요.")
+            return@addOnSuccessListener
+        }
+
+        nodes.firstOrNull()?.let { node ->
+            val nodeId = node.id
+            val messagePath = WearContract.PATH_FALL_DETECTED
+            val payload = System.currentTimeMillis().toString().toByteArray()
+
+            Log.d(TAG, "노드 ID: $nodeId")
+            Log.d(TAG, "메시지 경로: $messagePath")
+            Log.d(TAG, "페이로드: ${String(payload)}")
+
+            Wearable.getMessageClient(context).sendMessage(nodeId, messagePath, payload)
+                .addOnSuccessListener {
+                    Log.d(TAG, "폰으로 낙상 감지 메시지 전송 성공")
+                    Log.d(TAG, "낙상 감지 알림이 폰으로 전송되었습니다.")
+                }
+                .addOnFailureListener {
+                    Log.e(TAG, "폰으로 낙상 감지 메시지 전송 실패", it)
+                    Log.e(TAG, "낙상 감지 알림 전송 실패: ${it.message}")
+                }
+        }
+    }.addOnFailureListener { exception ->
+        Log.e(TAG, "연결된 노드 조회 실패", exception)
+    }
+}
+
+@Composable
+fun MainScreenWithFallDetection() {
+    var showFallDetection by remember { mutableStateOf(false) }
+    var shouldSendMessage by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // 전역 낙상 감지 상태 감지
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (isFallDetected) {
+                Log.i(TAG, "전역 낙상 감지 상태 감지됨 - 화면 표시")
+                showFallDetection = true
+                isFallDetected = false // 상태 리셋
+            }
+            delay(100) // 100ms마다 체크
+        }
+    }
+
+    // 낙상 감지 메시지 전송을 위한 LaunchedEffect
+    LaunchedEffect(shouldSendMessage) {
+        if (shouldSendMessage) {
+            try {
+                sendFallDetectionToPhone(context)
+                Log.d(TAG, "낙상 감지 메시지 전송 완료")
+            } catch (e: Exception) {
+                Log.e(TAG, "낙상 감지 메시지 전송 실패", e)
+            } finally {
+                shouldSendMessage = false
+            }
+        }
+    }
+
+    if (showFallDetection) {
+        // 낙상 감지 화면 표시
+        FallDetectedScreen(
+            onCancel = { showFallDetection = false },
+            onTimeout = {
+                // 폰으로 낙상 감지 메시지 전송 요청
+                shouldSendMessage = true
+                showFallDetection = false
+            }
+        )
+    } else {
+        // 일반 메인 화면
+        PagerScreen()
+    }
+}
+
+@Composable
+fun MainScreen() {
+    var showFallDetection by remember { mutableStateOf(false) }
+    var shouldSendMessage by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // 낙상 감지 메시지 전송을 위한 LaunchedEffect
+    LaunchedEffect(shouldSendMessage) {
+        if (shouldSendMessage) {
+            try {
+                sendFallDetectionToPhone(context)
+                Log.d(TAG, "낙상 감지 메시지 전송 완료")
+            } catch (e: Exception) {
+                Log.e(TAG, "낙상 감지 메시지 전송 실패", e)
+            } finally {
+                shouldSendMessage = false
+            }
+        }
+    }
+
+    if (showFallDetection) {
+        // 낙상 감지 화면 표시
+        FallDetectedScreen(
+            onCancel = { showFallDetection = false },
+            onTimeout = {
+                // 폰으로 낙상 감지 메시지 전송 요청
+                shouldSendMessage = true
+                showFallDetection = false
+            }
+        )
+    } else {
+        // 일반 메인 화면
+        PagerScreen()
     }
 }
 

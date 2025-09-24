@@ -59,6 +59,17 @@ import kotlinx.coroutines.delay
 class FallDetectedFeedbackActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 화면을 켜고 잠금 해제
+        window.addFlags(
+            android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                    android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                    android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+        )
+
+        Log.i(TAG, "FallDetectedFeedbackActivity created - 화면 잠금 해제 및 최우선 표시")
+
         setContent {
             WatchOutTheme {
                 WatchRoot(
@@ -79,14 +90,33 @@ class FallDetectedFeedbackActivity : ComponentActivity() {
     private fun sendDataToPhone() {
         Log.d(TAG, "폰으로 데이터 전송 요청 실행")
         Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
+            Log.d(TAG, "연결된 노드 개수: ${nodes.size}")
+            if (nodes.isEmpty()) {
+                Log.w(TAG, "연결된 노드가 없습니다. 폰과 워치가 연결되어 있는지 확인하세요.")
+                return@addOnSuccessListener
+            }
+
             nodes.firstOrNull()?.let { node ->
                 val nodeId = node.id
                 val messagePath = WearContract.PATH_FALL_DETECTED
                 val payload = System.currentTimeMillis().toString().toByteArray()
+
+                Log.d(TAG, "노드 ID: $nodeId")
+                Log.d(TAG, "메시지 경로: $messagePath")
+                Log.d(TAG, "페이로드: ${String(payload)}")
+
                 Wearable.getMessageClient(this).sendMessage(nodeId, messagePath, payload)
-                    .addOnSuccessListener { Log.d(TAG, "폰으로 메시지 전송 성공") }
-                    .addOnFailureListener { Log.e(TAG, "폰으로 메시지 전송 실패", it) }
+                    .addOnSuccessListener {
+                        Log.d(TAG, "폰으로 메시지 전송 성공")
+                        Log.d(TAG, "낙상 감지 알림이 폰으로 전송되었습니다.")
+                    }
+                    .addOnFailureListener {
+                        Log.e(TAG, "폰으로 메시지 전송 실패", it)
+                        Log.e(TAG, "낙상 감지 알림 전송 실패: ${it.message}")
+                    }
             }
+        }.addOnFailureListener { exception ->
+            Log.e(TAG, "연결된 노드 조회 실패", exception)
         }
     }
 }
@@ -124,7 +154,7 @@ fun CheckDoneScreen(modifier: Modifier = Modifier, onDoneClick: () -> Unit) {
     )
 
     LaunchedEffect(Unit) {
-            isVisible = true
+        isVisible = true
     }
 
     ScreenScaffold(

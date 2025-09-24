@@ -1,30 +1,31 @@
 package com.ssafy.watchout.core.service
 
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import androidx.health.services.client.PassiveListenerService
 import androidx.health.services.client.data.DataPointContainer
 import androidx.health.services.client.data.HealthEvent
-import com.ssafy.watchout.presentation.fallDetection.FallDetectedFeedbackActivity
-import kotlinx.coroutines.runBlocking
 
 class PassiveHealthEventService : PassiveListenerService() {
 
     override fun onHealthEventReceived(event: HealthEvent) {
-        runBlocking {
-            Log.i(TAG, "Health Event Received: ${event.type}")
+        if (event.type == HealthEvent.Type.FALL_DETECTED) {
+            Log.i(TAG, "Fall detected! Starting FallDetectionService.")
 
-            // 수신된 이벤트를 처리하는 로직: UI를 띄운다
-            if (event.type == HealthEvent.Type.FALL_DETECTED) {
-                val intent = Intent(this@PassiveHealthEventService, FallDetectedFeedbackActivity::class.java).apply {
-                    // 서비스에서 Activity를 시작하려면 NEW_TASK 플래그가 필수입니다.
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(intent)
+            // 직접 알림을 보내는 대신, FallDetectionService를 시작시킨다.
+            val serviceIntent = Intent(this, FallDetectionService::class.java)
+
+            // 안드로이드 버전에 맞춰 서비스를 시작
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
             }
         }
     }
 
     override fun onNewDataPointsReceived(dataPoints: DataPointContainer) {
+        // Not used in this project
     }
 }

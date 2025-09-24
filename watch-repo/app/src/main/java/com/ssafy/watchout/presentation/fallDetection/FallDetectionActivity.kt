@@ -82,9 +82,15 @@ class FallDetectionActivity : ComponentActivity() {
 
     private fun registerForEvents() {
         lifecycleScope.launch {
-            healthServicesManager.registerForHealthEvents()
-            Log.i(TAG, "Registered for fall detection events")
-            isRegistered.value = true
+            try {
+                Log.i(TAG, "Starting fall detection registration...")
+                healthServicesManager.registerForHealthEvents()
+                Log.i(TAG, "Successfully registered for fall detection events")
+                isRegistered.value = true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to register for fall detection events", e)
+                isRegistered.value = false
+            }
         }
     }
 
@@ -113,6 +119,15 @@ fun FallDetectionScreen(
             text = "낙상 감지 기능으로\n안전을 지키시겠습니까?",
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.title3
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "※ 갤럭시워치 기본 낙상 감지는\n설정에서 비활성화해주세요",
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.body2,
+            color = Color.Gray
         )
 
         Spacer(modifier = Modifier.height(24.dp))
