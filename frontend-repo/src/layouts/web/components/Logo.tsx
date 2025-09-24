@@ -11,4 +11,5 @@ const logo = css`
   text-align: center;
   font-family: 'PretendardBold';
   padding: 1rem 0;
+  font-size: 1.5rem;
 `

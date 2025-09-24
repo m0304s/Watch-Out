@@ -79,7 +79,7 @@ const mainContainer = css`
 `
 
 const notiContainer = css`
-  width: 25%;
+  width: 20%;
   border-left: 1px solid var(--color-gray-400);
   flex-shrink: 0;
 `
