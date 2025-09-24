@@ -1,5 +1,6 @@
-import { useState } from 'react'
 import { css } from '@emotion/react'
+import { useState } from 'react'
+import { MdOutlineClose } from 'react-icons/md'
 import { useFCM } from '@/features/notification/hooks/useFCM'
 import NotificationItem from '@/features/notification/components/NotificationItem'
 import ImageModal from '@/features/notification/components/ImageModal'
@@ -7,6 +8,7 @@ import NoticeSendForm from '@/features/notice/components/NoticeSendForm'
 import ViolationDetailModal from '@/features/violation/components/ViolationDetailModal'
 import { noticeApi } from '@/features/notice/services/noticeApi'
 import type { NoticeFormData, Area } from '@/features/notice/types'
+import { useToast } from '@/hooks'
 
 interface SelectedImageData {
   imageUrl: string
@@ -27,8 +29,10 @@ const NotificationPanel: React.FC = () => {
     clearNotifications,
     clearNotices,
     removeNotice,
-    removeNotification
+    removeNotification,
   } = useFCM()
+
+  const toast = useToast()
 
   // 공지사항 발송 관련 상태
   const [showSendForm, setShowSendForm] = useState<boolean>(false)
@@ -38,11 +42,14 @@ const NotificationPanel: React.FC = () => {
 
   // Violation 상세 모달 상태
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
-  const [selectedViolationUuid, setSelectedViolationUuid] = useState<string | null>(null)
+  const [selectedViolationUuid, setSelectedViolationUuid] = useState<
+    string | null
+  >(null)
 
   // 이미지 모달 상태
   const [isImageModalOpen, setIsImageModalOpen] = useState<boolean>(false)
-  const [selectedImageData, setSelectedImageData] = useState<SelectedImageData | null>(null)
+  const [selectedImageData, setSelectedImageData] =
+    useState<SelectedImageData | null>(null)
 
   // 알림 클릭 핸들러
   const handleNotificationClick = (notification: any) => {
@@ -51,12 +58,12 @@ const NotificationPanel: React.FC = () => {
       data: notification.data,
       violationUuid: notification.data?.violationUuid,
       imageUrl: notification.data?.imageUrl,
-      type: notification.data?.type
+      type: notification.data?.type,
     })
-    
+
     const violationUuid = notification.data?.violationUuid
     const imageUrl = notification.data?.imageUrl
-    
+
     if (violationUuid) {
       // 안전장비 위반 알림 - 상세 모달 열기
       setSelectedViolationUuid(violationUuid)
@@ -68,7 +75,7 @@ const NotificationPanel: React.FC = () => {
         title: notification.title,
         areaName: notification.data?.areaName,
         cctvName: notification.data?.cctvName,
-        equipmentTypes: notification.data?.heavyEquipmentTypes
+        equipmentTypes: notification.data?.heavyEquipmentTypes,
       })
       setIsImageModalOpen(true)
     } else {
@@ -88,16 +95,17 @@ const NotificationPanel: React.FC = () => {
     setSelectedImageData(null)
   }
 
-
   // 구역 목록 로드
   const loadAreas = async () => {
     try {
       const response = await noticeApi.getAreas()
       // Area 타입에 맞게 isSelected 속성 추가
-      const areasWithSelection = response.areas.map((area: { id: string; name: string }) => ({
-        ...area,
-        isSelected: false
-      }))
+      const areasWithSelection = response.areas.map(
+        (area: { id: string; name: string }) => ({
+          ...area,
+          isSelected: false,
+        }),
+      )
       setAreas(areasWithSelection)
     } catch (error) {
       console.error('구역 목록 로드 실패:', error)
@@ -108,43 +116,35 @@ const NotificationPanel: React.FC = () => {
   const handleSendNotice = async (formData: NoticeFormData) => {
     setIsSending(true)
     setSendError(null)
-    
+
     try {
       // 전체 발송인 경우 모든 구역 UUID 배열, 구역별 발송인 경우 선택된 구역 UUID 배열
-      const areaUuids = formData.isAllTarget 
-        ? areas?.map(area => area.id) || []  // 전체 선택 시 모든 구역 UUID
-        : formData.targetAreas               // 구역별 선택 시 선택된 구역 UUID
-      
-      
+      const areaUuids = formData.isAllTarget
+        ? areas?.map((area) => area.id) || [] // 전체 선택 시 모든 구역 UUID
+        : formData.targetAreas // 구역별 선택 시 선택된 구역 UUID
+
       const result = await noticeApi.sendNotice({
         title: formData.title,
         content: formData.content,
-        areaUuids: areaUuids
+        areaUuids: areaUuids,
       })
-      
+
       if (result.success) {
-        alert('공지사항이 성공적으로 발송되었습니다!')
+        toast.success('공지사항이 성공적으로 발송되었습니다!')
         setShowSendForm(false)
       } else {
         setSendError(result.message || '공지사항 발송에 실패했습니다.')
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '공지사항 발송에 실패했습니다.'
+      const errorMessage =
+        error instanceof Error ? error.message : '공지사항 발송에 실패했습니다.'
       setSendError(errorMessage)
+      toast.error('공지사항 발송에 실패했습니다.')
       console.error('공지사항 발송 실패:', error)
     } finally {
       setIsSending(false)
     }
   }
-
-  // 공지 발송 버튼 클릭
-  const handleSendButtonClick = () => {
-    if (!showSendForm) {
-      loadAreas()
-    }
-    setShowSendForm(!showSendForm)
-  }
-
 
   return (
     <div css={container}>
@@ -163,6 +163,14 @@ const NotificationPanel: React.FC = () => {
               </button>
             )}
           </div>
+          {notifications.length > 0 && (
+            <div css={buttonContainer}>
+              <button onClick={clearNotifications} css={clearAllButton}>
+                <MdOutlineClose className="icon" />
+                <span className="text">모두 지우기</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 에러 표시 */}
@@ -173,112 +181,118 @@ const NotificationPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 알림 관리 버튼 */}
-        {notifications.length > 0 && (
-          <div css={buttonContainer}>
-            <button onClick={clearNotifications} css={clearAllButton}>
-              모두 지우기
-            </button>
-          </div>
-        )}
-
         {/* 알림 목록 (공지사항 제외) */}
         <div css={notificationsContainer}>
-          {notifications.filter(notification => notification.data?.type !== 'ANNOUNCEMENT').length > 0 ? (
+          {notifications.filter(
+            (notification) => notification.data?.type !== 'ANNOUNCEMENT',
+          ).length > 0 ? (
             <div css={notificationList}>
-                     {notifications
-                       .filter(notification => notification.data?.type !== 'ANNOUNCEMENT')
-                       .map((notification) => (
-                       <div key={notification.id} css={noticeItemWithHover}>
-                  <NotificationItem
-                    notification={notification}
-                    timestamp={new Date(notification.timestamp || '').toLocaleTimeString()}
-                    onClick={() => handleNotificationClick(notification)}
-                  />
-                         <button 
-                           css={deleteButton}
-                           onClick={() => removeNotification(notification.id)}
-                           title="알림 삭제"
-                         >
-                    ×
-                  </button>
-                </div>
-              ))}
+              {notifications
+                .filter(
+                  (notification) => notification.data?.type !== 'ANNOUNCEMENT',
+                )
+                .map((notification) => (
+                  <div key={notification.id} css={noticeItemWithHover}>
+                    <NotificationItem
+                      notification={notification}
+                      timestamp={new Date(
+                        notification.timestamp || '',
+                      ).toLocaleTimeString()}
+                      onClick={() => handleNotificationClick(notification)}
+                    />
+                    <button
+                      css={deleteButton}
+                      onClick={() => removeNotification(notification.id)}
+                      title="알림 삭제"
+                    >
+                      <MdOutlineClose />
+                    </button>
+                  </div>
+                ))}
             </div>
           ) : (
             <div css={emptyState}>
-              <div css={emptyIcon}>📢</div>
-              <div css={emptyText}>
-                {isRegistered ? '새로운 알림이 없습니다' : '알림을 활성화해주세요'}
-              </div>
+              <p css={emptyNoticeText}>
+                {isRegistered
+                  ? '새로운 알림이 없습니다'
+                  : '알림을 활성화해주세요'}
+              </p>
             </div>
           )}
         </div>
       </div>
-
       {/* 공지사항 섹션 */}
       <div css={noticeSection}>
-        <div css={noticeHeader}>
-          <h2 css={noticeTitle}>공지 목록</h2>
-          <div css={noticeButtonGroup}>
-            {notices.length > 0 && (
-              <button onClick={clearNotices} css={clearNoticesButton}>
-                모두 지우기
-              </button>
-            )}
-            <button 
-              onClick={handleSendButtonClick}
-              css={sendNoticeButton}
+        <div css={tabContainer}>
+          <div>
+            <button
+              css={[tabButton, !showSendForm && activeTabButton]}
+              onClick={() => setShowSendForm(false)}
             >
-              {showSendForm ? '취소' : '공지 발송'}
+              공지 목록
+            </button>
+            <button
+              css={[tabButton, showSendForm && activeTabButton]}
+              onClick={() => {
+                setShowSendForm(true)
+                if (areas.length === 0) {
+                  loadAreas()
+                }
+              }}
+            >
+              공지 발송
             </button>
           </div>
+          {notices.length > 0 && (
+            <div css={buttonContainer}>
+              <button onClick={clearNotices} css={clearAllButton}>
+                <MdOutlineClose className="icon" />
+                <span className="text">모두 지우기</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* 공지사항 발송 폼 */}
-        {showSendForm ? (
-          <div css={sendFormContainer}>
-            <NoticeSendForm
-              areas={areas}
-              onSubmit={handleSendNotice}
-              isLoading={isSending}
-            />
-            {sendError && (
-              <div css={errorMessage}>
-                {sendError}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div css={noticeList}>
-            {notices.length > 0 ? (
-              notices.map((notice) => (
-                <div key={notice.id} css={noticeItemWithHover}>
-                  <div css={noticeDot}></div>
-                  <div css={noticeContent}>
-                    <div css={noticeTitleText}>{notice.title}</div>
-                    <div css={noticeDescription}>{notice.content}</div>
-                    <div css={noticeMeta}>
-                      {notice.timestamp} {notice.sender}
+        <div css={noticeContentContainer}>
+          {showSendForm ? (
+            <>
+              <NoticeSendForm
+                areas={areas}
+                onSubmit={handleSendNotice}
+                isLoading={isSending}
+              />
+              {sendError && <div css={errorMessage}>{sendError}</div>}
+            </>
+          ) : (
+            <div css={noticeList}>
+              {notices.length > 0 ? (
+                notices.map((notice) => (
+                  <div key={notice.id} css={noticeItemWithHover}>
+                    <div css={noticeDot}></div>
+                    <div css={noticeContent}>
+                      <div css={noticeTitleText}>{notice.title}</div>
+                      <div css={noticeDescription}>{notice.content}</div>
+                      <div css={noticeMeta}>
+                        {notice.timestamp} {notice.sender}
+                      </div>
                     </div>
+                    <button
+                      css={deleteButton}
+                      onClick={() => removeNotice(notice.id)}
+                      title="공지사항 삭제"
+                    >
+                      <MdOutlineClose />
+                    </button>
                   </div>
-                  <button 
-                    css={deleteButton}
-                    onClick={() => removeNotice(notice.id)}
-                    title="공지사항 삭제"
-                  >
-                    ×
-                  </button>
+                ))
+              ) : (
+                <div css={emptyState}>
+                  <div css={emptyNoticeText}>공지사항이 없습니다</div>
                 </div>
-              ))
-            ) : (
-              <div css={emptyNoticeState}>
-                <div css={emptyNoticeIcon}>📢</div>
-                <div css={emptyNoticeText}>공지사항이 없습니다</div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Violation 상세 모달 */}
@@ -305,68 +319,53 @@ const NotificationPanel: React.FC = () => {
 }
 
 const container = css`
-  height: 100vh;
-  padding: 1.5%;
-  background: var(--color-bg-white);
-  overflow-y: auto;
-  font-family: 'PretendardRegular', sans-serif;
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
   width: 100%;
-  box-sizing: border-box;
+  height: 100%;
 `
 
 const notificationSection = css`
-  background: var(--color-bg-white);
-  border-radius: 12px;
-  padding: 1.5%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--color-gray-200);
+  flex: 1;
   width: 100%;
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-gray-400);
 `
 
 const sectionHeader = css`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.8rem;
-  border-bottom: 2px solid var(--color-primary);
+  height: 60px;
 `
 
 const sectionTitle = css`
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-gray-800);
-  margin: 0;
-  text-decoration: underline;
-  text-decoration-color: var(--color-primary);
-  text-underline-offset: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: 'PretendardRegular';
 `
 
 const buttonSection = css`
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
 `
 
 const primaryButton = css`
+  margin: 0 0.5rem;
   padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
-  color: var(--color-text-white);
-  border: none;
+  color: var(--color-primary);
+  background-color: white;
+  border: 1px solid var(--color-primary);
   border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
 
   &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+    transform: translateY(-0.5px);
+    box-shadow: var(--color-gray-500);
   }
 
   &:disabled {
@@ -375,8 +374,6 @@ const primaryButton = css`
     transform: none;
   }
 `
-
-
 
 const errorCard = css`
   display: flex;
@@ -402,127 +399,118 @@ const errorText = css`
 const buttonContainer = css`
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 1.5rem;
   padding: 0 0.25rem;
 `
 
 const clearAllButton = css`
-  padding: 0.5rem 1rem;
-  background: var(--color-red);
-  color: var(--color-text-white);
-  border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  position: relative;
+  background-color: white;
+  border: 1px solid var(--color-red);
+  border-radius: 20px;
   cursor: pointer;
-  transition: all 0.3s ease;
+
+  color: var(--color-red);
+
+  width: 20px;
+  height: 20px;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+  white-space: nowrap;
+
+  transition: all 0.4s ease-in-out;
+
+  .icon {
+    position: absolute;
+    font-size: 14px;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+  }
+
+  .text {
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
 
   &:hover {
-    background: #ff5252;
-    transform: translateY(-1px);
+    width: 80px;
+
+    .icon {
+      opacity: 0;
+    }
+
+    .text {
+      opacity: 1;
+    }
   }
 `
 
 const notificationsContainer = css`
   flex: 1;
-`
-
-const notificationList = css`
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  max-height: 25rem;
   overflow-y: auto;
-  padding-right: 0.25rem;
-  
-  /* 스크롤바 스타일링 */
+
   &::-webkit-scrollbar {
     width: 0.375rem;
   }
-  
   &::-webkit-scrollbar-track {
     background: var(--color-gray-100);
     border-radius: 0.1875rem;
   }
-  
   &::-webkit-scrollbar-thumb {
     background: var(--color-gray-400);
     border-radius: 0.1875rem;
   }
-  
   &::-webkit-scrollbar-thumb:hover {
     background: var(--color-gray-500);
   }
 `
 
+const notificationList = css`
+  display: flex;
+  flex-direction: column;
+`
+
 const emptyState = css`
-  text-align: center;
-  padding: 3.75rem 1.25rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background: var(--color-bg-white);
-  border-radius: 1rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-`
-
-const emptyIcon = css`
-  font-size: 4rem;
-  margin-bottom: 1.5rem;
-  opacity: 0.6;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-`
-
-const emptyText = css`
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-gray-900);
-  margin-bottom: 0.75rem;
+  height: 100%;
 `
 
 const noticeSection = css`
-  background: var(--color-bg-white);
-  border-radius: 12px;
-  padding: 1.5%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--color-gray-200);
+  flex: 1;
   width: 100%;
   box-sizing: border-box;
-`
-
-const noticeHeader = css`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.8rem;
-  border-bottom: 2px solid var(--color-green);
+  flex-direction: column;
+  overflow: hidden;
 `
 
-const noticeTitle = css`
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-gray-800);
-  margin: 0;
-  text-decoration: underline;
-  text-decoration-color: var(--color-green);
-  text-underline-offset: 0.25rem;
-`
+const noticeContentContainer = css`
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
 
-const sendNoticeButton = css`
-  padding: 0.5rem 1rem;
-  background: var(--color-green);
-  color: var(--color-text-white);
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: #45a049;
-    transform: translateY(-1px);
+  &::-webkit-scrollbar {
+    width: 0.375rem;
+  }
+  &::-webkit-scrollbar-track {
+    background: var(--color-gray-100);
+    border-radius: 0.1875rem;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-gray-400);
+    border-radius: 0.1875rem;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gray-500);
   }
 `
 
@@ -530,53 +518,8 @@ const noticeList = css`
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  max-height: 25rem;
-  overflow-y: auto;
-  padding-right: 0.25rem;
-  
-  /* 스크롤바 스타일링 */
-  &::-webkit-scrollbar {
-    width: 0.375rem;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: var(--color-gray-100);
-    border-radius: 0.1875rem;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-gray-400);
-    border-radius: 0.1875rem;
-  }
-  
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--color-gray-500);
-  }
+  height: 100%;
 `
-
-const noticeButtonGroup = css`
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-`
-
-const clearNoticesButton = css`
-  padding: 0.375rem 0.75rem;
-  background: var(--color-red);
-  color: var(--color-text-white);
-  border: none;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: #ff5252;
-    transform: translateY(-1px);
-  }
-`
-
 
 const noticeDot = css`
   width: 0.75rem;
@@ -621,26 +564,10 @@ const noticeMeta = css`
   max-width: 100%;
 `
 
-const emptyNoticeState = css`
-  text-align: center;
-  padding: 2.5rem 1.25rem;
-  background: var(--color-gray-50);
-  border-radius: 8px;
-  border: 2px dashed var(--color-gray-300);
-`
-
-const emptyNoticeIcon = css`
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  opacity: 0.6;
-  color: var(--color-green);
-`
-
 const emptyNoticeText = css`
   font-size: 1rem;
   font-weight: 500;
   color: var(--color-gray-500);
-  margin: 0;
 `
 
 const deleteButton = css`
@@ -649,8 +576,8 @@ const deleteButton = css`
   right: 0.75rem;
   width: 1.5rem;
   height: 1.5rem;
-  background: var(--color-red);
-  color: var(--color-text-white);
+  background-color: transparent;
+  color: var(--color-gray-600);
   border: none;
   border-radius: 50%;
   font-size: 1rem;
@@ -662,41 +589,22 @@ const deleteButton = css`
   opacity: 0;
   transition: all 0.2s ease;
   z-index: 10;
-
-  &:hover {
-    background: #ff5252;
-    transform: scale(1.1);
-  }
 `
 
 const noticeItemWithHover = css`
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  padding: 1.25rem;
+  padding: 0.5rem;
   background: var(--color-bg-white);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
   min-width: 0;
+  gap: 1rem;
   position: relative;
 
-  &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
-    
-    button {
-      opacity: 1;
-    }
+  &:hover button {
+    opacity: 1;
   }
-`
-
-const sendFormContainer = css`
-  margin-bottom: 1.5rem;
-  padding: 1.5rem;
-  background: var(--color-gray-50);
-  border-radius: 8px;
-  border: 1px solid var(--color-gray-200);
 `
 
 const errorMessage = css`
@@ -709,5 +617,33 @@ const errorMessage = css`
   border: 1px solid #f5c6cb;
 `
 
+const tabContainer = css`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid transparent;
+`
+
+const tabButton = css`
+  padding: 0.75rem 1.25rem;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-gray-600);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  margin-bottom: -1px;
+
+  &:hover {
+    color: #000;
+    background-color: var(--color-gray-100);
+  }
+`
+
+const activeTabButton = css`
+  color: #000;
+  border-bottom: 1px solid #000;
+`
 
 export default NotificationPanel

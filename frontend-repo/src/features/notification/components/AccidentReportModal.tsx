@@ -22,7 +22,7 @@ const AccidentReportModal: React.FC<AccidentReportModalProps> = ({
   title,
   body,
   data,
-  onClose
+  onClose,
 }) => {
   if (!isVisible) return null
 
@@ -42,14 +42,12 @@ const AccidentReportModal: React.FC<AccidentReportModalProps> = ({
 
         {/* 내용 */}
         <div css={contentStyle}>
-          <div css={messageStyle}>
-            {body}
-          </div>
+          <div css={messageStyle}>{body}</div>
 
           {/* 상세 정보 */}
           <div css={detailsStyle}>
             <h3 css={detailsTitleStyle}>상세 정보</h3>
-            
+
             <div css={detailItemStyle}>
               <span css={labelStyle}>🏢 구역</span>
               <span css={valueStyle}>{data.areaName || '미상'}</span>
@@ -146,7 +144,8 @@ const emergencyIconStyle = css`
   animation: pulse 2s infinite;
 
   @keyframes pulse {
-    0%, 100% {
+    0%,
+    100% {
       transform: scale(1);
     }
     50% {

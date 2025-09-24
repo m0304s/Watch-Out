@@ -40,21 +40,14 @@ export const LoginPage = () => {
           console.error('FCM 토큰 등록 실패:', fcmError)
           // FCM 토큰 등록 실패해도 로그인은 계속 진행
         }
-        toast.success('로그인 성공!')
-        console.log('로그인 성공:', response.result)
-
         // 대시보드로 리다이렉트 (루트 경로로 이동하면 자동으로 /dashboard로 리다이렉트됨)
         navigate('/')
       } else {
-        const errorMessage = response.message || '로그인에 실패했습니다.'
+        const errorMessage = response.message || '로그인에 실패했습니다'
         setError(errorMessage)
-        toast.error(errorMessage)
       }
     } catch (error) {
-      const errorMessage = '로그인 중 오류가 발생했습니다.'
-      console.error('로그인 실패:', error)
-      setError(errorMessage)
-      toast.error(errorMessage)
+      toast.error('로그인에 실패했습니다.')
     } finally {
       setLoading(false)
     }
