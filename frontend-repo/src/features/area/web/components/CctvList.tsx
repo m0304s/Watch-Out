@@ -20,7 +20,6 @@ const CctvList: React.FC<CctvListProps> = ({
   itemPerPage,
   onCctvClick,
 }) => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   const [cctvList, setCctvList] = useState<CctvViewAreaItem[] | null>(null)
 
   useEffect(() => {
@@ -58,10 +57,7 @@ const CctvList: React.FC<CctvListProps> = ({
         if (cctv) {
           return (
             <div key={cctv.uuid} css={cell}>
-              <img
-                css={iFrameBox}
-                src={`${API_BASE_URL}${cctv.springProxyUrl}`}
-              ></img>
+              <img css={iFrameBox} src={cctv.fastapiMjpegUrl}></img>
               <div css={labelBox}>
                 <p>{cctv.name}</p>
               </div>

@@ -9,7 +9,6 @@ interface CctvModalProps {
 }
 
 const CctvModal: React.FC<CctvModalProps> = ({ cctv, onClose }) => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   const modalRef = useRef<HTMLDivElement>(null)
 
   return (
@@ -26,7 +25,7 @@ const CctvModal: React.FC<CctvModalProps> = ({ cctv, onClose }) => {
               <div css={iframeWrapper}>
                 <img
                   css={iFrameBox}
-                  src={`${API_BASE_URL}${cctv.springProxyUrl}`}
+                  src={cctv.fastapiMjpegUrl}
                   alt={cctv.name}
                 />
               </div>
