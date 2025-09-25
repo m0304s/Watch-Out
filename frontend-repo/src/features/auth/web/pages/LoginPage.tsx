@@ -9,6 +9,7 @@ import { login } from '@/features/auth/api/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { useFCM } from '@/features/notification/hooks/useFCM'
 import { useToast } from '@/hooks/useToast'
+import { isWebPlatform } from '@/utils/platform'
 
 export const LoginPage = () => {
   const toast = useToast()
@@ -29,6 +30,13 @@ export const LoginPage = () => {
       const response = await login(loginRequest)
 
       if (response.success && response.result) {
+        // 웹 환경에서 WORKER 역할 사용자 로그인 차단
+        if (isWebPlatform() && response.result.userRole === 'WORKER') {
+          toast.warning('모바일로 로그인 해주세요.')
+          setLoading(false)
+          return
+        }
+
         // Auth 스토어에 로그인 정보 저장
         setAuthData(response.result)
 
