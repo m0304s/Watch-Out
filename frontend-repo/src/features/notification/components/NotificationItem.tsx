@@ -6,7 +6,10 @@ interface NotificationItemProps {
   onClick?: () => void
 }
 
-const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClick }) => {
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onClick,
+}) => {
   // 알림 수신 시간을 포맷팅
   const formatTimestamp = (timestamp: string) => {
     try {
@@ -30,7 +33,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onCli
           month: 'short',
           day: 'numeric',
           hour: '2-digit',
-          minute: '2-digit'
+          minute: '2-digit',
         })
       }
     } catch (error) {
@@ -40,42 +43,51 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onCli
   }
 
   const displayTime = formatTimestamp(notification.timestamp)
-  const isSafetyEquipmentAlert = notification.title?.includes('안전장비') || 
-                                 notification.title?.includes('미착용') ||
-                                 notification.body?.includes('안전장비') ||
-                                 notification.body?.includes('미착용') ||
-                                 notification.data?.type === 'SAFETY_VIOLATION'
+  const isSafetyEquipmentAlert =
+    notification.title?.includes('안전장비') ||
+    notification.title?.includes('미착용') ||
+    notification.body?.includes('안전장비') ||
+    notification.body?.includes('미착용') ||
+    notification.data?.type === 'SAFETY_VIOLATION'
 
-  const isHeavyEquipmentAlert = notification.title?.includes('중장비') || 
-                                notification.title?.includes('진입') ||
-                                notification.body?.includes('중장비') ||
-                                notification.body?.includes('진입') ||
-                                notification.data?.type === 'HEAVY_EQUIPMENT'
+  const isHeavyEquipmentAlert =
+    notification.title?.includes('중장비') ||
+    notification.title?.includes('진입') ||
+    notification.body?.includes('중장비') ||
+    notification.body?.includes('진입') ||
+    notification.data?.type === 'HEAVY_EQUIPMENT'
 
-  const isAccidentReport = notification.data?.type === 'ACCIDENT_REPORT' ||
-                           notification.title?.includes('사고 신고') ||
-                           notification.title?.includes('사고 접수')
+  const isAccidentReport =
+    notification.data?.type === 'ACCIDENT_REPORT' ||
+    notification.title?.includes('사고 신고') ||
+    notification.title?.includes('사고 접수')
 
-  const isClickable = (isSafetyEquipmentAlert && notification.data?.violationUuid) || 
-                     (isHeavyEquipmentAlert && notification.data?.imageUrl)
+  const isClickable =
+    (isSafetyEquipmentAlert && notification.data?.violationUuid) ||
+    (isHeavyEquipmentAlert && notification.data?.imageUrl)
 
   return (
-    <div 
+    <div
       css={[
-        notificationItemWithHover, 
+        notificationItemWithHover,
         isClickable && clickableItem,
         isAccidentReport && accidentReportItem,
         isSafetyEquipmentAlert && safetyEquipmentItem,
-        isHeavyEquipmentAlert && heavyEquipmentItem
+        isHeavyEquipmentAlert && heavyEquipmentItem,
       ]}
       onClick={isClickable ? onClick : undefined}
     >
-      <div css={
-        isAccidentReport ? accidentReportDot :
-        isSafetyEquipmentAlert ? safetyEquipmentDot : 
-        isHeavyEquipmentAlert ? heavyEquipmentDot : 
-        notificationDot
-      }></div>
+      <div
+        css={
+          isAccidentReport
+            ? accidentReportDot
+            : isSafetyEquipmentAlert
+              ? safetyEquipmentDot
+              : isHeavyEquipmentAlert
+                ? heavyEquipmentDot
+                : notificationDot
+        }
+      ></div>
       <div css={notificationContent}>
         <div css={notificationTitleText}>{notification.title}</div>
         <div css={notificationDescription}>{notification.body}</div>
@@ -88,12 +100,11 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onCli
   )
 }
 
-
 const notificationItemWithHover = css`
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  padding: 20px;
+  gap: 1rem;
+  padding: 0.8rem;
   background: var(--color-bg-white);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -120,7 +131,7 @@ const safetyEquipmentItem = css`
   background: #fef3c7 !important;
   border: 2px solid #fde68a;
   border-left: 4px solid var(--color-yellow);
-  
+
   &:hover {
     background: #fde68a !important;
     border-color: #f59e0b;
@@ -142,7 +153,7 @@ const heavyEquipmentItem = css`
   background: #fef2f2 !important;
   border: 2px solid #fecaca;
   border-left: 4px solid #f97316;
-  
+
   &:hover {
     background: #fed7aa !important;
     border-color: #fb923c;
@@ -199,7 +210,7 @@ const notificationMeta = css`
 
 const clickableItem = css`
   cursor: pointer;
-  
+
   &:hover {
     background: var(--color-gray-50);
     border: 1px solid var(--color-gray-200);
@@ -220,7 +231,7 @@ const accidentReportItem = css`
   background: #fef2f2 !important;
   border: 2px solid #fecaca;
   border-left: 4px solid var(--color-red);
-  
+
   &:hover {
     background: #fee2e2 !important;
     border-color: #fca5a5;
@@ -237,6 +248,5 @@ const accidentReportDot = css`
   flex-shrink: 0;
   box-shadow: 0 0 0 2px #fecaca;
 `
-
 
 export default NotificationItem

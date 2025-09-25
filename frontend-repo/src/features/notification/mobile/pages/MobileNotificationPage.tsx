@@ -1,5 +1,6 @@
 import React from 'react'
 import { MobileLayout } from '@/components/mobile/MobileLayout'
+import { MobileUser } from '@/components/mobile'
 import NotificationList from '@/features/notification/mobile/components/NotificationList'
 
 /**
@@ -8,7 +9,7 @@ import NotificationList from '@/features/notification/mobile/components/Notifica
  */
 export const MobileNotificationPage: React.FC = () => {
   return (
-    <MobileLayout title="알림 관리">
+    <MobileLayout title="알림 관리" rightSlot={<MobileUser />}>
       <NotificationList />
     </MobileLayout>
   )

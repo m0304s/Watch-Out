@@ -1,5 +1,6 @@
 import { css } from '@emotion/react'
 import { useState, useMemo } from 'react'
+import { IoMdSend } from 'react-icons/io'
 import type { NoticeFormData, Area } from '@/features/notice/types'
 
 interface NoticeSendFormProps {
@@ -8,30 +9,34 @@ interface NoticeSendFormProps {
   isLoading?: boolean
 }
 
-const NoticeSendForm = ({ areas, onSubmit, isLoading = false }: NoticeSendFormProps) => {
+const NoticeSendForm = ({
+  areas,
+  onSubmit,
+  isLoading = false,
+}: NoticeSendFormProps) => {
   const [formData, setFormData] = useState<NoticeFormData>({
     title: '',
     content: '',
     targetAreas: [],
-    isAllTarget: false
+    isAllTarget: false,
   })
 
   const [showAreaDropdown, setShowAreaDropdown] = useState(false)
 
   const handleAllTargetChange = (checked: boolean) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       isAllTarget: checked,
-      targetAreas: checked ? [] : prev.targetAreas
+      targetAreas: checked ? [] : prev.targetAreas,
     }))
   }
 
   const handleAreaToggle = (areaId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       targetAreas: prev.targetAreas.includes(areaId)
-        ? prev.targetAreas.filter(id => id !== areaId)
-        : [...prev.targetAreas, areaId]
+        ? prev.targetAreas.filter((id) => id !== areaId)
+        : [...prev.targetAreas, areaId],
     }))
   }
 
@@ -44,13 +49,13 @@ const NoticeSendForm = ({ areas, onSubmit, isLoading = false }: NoticeSendFormPr
         title: '',
         content: '',
         targetAreas: [],
-        isAllTarget: false
+        isAllTarget: false,
       })
     }
   }
 
   const selectedAreas = useMemo(() => {
-    return areas?.filter(area => formData.targetAreas.includes(area.id)) || []
+    return areas?.filter((area) => formData.targetAreas.includes(area.id)) || []
   }, [areas, formData.targetAreas])
 
   const hasSelectedAreas = useMemo(() => {
@@ -58,12 +63,12 @@ const NoticeSendForm = ({ areas, onSubmit, isLoading = false }: NoticeSendFormPr
   }, [formData.targetAreas.length, selectedAreas.length])
 
   return (
-    <div css={container}>
+    <div>
       <form onSubmit={handleSubmit}>
         {/* 발송 대상 섹션 */}
         <div css={section}>
           <h3 css={sectionTitle}>발송 대상</h3>
-          
+
           <div css={checkboxContainer}>
             <label css={checkboxLabel}>
               <input
@@ -85,17 +90,16 @@ const NoticeSendForm = ({ areas, onSubmit, isLoading = false }: NoticeSendFormPr
                   css={areaDropdownButton}
                 >
                   <span css={areaDropdownText}>
-                    {hasSelectedAreas 
+                    {hasSelectedAreas
                       ? `${selectedAreas.length}개 구역 선택됨`
-                      : '구역 선택'
-                    }
+                      : '구역 선택'}
                   </span>
                   <span css={dropdownArrow(showAreaDropdown)}>▼</span>
                 </button>
-                
+
                 {showAreaDropdown && (
                   <div css={areaDropdown}>
-                    {areas?.map(area => {
+                    {areas?.map((area) => {
                       const isChecked = formData.targetAreas.includes(area.id)
                       return (
                         <label key={area.id} css={areaOption}>
@@ -116,7 +120,7 @@ const NoticeSendForm = ({ areas, onSubmit, isLoading = false }: NoticeSendFormPr
               {/* 선택된 구역 태그들 */}
               {hasSelectedAreas && (
                 <div css={selectedAreasContainer}>
-                  {selectedAreas.map(area => (
+                  {selectedAreas.map((area) => (
                     <div key={area.id} css={areaTag}>
                       {area.name}
                     </div>
@@ -128,12 +132,14 @@ const NoticeSendForm = ({ areas, onSubmit, isLoading = false }: NoticeSendFormPr
         </div>
 
         {/* 제목 입력 섹션 */}
-        <div css={section}>
+        <div css={titleSection}>
           <h3 css={sectionTitle}>제목</h3>
           <input
             type="text"
             value={formData.title}
-            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, title: e.target.value }))
+            }
             placeholder="공지사항 제목을 입력해주세요"
             css={titleInput}
           />
@@ -144,7 +150,9 @@ const NoticeSendForm = ({ areas, onSubmit, isLoading = false }: NoticeSendFormPr
           <h3 css={sectionTitle}>내용</h3>
           <textarea
             value={formData.content}
-            onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, content: e.target.value }))
+            }
             placeholder="공지사항 내용을 입력해주세요"
             css={messageTextarea}
             rows={8}
@@ -155,24 +163,19 @@ const NoticeSendForm = ({ areas, onSubmit, isLoading = false }: NoticeSendFormPr
         <div css={buttonContainer}>
           <button
             type="submit"
-            disabled={!formData.title.trim() || !formData.content.trim() || isLoading}
+            disabled={
+              !formData.title.trim() || !formData.content.trim() || isLoading
+            }
             css={sendButton}
           >
             {isLoading ? '발송 중...' : '발송'}
-            <span css={sendIcon}>▶</span>
+            <IoMdSend color="#fff" />
           </button>
         </div>
       </form>
     </div>
   )
 }
-
-const container = css`
-  padding: 20px;
-  background-color: var(--color-bg-white);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-`
 
 const section = css`
   margin-bottom: 24px;
@@ -181,13 +184,10 @@ const section = css`
 const sectionTitle = css`
   margin: 0 0 16px 0;
   font-size: 16px;
-  font-weight: 600;
-  color: var(--color-gray-800);
+  width: 60px;
 `
 
-const checkboxContainer = css`
-  margin-bottom: 16px;
-`
+const checkboxContainer = css``
 
 const checkboxLabel = css`
   display: flex;
@@ -305,7 +305,7 @@ const areaTag = css`
 
 const titleInput = css`
   width: 100%;
-  padding: 12px 16px;
+  padding: 12px;
   border: 1px solid var(--color-gray-300);
   border-radius: 6px;
   font-size: 14px;
@@ -346,20 +346,19 @@ const messageTextarea = css`
 const buttonContainer = css`
   display: flex;
   justify-content: flex-end;
-  margin-top: 24px;
+  /* margin-top: 12px; */
 `
 
 const sendButton = css`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
+  padding: 12px;
   background-color: var(--color-primary);
   color: var(--color-text-white);
   border: none;
   border-radius: 6px;
   font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s;
 
@@ -373,8 +372,9 @@ const sendButton = css`
   }
 `
 
-const sendIcon = css`
-  font-size: 12px;
+const titleSection = css`
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
 `
-
 export default NoticeSendForm

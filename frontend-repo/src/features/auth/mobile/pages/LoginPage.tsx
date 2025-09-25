@@ -59,8 +59,6 @@ export const MobileLoginPage = () => {
         // Auth 스토어에 로그인 정보 저장
         setAuthData(response.result)
 
-        console.log('✅ 모바일 로그인 성공:', response.result)
-
         // 3. 로그인 성공 후 FCM 토큰을 서버에 등록
         if (fcmToken) {
           try {
@@ -82,11 +80,6 @@ export const MobileLoginPage = () => {
           }
         }
 
-        alert('로그인 성공!')
-
-        console.log('🔐 로그인 성공 - 사용자 역할:', response.result.userRole)
-        console.log('🔐 인증 상태:', response.result)
-
         // 사용자 역할에 따른 라우팅
         if (response.result.userRole === 'WORKER') {
           // 작업자인 경우 알림 페이지로 이동
@@ -100,7 +93,7 @@ export const MobileLoginPage = () => {
       } else {
         const errorMessage = response.message || '로그인에 실패했습니다.'
         setError(errorMessage)
-        toast.error(errorMessage)
+        toast.error('로그인에 실패했습니다.')
       }
     } catch (error) {
       console.error('모바일 로그인 실패 - 상세 에러:', error)
@@ -131,7 +124,7 @@ export const MobileLoginPage = () => {
       }
 
       setError(errorMessage)
-      toast.error(errorMessage)
+      toast.error('로그인에 실패했습니다.')
     } finally {
       setLoading(false)
     }
