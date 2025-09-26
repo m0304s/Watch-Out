@@ -1,0 +1,7 @@
+export { BaseModal } from './BaseModal'
+export { ModalHeader } from './ModalHeader'
+export { ModalContent } from './ModalContent'
+export { ModalLoading } from './ModalLoading'
+export { ModalError } from './ModalError'
+export { FormModal } from './FormModal'
+export { DetailModal } from './DetailModal'
