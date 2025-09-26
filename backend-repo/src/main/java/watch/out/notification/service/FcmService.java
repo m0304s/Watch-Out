@@ -20,9 +20,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import watch.out.area.entity.AreaManager;
 import watch.out.area.repository.AreaManagerRepository;
+import watch.out.common.util.S3Util;
 import watch.out.notification.dto.FcmMessage;
 import watch.out.notification.entity.FcmToken;
 import watch.out.notification.repository.FcmTokenRepository;
+import watch.out.safety.entity.SafetyViolation;
+import watch.out.safety.repository.SafetyViolationRepository;
 import watch.out.user.entity.User;
 import watch.out.user.entity.UserRole;
 import watch.out.user.repository.UserRepository;
@@ -36,6 +39,7 @@ public class FcmService {
     private final FcmTokenRepository fcmTokenRepository;
     private final AreaManagerRepository areaManagerRepository;
     private final UserRepository userRepository;
+    private final S3Util s3Util;
 
     /**
      * 구역별 담당자에게 안전장비 위반 알림 전송
@@ -868,4 +872,28 @@ public class FcmService {
             log.error("안면인식 성공 data-only FCM 알림 일괄 전송 실패", e);
         }
     }
+
+    /**
+     * 테스트용 안전장비 위반 알림 전송 (고정 이미지 사용)
+     */
+    public void sendTestSafetyViolationNotification(UUID areaUuid, String areaName, String cctvName,
+        List<String> violationTypes, UUID violationUuid) {
+        // 안전장비 미착용 알림은 고정 이미지 키 사용
+        String fixedImageKey = "violation/20250919T005220Z_Belt off_Helmet off_src-https:__media-test.hssu.dev_live_iphone3_index.m3u8.jpg";
+        String imageUrl = s3Util.keyToUrl(fixedImageKey);
+        
+        sendSafetyViolationNotification(areaUuid, areaName, cctvName, violationTypes, imageUrl, violationUuid);
+    }
+
+    /**
+     * 테스트용 중장비 진입 알림 전송 (이미지 자동 조회)
+     */
+    public void sendTestHeavyEquipmentEntryNotification(UUID areaUuid, String areaName, String cctvName,
+        List<String> heavyEquipmentTypes) {
+        String fixedImageKey = "violation/20250919T005220Z_Belt off_Helmet off_src-https:__media-test.hssu.dev_live_iphone3_index.m3u8.jpg";
+        String imageUrl = s3Util.keyToUrl(fixedImageKey);
+
+        sendHeavyEquipmentEntryNotification(areaUuid, areaName, cctvName, heavyEquipmentTypes, imageUrl);
+    }
+
 }
