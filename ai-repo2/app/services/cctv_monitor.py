@@ -83,6 +83,57 @@ def update_cctv_status(cctv_uuid: str, status: bool):
   except Exception as e:
     logger.error(f"CCTV 상태 업데이트 실패 ({cctv_uuid[:8]}): {e}")
 
+def find_best_match_k5(live_embedding, current_known_embeddings):
+  """
+  k=5 방식을 적용하여 가장 유사한 사용자를 찾습니다.
+  1순위가 임계값 이내이고, 2순위와 충분한 격차가 있을 때만 인정합니다.
+  """
+  if not current_known_embeddings:
+    return None
+
+  # 1. 모든 등록된 얼굴과의 유사도 계산
+  distances = []
+  for user_uuid, user_info in current_known_embeddings.items():
+    # --- 💡 핵심 변경점: L2 거리 -> 코사인 유사도 ---
+    # ArcFace는 코사인 유사도(내적)를 사용합니다. live_embedding과 db_embedding 모두
+    # generate_embedding 함수에서 L2 정규화되었으므로 내적(dot product)이 코사인 유사도와 같습니다.
+    # 유사도는 클수록 좋으므로, 1에서 빼서 '거리' 개념으로 변환합니다 (거리는 작을수록 좋음).
+    similarity = np.dot(live_embedding, user_info["embedding"])
+    dist = 1 - similarity # 코사인 거리
+    distances.append({'uuid': user_uuid, 'dist': dist})
+
+  # 2. 거리가 가까운 순서대로 정렬 (이후 로직은 동일)
+  distances.sort(key=lambda x: x['dist'])
+
+  # 3. 상위 5명(또는 그 이하)의 후보 추출
+  top_candidates = distances[:5]
+
+  # 후보가 한 명도 없는 경우
+  if not top_candidates:
+    return None
+
+  # 4. 최종 판단 로직
+  best_match = top_candidates[0]
+
+  # --- 조건 1: 1순위 후보가 임계값보다 가까운가? ---
+  if best_match['dist'] < settings.RECOGNITION_THRESHOLD:
+
+    # --- 조건 2: 후보가 2명 이상이고, 1-2순위 간 격차가 충분한가? ---
+    # 후보가 1명 뿐이면, 임계값만 통과하면 성공으로 간주
+    if len(top_candidates) == 1:
+      return best_match['uuid']
+
+    # 2순위와의 거리 격차를 확인 (이 값은 settings에 추가하는 것을 권장)
+    second_match = top_candidates[1]
+    distance_gap = second_match['dist'] - best_match['dist']
+
+    # 예시: 격차가 0.2 이상 나야만 확실하다고 판단
+    if distance_gap > 0.2:
+      return best_match['uuid']
+
+  # 위 모든 조건을 통과하지 못하면 인식 실패로 간주
+  return None
+
 def find_best_match(live_embedding, current_known_embeddings):
   min_dist = float('inf')
   found_user_uuid = None
@@ -175,7 +226,7 @@ def process_camera_stream(camera_info, thread_shutdown_event):
         with known_embeddings_lock:
           current_known_embeddings = known_embeddings.copy()
 
-        found_user_uuid = find_best_match(live_embedding, current_known_embeddings)
+        found_user_uuid = find_best_match_k5(live_embedding, current_known_embeddings)
 
         if found_user_uuid:
           logger.info(f"[{cam_name}] 🎯 얼굴 인식 성공! 크기: {face_width}x{face_height} (면적: {face_area})")
@@ -261,7 +312,8 @@ def update_known_faces_periodically():
 # --- 서비스 시작/종료 함수 ---
 def start_monitoring():
   """CCTV 모니터링을 위한 모든 백그라운드 스레드를 시작합니다."""
-  if not hasattr(face_embedding_service, 'tf_sess'):
+  # --- 💡 핵심 변경점: 모델 로드 확인 ---
+  if not hasattr(face_embedding_service, 'ort_session'): # tf_sess -> ort_session
     logger.critical("FaceEmbeddingService가 초기화되지 않았습니다. 모니터링을 시작할 수 없습니다.")
     return
 
