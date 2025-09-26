@@ -1,43 +1,32 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect } from 'react';
+import { isMobilePlatform } from '@/utils/platform';
+import RouterMobile from '@/routes/RouterMobile';
+import RouterWeb from '@/routes/RouterWeb';
+import { initializeWeatherStore } from '@/stores/weatherStore';
 
-function App() {
-  const [count, setCount] = useState(0)
+const App = () => {
+  const isMobile = isMobilePlatform();
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more-cicd-test
-      </p>
-      <p className="test-the-pr-agent">
-        테이블 17개??
+  useEffect(() => {
+    initializeWeatherStore();
 
-        PR-Agent 정상 동작 하니??
-        이 코드에선 어떤 것들이 바뀌었니?
+    // 웹에서 브라우저 알림 권한 요청
+    if (!isMobile && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        console.log('🔔 웹 앱 시작 시 브라우저 알림 권한 요청...')
+        Notification.requestPermission().then((permission) => {
+          console.log('🔔 브라우저 알림 권한 결과:', permission)
+        })
+      }
+    }
+  }, [isMobile]);
 
-        아 테스트입니다.ㅇㅇㅇ
-      </p>
-    </>
-  )
-}
+  return <div>{isMobile ? <RouterMobile /> : <RouterWeb />}</div>;
+};
 
-export default App
+export default App;
+
+
+
+
+

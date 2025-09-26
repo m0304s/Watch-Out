@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>CCTV 멀티뷰 – 회사/카메라/링크</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --gap: 12px; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; background:#f7f7f9; color:#222; }
+    header { padding:14px 16px; background:#fff; border-bottom:1px solid #e6e6e9; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:flex-end; }
+    header h2 { margin:0; font-size:18px; font-weight:800; }
+    .controls, .form { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .btn{ cursor:pointer; border:1px solid #d0d0d6; background:#fff; border-radius:10px; padding:8px 12px; font-size:14px; }
+    .btn.primary{ background:#2b66f6; color:#fff; border-color:#2b66f6; }
+    .btn.danger{ background:#ff4d4f; color:#fff; border-color:#ff4d4f; }
+    .btn.ghost{ background:#fff; }
+    .btn[disabled]{ opacity:.5; cursor:not-allowed; }
+    .input{ padding:8px 10px; border:1px solid #d0d0d6; border-radius:8px; font-size:14px; }
+    .form { padding:12px 16px; background:#fff; border-bottom:1px solid #e6e6e9; }
+    .form .input.link { flex:1; min-width:260px; }
+    .hint { padding:8px 16px; font-size:12px; color:#666; }
+    .grid { display:grid; gap: var(--gap); padding: var(--gap); grid-template-columns: repeat(var(--cols,2), minmax(320px,1fr)); }
+    .card { background:#fff; border:1px solid #e6e6e9; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; }
+    .card header{ padding:8px 10px; font-size:13px; color:#666; background:#fafafa; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .pill{ font-size:11px; color:#666; background:#f0f2f5; border-radius:999px; padding:2px 8px; border:1px solid #e3e6ea; }
+    .name { font-weight:700; color:#333; }
+    .controls-row{ display:flex; gap:6px; padding:8px 10px; align-items:center; border-top:1px solid #eee; flex-wrap:wrap; }
+    .row-right{ margin-left:auto; display:flex; gap:6px; }
+    img.stream{ width:100%; height:auto; display:block; background:#000; aspect-ratio:16/9; object-fit:contain; }
+    .footer{ padding:10px 16px; color:#888; font-size:12px; }
+    .divider{ height:1px; background:#ececf2; margin:0; }
+    .status-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; background:#bbb; }
+    .status-on{ background:#28a745; }
+    .status-off{ background:#bbb; }
+    @media (max-width: 480px){ .grid{ grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>CCTV 멀티뷰</h2>
+    <div class="controls">
+      <label>열(Cols): <input id="cols" class="input" type="number" min="1" max="6" value="2"></label>
+      <label>간격(px): <input id="gap" class="input" type="number" min="0" max="40" value="12"></label>
+      <label>미러: 
+        <select id="mirror" class="input">
+          <option value="true">true</option>
+          <option value="false" selected>false</option>
+        </select>
+      </label>
+      <button class="btn primary" id="startAllView">모두 보기</button>
+      <button class="btn danger" id="stopAllView">모두 끄기</button>
+      <button class="btn ghost" id="clearAll">전체 삭제</button>
+    </div>
+  </header>
+
+  <div class="form">
+    <input id="company" class="input" type="text" placeholder="회사명" />
+    <input id="camera"  class="input" type="text" placeholder="카메라명" />
+    <input id="link"    class="input link" type="text" placeholder="카메라 링크 (숫자=로컬 인덱스, rtsp/http url)" />
+    <button class="btn" id="add">추가</button>
+  </div>
+
+  <div class="hint">규칙: <b>추론이 켜져 있어야</b> 보기 시작/정지를 할 수 있고, <b>보기가 꺼져 있어야</b> 추론 정지를 할 수 있습니다.</div>
+  <hr class="divider"/>
+
+  <div id="grid" class="grid" style="--cols:2; --gap:12px;"></div>
+
+  <div class="footer">Tip: 등록 리스트는 <b>localStorage</b>에 자동 저장/복원됩니다.</div>
+
+  <template id="cardTpl">
+    <div class="card">
+      <header>
+        <div class="meta">
+          <span class="pill">CCTV</span>
+          <span class="name"></span>
+          <span class="pill company"></span>
+        </div>
+        <div class="meta">
+          <span class="status">
+            <span class="status-dot"></span> <span class="status-text">detector: off</span>
+          </span>
+        </div>
+      </header>
+      <img class="stream" alt="stream" />
+      <div class="controls-row">
+        <span class="pill src"></span>
+        <div class="row-right">
+          <button class="btn ghost detect-start">추론 시작</button>
+          <button class="btn ghost detect-stop" disabled>추론 정지</button>
+          <button class="btn primary view-start" disabled>보기 시작</button>
+          <button class="btn danger view-stop" disabled>보기 정지</button>
+          <button class="btn danger remove">삭제</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const colsEl = document.getElementById('cols');
+    const gapEl  = document.getElementById('gap');
+    const mirrorEl = document.getElementById('mirror');
+
+    const companyEl = document.getElementById('company');
+    const cameraEl  = document.getElementById('camera');
+    const linkEl    = document.getElementById('link');
+    const addBtn    = document.getElementById('add');
+
+    const startAllViewBtn = document.getElementById('startAllView');
+    const stopAllViewBtn  = document.getElementById('stopAllView');
+    const clearAllBtn = document.getElementById('clearAll');
+
+    const tpl = document.getElementById('cardTpl');
+    const state = { items: [] }; // {company,camera,link,el,img,detecting,viewing}
+
+    function toSrcParam(val){
+      const t = (val||'').trim();
+      if(!t) return '';
+      const isInt = /^-?\d+$/.test(t);
+      return isInt ? t : encodeURIComponent(t);
+    }
+    function buildStreamURL(link, company, camera){
+      const srcParam = toSrcParam(link);
+      if(!srcParam) return '';
+      const mirror = mirrorEl.value;
+      const q = new URLSearchParams({
+        src: srcParam, mirror, company: company || '', camera: camera || ''
+      });
+      return `/cctv?${q.toString()}`;
+    }
+    function applyLayout(){
+      const cols = Math.min(Math.max(+colsEl.value||2,1),6);
+      const gap  = Math.min(Math.max(+gapEl.value||12,0),40);
+      grid.style.setProperty('--cols', cols);
+      grid.style.setProperty('--gap', `${gap}px`);
+      persist();
+    }
+    function persist(){
+      const data = {
+        cols:+colsEl.value||2,
+        gap:+gapEl.value||12,
+        mirror:mirrorEl.value,
+        items: state.items.map(({company,camera,link})=>({company,camera,link}))
+      };
+      localStorage.setItem('multiview-form-config', JSON.stringify(data));
+    }
+    function restore(){
+      const raw = localStorage.getItem('multiview-form-config');
+      if(!raw) return;
+      try{
+        const data = JSON.parse(raw);
+        if(data.cols) colsEl.value = data.cols;
+        if(data.gap !== undefined) gapEl.value = data.gap;
+        if(data.mirror) mirrorEl.value = data.mirror;
+        (data.items||[]).forEach(it => addCard(it.company, it.camera, it.link, /*noPersist*/ true));
+        applyLayout();
+      }catch{}
+    }
+
+    async function postJSON(url, params){
+      const qs = new URLSearchParams(params).toString();
+      const res = await fetch(`${url}?${qs}`, {method:'POST'});
+      if(!res.ok) throw new Error(`${url} ${res.status}`);
+      return res.json();
+    }
+
+    function setButtonsByDetect(item){
+      const running = !!item.detecting;
+      const viewing = !!item.viewing;
+
+      const btnDetectStart = item.el.querySelector('.detect-start');
+      const btnDetectStop  = item.el.querySelector('.detect-stop');
+      const btnViewStart   = item.el.querySelector('.view-start');
+      const btnViewStop    = item.el.querySelector('.view-stop');
+
+      // 규칙 1) 추론이 켜져 있어야 보기 제어 가능
+      btnViewStart.disabled = !running;
+      btnViewStop.disabled  = !running || !viewing;
+
+      // 규칙 2) 보기가 켜져 있으면 추론 정지 불가
+      btnDetectStop.disabled = !running || viewing;
+
+      // 켜져 있으면 시작 비활성화
+      btnDetectStart.disabled = running;
+    }
+
+    function setDetectStatus(item, running){
+      item.detecting = !!running;
+      const dot = item.el.querySelector('.status-dot');
+      const text = item.el.querySelector('.status-text');
+      if(running){
+        dot.classList.add('status-on'); dot.classList.remove('status-off');
+        text.textContent = 'detector: on';
+      }else{
+        dot.classList.add('status-off'); dot.classList.remove('status-on');
+        text.textContent = 'detector: off';
+        // 추론이 꺼지면 보기 상태도 강제 종료
+        item.viewing = false;
+        item.img.removeAttribute('src');
+      }
+      setButtonsByDetect(item);
+    }
+
+    async function refreshRunning(){
+      try{
+        const res = await fetch('/running', { cache: 'no-store' });
+        const data = await res.json();
+        const running = new Set((data.items||[]).map(it => `${it.company}:${it.camera}`));
+        state.items.forEach(it => setDetectStatus(it, running.has(`${it.company}:${it.camera}`)));
+      }catch{}
+    }
+
+    function addCard(company, camera, link, noPersist){
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      const nameEl = node.querySelector('.name');
+      const compEl = node.querySelector('.company');
+      const srcPill = node.querySelector('.src');
+      const img = node.querySelector('img.stream');
+      const btnDetectStart = node.querySelector('.detect-start');
+      const btnDetectStop  = node.querySelector('.detect-stop');
+      const btnViewStart   = node.querySelector('.view-start');
+      const btnViewStop    = node.querySelector('.view-stop');
+      const btnRemove      = node.querySelector('.remove');
+
+      nameEl.textContent = camera || '(이름 없음)';
+      compEl.textContent = company || '(회사 없음)';
+      srcPill.textContent = link || '(링크 없음)';
+
+      const item = { company, camera, link, el: node, img, detecting:false, viewing:false };
+      state.items.push(item);
+      grid.appendChild(node);
+
+      // === 추론 시작/정지 ===
+      btnDetectStart.addEventListener('click', async () => {
+        if(!company || !camera || !link){ alert('회사명/카메라/링크가 필요합니다.'); return; }
+        try{
+          const r = await postJSON('/detect/start', { company, camera, src: link, mirror: mirrorEl.value, push: false });
+          setDetectStatus(item, r.running);
+        }catch(e){ alert('추론 시작 실패: ' + e.message); }
+      });
+
+      btnDetectStop.addEventListener('click', async () => {
+        if(item.viewing){ alert('먼저 "보기 정지"를 눌러 스트림을 끊어주세요.'); return; }
+        if(!company || !camera){ alert('회사명/카메라가 필요합니다.'); return; }
+        try{
+          await postJSON('/detect/stop', { company, camera });
+          setDetectStatus(item, false);
+        }catch(e){ alert('추론 정지 실패: ' + e.message); }
+      });
+
+      // === 보기 시작/정지 ===
+      btnViewStart.addEventListener('click', () => {
+        if(!item.detecting){ alert('먼저 추론을 시작해야 봅니다.'); return; }
+        const url = buildStreamURL(item.link, item.company, item.camera);
+        if(!url){ alert('유효한 링크가 없습니다.'); return; }
+        item.viewing = true;
+        img.src = url;
+        setButtonsByDetect(item);
+      });
+
+      btnViewStop.addEventListener('click', () => {
+        item.viewing = false;
+        img.removeAttribute('src'); // 빈 src 대신 아예 제거
+        setButtonsByDetect(item);   // => 여기서 곧바로 추론 정지 버튼 활성화됨
+      });
+
+      // === 삭제 ===
+      btnRemove.addEventListener('click', () => {
+        item.viewing = false;
+        img.removeAttribute('src');
+        node.remove();
+        const i = state.items.indexOf(item);
+        if(i>=0) state.items.splice(i,1);
+        persist();
+      });
+
+      if(!noPersist) persist();
+      // 초기 상태 동기화
+      setButtonsByDetect(item);
+      refreshRunning();
+      startRunningPoll(); // 아래 가시성 기반 폴링
+    }
+
+    // 상단 제어
+    addBtn.addEventListener('click', () => {
+      const company = companyEl.value.trim();
+      const camera  = cameraEl.value.trim();
+      const link    = linkEl.value.trim();
+      if(!company || !camera || !link){ alert('회사명, 카메라명, 링크를 모두 입력하세요.'); return; }
+      addCard(company, camera, link);
+      companyEl.value = cameraEl.value = linkEl.value = '';
+    });
+
+    startAllViewBtn.addEventListener('click', () => {
+      state.items.forEach(it => {
+        if(!it.detecting) return; // 규칙: 추론 켜진 것만 보기
+        const url = buildStreamURL(it.link, it.company, it.camera);
+        if(url){
+          it.viewing = true;
+          it.img.src = url;
+          setButtonsByDetect(it);
+        }
+      });
+    });
+    stopAllViewBtn.addEventListener('click', () => {
+      state.items.forEach(it => {
+        it.viewing = false;
+        it.img.removeAttribute('src');
+        setButtonsByDetect(it);
+      });
+    });
+    clearAllBtn.addEventListener('click', () => {
+      if(!confirm('모든 카드와 저장된 목록을 삭제할까요?')) return;
+      state.items.forEach(it => {
+        it.viewing = false;
+        it.img.removeAttribute('src');
+      });
+      state.items.length = 0;
+      grid.innerHTML='';
+      persist();
+      stopRunningPoll();
+    });
+
+    colsEl.addEventListener('change', applyLayout);
+    gapEl.addEventListener('change', applyLayout);
+    mirrorEl.addEventListener('change', () => {
+      // 미러 변경 시 실행 중 스트림 새로고침
+      state.items.forEach(it => {
+        if(it.viewing){
+          const url = buildStreamURL(it.link, it.company, it.camera);
+          it.img.src = url;
+        }
+      });
+      persist();
+    });
+
+    // ======= /running 스마트 폴링 (가시성 + 간격 15초) =======
+    let runningPollTimer = null;
+    async function pollOnce(){ await refreshRunning(); }
+    function startRunningPoll(intervalMs = 15000){
+      if (runningPollTimer || state.items.length === 0) return;
+      runningPollTimer = setInterval(() => {
+        if (document.hidden) return;
+        pollOnce();
+      }, intervalMs);
+    }
+    function stopRunningPoll(){
+      if (runningPollTimer){
+        clearInterval(runningPollTimer);
+        runningPollTimer = null;
+      }
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopRunningPoll();
+      else startRunningPoll();
+    });
+
+    // init
+    restore();
+    applyLayout();
+    refreshRunning();
+    startRunningPoll();
+  </script>
+</body>
+</html>
