@@ -164,7 +164,7 @@ fun CheckDoneScreen(modifier: Modifier = Modifier, onDoneClick: () -> Unit) {
 @Composable
 fun FallDetectedScreen(
     modifier: Modifier = Modifier,
-    totalSeconds: Int = 30,
+    totalSeconds: Int = 10,
     onCancel: () -> Unit,
     onTimeout: () -> Unit
 ) {

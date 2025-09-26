@@ -1,45 +1,41 @@
+# ai-repo2/app/services/face_embedding.py
+
 import cv2
 import numpy as np
-# 1. 원래대로 tensorflow 전체를 import 합니다.
-import tensorflow as tf
+import onnxruntime as ort # tensorflow 대신 onnxruntime 임포트
 import logging
 from app.config import settings
 
 class FaceEmbeddingService:
   def __init__(self):
-    self.input_size = settings.INPUT_SIZE
+    self.input_size = settings.INPUT_SIZE # (112, 112)
     self.detection_confidence = settings.DETECTION_CONFIDENCE
     self._load_models()
 
   def _load_models(self):
-    logging.info("얼굴 탐지 및 임베딩 모델을 로드합니다...")
+    logging.info("얼굴 탐지 및 ArcFace 임베딩 모델을 로드합니다...")
     try:
-      tf.compat.v1.disable_v2_behavior()
-
+      # 얼굴 탐지 모델은 기존 Caffe 모델을 그대로 사용
       self.face_detector = cv2.dnn.readNetFromCaffe(settings.PROTOTXT_PATH, settings.CAFFE_MODEL_PATH)
 
-      graph_def = tf.compat.v1.GraphDef()
-      graph_def.ParseFromString(open(settings.MODEL_PATH, 'rb').read())
+      # ArcFace ONNX 모델 로드
+      self.ort_session = ort.InferenceSession(settings.MODEL_PATH)
+      self.input_name = self.ort_session.get_inputs()[0].name
+      self.output_name = self.ort_session.get_outputs()[0].name
 
-      self.tf_sess = tf.compat.v1.Session(graph=tf.compat.v1.Graph())
-      with self.tf_sess.graph.as_default():
-        tf.import_graph_def(graph_def, name='')
-
-      self.images_placeholder = self.tf_sess.graph.get_tensor_by_name('input:0')
-      self.embeddings_tensor = self.tf_sess.graph.get_tensor_by_name('embeddings:0')
       logging.info("✅ 모델 로드 완료!")
     except Exception as e:
       logging.critical(f"❌ 모델 로드 실패: {e}")
       raise e
 
   def generate_embedding(self, image_bytes: bytes) -> np.ndarray:
-    # 이 아래 부분은 수정할 필요 없습니다.
     try:
       img_array = np.frombuffer(image_bytes, np.uint8)
       image = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
       if image is None:
         raise ValueError("이미지 파일을 디코딩할 수 없습니다.")
 
+      # 1. 얼굴 탐지 (기존과 동일)
       (h, w) = image.shape[:2]
       blob = cv2.dnn.blobFromImage(cv2.resize(image, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
       self.face_detector.setInput(blob)
@@ -61,11 +57,18 @@ class FaceEmbeddingService:
       if face_roi.size == 0:
         raise ValueError("얼굴 영역이 유효하지 않습니다.")
 
-      img_resized = cv2.resize(face_roi, self.input_size)
+      # 2. ArcFace 모델 입력에 맞게 전처리
+      img_rgb = cv2.cvtColor(face_roi, cv2.COLOR_BGR2RGB)
+      img_resized = cv2.resize(img_rgb, self.input_size)
       img_preprocessed = (img_resized.astype(np.float32) - 127.5) / 128.0
-      img_expanded = np.expand_dims(img_preprocessed, axis=0)
-      feed_dict = {self.images_placeholder: img_expanded}
-      return self.tf_sess.run(self.embeddings_tensor, feed_dict=feed_dict)[0]
+      img_expanded = np.expand_dims(img_preprocessed, axis=0) # 최종 shape: (1, 112, 112, 3)
+
+      # 3. ONNX 모델로 임베딩 추론
+      embedding = self.ort_session.run([self.output_name], {self.input_name: img_expanded})[0][0]
+
+      # 4. L2 정규화 (코사인 유사도 계산을 위해 필수)
+      embedding = embedding / np.linalg.norm(embedding)
+      return embedding
 
     except Exception as e:
       logging.error(f"임베딩 생성 중 오류 발생: {e}")

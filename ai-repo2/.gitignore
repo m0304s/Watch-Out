@@ -22,3 +22,6 @@ Thumbs.db
 # 로그 파일
 logs/
 *.log
+
+# 테스트용 안면 데이터셋
+/lfw-people/
