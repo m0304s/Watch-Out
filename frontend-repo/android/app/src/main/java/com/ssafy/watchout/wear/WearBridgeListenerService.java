@@ -65,7 +65,7 @@ public class WearBridgeListenerService extends WearableListenerService {
             return;
         }
 
-        String serverUrl = "https://j13e102.p.ssafy.io:8443/api" + "/accident";
+        String serverUrl = "https://j13e102.p.ssafy.io/api" + "/accident";
         
         OkHttpClient client = new OkHttpClient();
         MediaType JSON = MediaType.get("application/json; charset=utf-8");
