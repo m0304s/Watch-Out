@@ -16,10 +16,11 @@ class PassiveHealthEventService : PassiveListenerService() {
 
             // 수신된 이벤트를 처리하는 로직: UI를 띄운다
             if (event.type == HealthEvent.Type.FALL_DETECTED) {
+                Log.d(TAG, "✅ Fall detection confirmed! Starting FallDetectedFeedbackActivity.")
                 val intent = Intent(this@PassiveHealthEventService, FallDetectedFeedbackActivity::class.java).apply {
                     // 서비스에서 Activity를 시작하려면 NEW_TASK 플래그가 필수입니다.
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+                  }
                 startActivity(intent)
             }
         }
