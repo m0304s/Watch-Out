@@ -348,9 +348,9 @@ pipeline {
                                 mkdir -p _docker_ctx
                                 tar --no-same-owner -cf - --exclude=.git --exclude=_docker_ctx . | (cd _docker_ctx && tar -xf -)
                                 chmod -R 755 _docker_ctx
-                                cp "$ENV_FILE" _docker_ctx/.env
-                                ls -la _docker_ctx/.env
-                                cat _docker_ctx/.env
+                                cp "$ENV_FILE" _docker_ctx/.env.production
+                                ls -la _docker_ctx/.env.production
+                                cat _docker_ctx/.env.production
                                 docker build -t ${tag} --build-arg ENV=prod _docker_ctx
                                 """
                             }
