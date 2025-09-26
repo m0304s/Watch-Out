@@ -9,7 +9,8 @@ interface CctvModalProps {
 }
 
 const MobileCctvModal = ({ cctv, onClose }: CctvModalProps) => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://j13e102.p.ssafy.io:8443/api'
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || 'https://j13e102.p.ssafy.io/api'
   const modalRef = useRef<HTMLDivElement>(null)
 
   return (
