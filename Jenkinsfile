@@ -174,51 +174,6 @@ pipeline {
             }
         }
 
-        /********************  엣지 프록시 배포/리로드  ********************/
-        stage('Deploy or Reload Edge Proxy') {
-            when {
-                anyOf {
-                    allOf {
-                        expression { (env.MR_STATE ?: '') == 'merged' }
-                        expression { env.DO_EDGE_CONFIG_CHANGE == 'true' }
-                    }
-                    expression { params.BUILD_EDGE_PROXY == true }
-                }
-            }
-            steps {
-                dir('frontend-repo') {
-                    script {
-                        def branch   = (env.MR_STATE == 'merged') ? (env.TARGET_BRANCH ?: '').trim() : (params.BRANCH_TO_BUILD ?: '').trim()
-                        def isProd   = (branch == 'master')
-                        def tag      = isProd ? "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}" : "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
-                        def envType  = isProd ? "prod" : "test"
-                        def httpPort = isProd ? REVERSE_PROXY_PROD_PORT : REVERSE_PROXY_TEST_PORT
-                        def httpsPort= isProd ? REVERSE_PROXY_PROD_SSL_PORT : REVERSE_PROXY_TEST_SSL_PORT
-                        def network  = isProd ? PROD_NETWORK : TEST_NETWORK
-                        def name     = isProd ? REVERSE_PROXY_PROD_CONTAINER : REVERSE_PROXY_TEST_CONTAINER
-
-                        sh "docker build -t ${tag} --build-arg ENV=${envType} -f ./docker/edge/Dockerfile ."
-
-                        def running = sh(script: "docker ps -q --filter name=${name}", returnStdout: true).trim()
-                        if (running) {
-                            sh "docker cp ./docker/edge/nginx/${envType}.conf ${name}:/etc/nginx/nginx.conf"
-                            sh "docker exec ${name} nginx -s reload"
-                        } else {
-                            sh """
-                                docker rm -f ${name} || true
-                                docker run -d --name ${name} --network ${network} \\
-                                    -p ${httpPort}:80 \\
-                                    -p ${httpsPort}:${httpsPort} \\
-                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
-                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
-                                    ${tag}
-                            """
-                        }
-                    }
-                }
-            }
-        }
-
         /********************  백엔드 배포 (컨테이너 빌드/실행)  ********************/
         stage('Deploy Backend') {
             when {
@@ -401,6 +356,51 @@ pipeline {
                             }
                             sh "docker rm -f ${FE_PROD_CONTAINER} || true"
                             sh "docker run -d --name ${FE_PROD_CONTAINER} --network ${PROD_NETWORK} ${tag}"
+                        }
+                    }
+                }
+            }
+        }
+
+        /********************  엣지 프록시 배포/리로드  ********************/
+        stage('Deploy or Reload Edge Proxy') {
+            when {
+                anyOf {
+                    allOf {
+                        expression { (env.MR_STATE ?: '') == 'merged' }
+                        expression { env.DO_EDGE_CONFIG_CHANGE == 'true' }
+                    }
+                    expression { params.BUILD_EDGE_PROXY == true }
+                }
+            }
+            steps {
+                dir('frontend-repo') {
+                    script {
+                        def branch   = (env.MR_STATE == 'merged') ? (env.TARGET_BRANCH ?: '').trim() : (params.BRANCH_TO_BUILD ?: '').trim()
+                        def isProd   = (branch == 'master')
+                        def tag      = isProd ? "${REVERSE_PROXY_IMAGE_NAME}:prod-${BUILD_NUMBER}" : "${REVERSE_PROXY_IMAGE_NAME}:test-${BUILD_NUMBER}"
+                        def envType  = isProd ? "prod" : "test"
+                        def httpPort = isProd ? REVERSE_PROXY_PROD_PORT : REVERSE_PROXY_TEST_PORT
+                        def httpsPort= isProd ? REVERSE_PROXY_PROD_SSL_PORT : REVERSE_PROXY_TEST_SSL_PORT
+                        def network  = isProd ? PROD_NETWORK : TEST_NETWORK
+                        def name     = isProd ? REVERSE_PROXY_PROD_CONTAINER : REVERSE_PROXY_TEST_CONTAINER
+
+                        sh "docker build -t ${tag} --build-arg ENV=${envType} -f ./docker/edge/Dockerfile ."
+
+                        def running = sh(script: "docker ps -q --filter name=${name}", returnStdout: true).trim()
+                        if (running) {
+                            sh "docker cp ./docker/edge/nginx/${envType}.conf ${name}:/etc/nginx/nginx.conf"
+                            sh "docker exec ${name} nginx -s reload"
+                        } else {
+                            sh """
+                                docker rm -f ${name} || true
+                                docker run -d --name ${name} --network ${network} \\
+                                    -p ${httpPort}:80 \\
+                                    -p ${httpsPort}:${httpsPort} \\
+                                    -v ${CERT_PATH}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro \\
+                                    -v ${CERT_PATH}/privkey.pem:/etc/nginx/certs/privkey.pem:ro \\
+                                    ${tag}
+                            """
                         }
                     }
                 }
