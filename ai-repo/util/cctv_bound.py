@@ -22,13 +22,13 @@ WEIGHTS  = BASE_DIR / "weights/yolact_resnet101_safety_33_200000.pth"
 SCORE_THRESHOLD = 0.3
 TOP_K = 100
 USE_ALLOWED_FILTER = True
-ALLOWED = {"Helmet off","Belt off","Fork lane", "Dump truck", "Remicon", "Pump car", "Truck", "Tower crane", "Dangerous goods storage", "Elevator fall arrester", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Fire extinguisher", "Hand grinder"}
+ALLOWED = {"Helmet off", "Fork lane", "Dump truck", "Remicon", "Pump car", "Truck", "Tower crane", "Dangerous goods storage", "Elevator fall arrester", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Fire extinguisher", "Hand grinder"}
 LABELMAP_PATH = BASE_DIR / "labelmap.txt"
 
 # 스냅샷/알림 설정
-TRIGGERS = {"Helmet off","Belt off","Fork lane", "Dump truck", "Remicon", "Pump car", "Truck", "Tower crane", "Dangerous goods storage", "Elevator fall arrester", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Fire extinguisher", "Hand grinder"}
-TRIGGERS_EQUIPMENT = {"Helmet off","Belt off"}
-TRIGGERS_HEAVY = {"Fork lane", "Dump truck", "Remicon", "Pump car", "Truck", "Tower crane", "Dangerous goods storage", "Elevator fall arrester", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Fire extinguisher", "Hand grinder"}
+TRIGGERS = {"Helmet off", "Fork lane", "Dump truck", "Remicon", "Pump car", "Truck", "Tower crane", "Dangerous goods storage", "Elevator fall arrester", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Fire extinguisher", "Hand grinder"}
+TRIGGERS_EQUIPMENT = {"Helmet off"}
+TRIGGERS_HEAVY = {"Fork lane", "Dump truck", "Remicon", "Pump car", "Truck", "Tower crane", "Dangerous goods storage",git "Elevator fall arrester", "Steal pipe scaffolding", "System scaffolding", "Cement brick", "Hammer", "Electric drill", "Remital", "Fire extinguisher", "Hand grinder"}
 SNAPSHOT_DIR = "./snapshot"
 SNAPSHOT_COOLDOWN = 60.0
 NOTICE_SECS = 5.0

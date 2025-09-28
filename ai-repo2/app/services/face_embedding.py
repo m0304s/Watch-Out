@@ -2,7 +2,7 @@
 
 import cv2
 import numpy as np
-import onnxruntime as ort # tensorflow 대신 onnxruntime 임포트
+import onnxruntime as ort
 import logging
 from app.config import settings
 
@@ -18,12 +18,15 @@ class FaceEmbeddingService:
       # 얼굴 탐지 모델은 기존 Caffe 모델을 그대로 사용
       self.face_detector = cv2.dnn.readNetFromCaffe(settings.PROTOTXT_PATH, settings.CAFFE_MODEL_PATH)
 
-      # ArcFace ONNX 모델 로드
-      self.ort_session = ort.InferenceSession(settings.MODEL_PATH)
+      # ArcFace ONNX 모델 로드 (GPU 우선 사용 설정)
+      providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+      self.ort_session = ort.InferenceSession(settings.MODEL_PATH, providers=providers)
+
       self.input_name = self.ort_session.get_inputs()[0].name
       self.output_name = self.ort_session.get_outputs()[0].name
 
-      logging.info("✅ 모델 로드 완료!")
+      # 사용 중인 장치 정보 로깅
+      logging.info(f"✅ 모델 로드 완료! ONNX Runtime provider: {self.ort_session.get_providers()}")
     except Exception as e:
       logging.critical(f"❌ 모델 로드 실패: {e}")
       raise e
@@ -49,10 +52,7 @@ class FaceEmbeddingService:
 
       box = detections[0, 0, best_detection_idx, 3:7] * np.array([w, h, w, h])
       (startX, startY, endX, endY) = box.astype("int")
-      
-      # 임베딩 등록 시에는 바운딩박스 크기 필터링을 하지 않음
-      # 입출입 체크할 때만 바운딩박스 크기를 확인함
-      
+
       face_roi = image[startY:endY, startX:endX]
       if face_roi.size == 0:
         raise ValueError("얼굴 영역이 유효하지 않습니다.")
@@ -61,7 +61,10 @@ class FaceEmbeddingService:
       img_rgb = cv2.cvtColor(face_roi, cv2.COLOR_BGR2RGB)
       img_resized = cv2.resize(img_rgb, self.input_size)
       img_preprocessed = (img_resized.astype(np.float32) - 127.5) / 128.0
-      img_expanded = np.expand_dims(img_preprocessed, axis=0) # 최종 shape: (1, 112, 112, 3)
+      # ONNX 모델은 (N, C, H, W) 또는 (N, H, W, C)를 모두 지원할 수 있으나,
+      # 일반적으로 (N, C, H, W) 형태를 많이 사용합니다.
+      # 현재 코드는 (N, H, W, C)를 사용하고 있으므로 그대로 둡니다.
+      img_expanded = np.expand_dims(img_preprocessed, axis=0)
 
       # 3. ONNX 모델로 임베딩 추론
       embedding = self.ort_session.run([self.output_name], {self.input_name: img_expanded})[0][0]
