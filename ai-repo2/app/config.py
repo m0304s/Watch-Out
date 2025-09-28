@@ -37,13 +37,14 @@ class Settings(BaseSettings):
   KAFKA_CLIENT_ID: str
 
   # Models
-  MODEL_PATH: str = os.path.join(BASE_DIR, "models/MobileFaceNet.pb")
+  # MODEL_PATH: str = os.path.join(BASE_DIR, "models/MobileFaceNet.pb")
+  MODEL_PATH: str = os.path.join(BASE_DIR, "models/arcface.onnx")
   PROTOTXT_PATH: str = os.path.join(BASE_DIR, "models/deploy.prototxt")
   CAFFE_MODEL_PATH: str = os.path.join(BASE_DIR, "models/res10_300x300_ssd_iter_140000.caffemodel")
 
   # General Settings (근거리 카메라 최적화)
-  RECOGNITION_THRESHOLD: float = Field(default=0.9, description="인식 임계값 - 근거리용으로 낮춤")
-  DETECTION_CONFIDENCE: float = Field(default=0.8, description="탐지 신뢰도 - 근거리용으로 높임")
+  RECOGNITION_THRESHOLD: float = Field(default=0.5, description="인식 임계값 - 근거리용으로 낮춤")
+  DETECTION_CONFIDENCE: float = Field(default=0.7, description="탐지 신뢰도 - 근거리용으로 높임")
   INPUT_SIZE: Tuple[int, int] = (112, 112)
   LOG_COOLDOWN_SECONDS: int = Field(default=15, description="중복 로그 방지 시간 - 근거리용으로 단축")
   FRAME_PROCESSING_INTERVAL_SECONDS: float = Field(default=0.5, description="프레임 처리 간격 - 근거리용으로 단축")
