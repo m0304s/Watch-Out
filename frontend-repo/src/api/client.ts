@@ -11,7 +11,7 @@ const isMobile =
   (window as any).Capacitor?.isNativePlatform()
 
 // API URL 설정 (웹과 모바일 모두 배포 서버 사용)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://j13e102.p.ssafy.io:8443/api'
 
 logger.info(
   'API 클라이언트 초기화',
@@ -23,7 +23,7 @@ logger.info(
     isProd: import.meta.env.PROD,
     isDev: import.meta.env.DEV,
     viteMobileUrl: import.meta.env.VITE_MOBILE_API_URL,
-    viteApiUrl: import.meta.env.VITE_API_BASE_URL,
+    viteApiUrl: import.meta.env.VITE_API_BASE_URL || 'https://j13e102.p.ssafy.io:8443/api',
     baseURL: API_BASE_URL,
   },
   'API',
