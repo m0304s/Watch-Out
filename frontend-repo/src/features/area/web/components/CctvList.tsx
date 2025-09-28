@@ -21,7 +21,7 @@ const CctvList: React.FC<CctvListProps> = ({
   onCctvClick,
 }) => {
   const [cctvList, setCctvList] = useState<CctvViewAreaItem[] | null>(null)
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://j13e102.p.ssafy.io:8443/api'
 
   useEffect(() => {
     const getCctvList = async () => {
