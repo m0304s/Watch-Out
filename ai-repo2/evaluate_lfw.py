@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 import csv
@@ -21,7 +18,6 @@ except ImportError:
 # -----------------------------------------------------------------------------
 # 프로젝트 임베딩 서비스 로드
 # -----------------------------------------------------------------------------
-sys.path.append(".")
 try:
     from app.services.face_embedding import face_embedding_service
     _HAS_PROJECT = True
@@ -38,10 +34,6 @@ handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-
-# -----------------------------------------------------------------------------
-# [중요] 모든 설정은 여기서 직접 수정하세요!
-# -----------------------------------------------------------------------------
 @dataclass
 class EvalConfig:
     lfw_dir: str = "./lfw-people"

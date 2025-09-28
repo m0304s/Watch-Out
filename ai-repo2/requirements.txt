@@ -1,14 +1,27 @@
+# FastAPI & Server
 fastapi~=0.116.1
-pydantic~=2.11.9
-psycopg2~=2.9.10
-psycopg2-binary~=2.9.10
+uvicorn[standard]~=0.29.0  # <-- ✅ 서버 실행을 위해 추가
+
+# AI & Data Processing
+onnxruntime-gpu~=1.18.1      # <-- ✅ GPU 버전으로 변경
+opencv-python~=4.6.0.66
+numpy~=1.23.0
+
+# Database & Broker
+psycopg2-binary~=2.9.10      # <-- ✅ binary 버전만 남기는 것을 권장
 boto3~=1.40.31
 redis~=6.4.0
 kafka-python~=2.2.15
-opencv-python~=4.12.0.88
-numpy~=2.2.6
-requests~=2.32.5
-tensorflow~=2.20.0
+
+# etc.
+pydantic~=2.11.9
 pydantic-settings~=2.10.1
+requests~=2.32.5
+
+# --- 이하 패키지는 다른 패키지의 의존성일 수 있습니다 ---
+protobuf~=6.32.1
+setuptools~=80.3.1
+packaging~=25.0
+typing_extensions~=4.15.0
+jmespath~=1.0.1
 tqdm~=4.67.1
-onnxruntime~=1.18.1
