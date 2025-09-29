@@ -10,7 +10,7 @@ import MobileCctvModal from '@/features/area/mobile/MobileCctvModal'
 import { useToast } from '@/hooks/useToast'
 
 const MobileCctvMonitoring = () => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://j13e102.p.ssafy.io:8443/api'
   const toast = useToast()
   const [selectedArea, setSelectedArea] = useState<string>('')
   const [areaList, setAreaList] = useState<AreaListItem[]>([])
