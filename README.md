@@ -196,12 +196,12 @@ python main.py
 
 | 역할 | 이름 | 담당 영역 | GitHub |
 |------|------|-----------|--------|
-| `FE Leader` | 김예나 | Frontend, Web App | [@silence102](https://github.com/silence102) |
-| `FE` | 김동규 | Frontend, Mobile App | [@iiiiin](https://github.com/iiiiin) |
+| `FE Leader` | 김예나 | Frontend, Web App | [@yeneua](https://github.com/yeneua) |
+| `FE` | 김동규 | Frontend, Mobile App | [@donggyu-kim12](https://github.com/donggyu-kim12) |
 | `BE Leader` | 최민석 | Backend, DevOps | [@m0304s](https://github.com/m0304s) |
-| `BE` | 김환수 | Backend | [@yuju9](https://github.com/yuju9) |
-| `BE, AI` | 김현서 | Backend | [@Lee-heesan](https://github.com/Lee-heesan) |
-| `BE, AI` | 박정훈 | Backend, DevOps | [@m0304s](https://github.com/m0304s) |
+| `BE` | 김환수 | Backend | [@KimHS17](https://github.com/KimHS17) |
+| `BE, AI` | 김현서 | Backend | [@khyunse0](https://github.com/khyunse0) |
+| `BE, AI` | 박정훈 | Backend, DevOps | [@Leehwa531](https://github.com/Leehwa531) |
 
 ---
 
