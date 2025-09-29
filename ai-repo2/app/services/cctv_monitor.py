@@ -31,7 +31,7 @@ def load_known_faces_from_db():
       cursor = conn.cursor()
       cursor.execute("SELECT uuid, user_name, avg_embedding FROM users WHERE avg_embedding IS NOT NULL")
       for user_uuid, user_name, embedding_bytes in cursor.fetchall():
-        if len(embedding_bytes) == 512:
+        if len(embedding_bytes) == 2048:
           embedding = np.frombuffer(embedding_bytes, dtype=np.float32)
           temp_embeddings[str(user_uuid)] = {
             "name": user_name,
@@ -85,34 +85,28 @@ def update_cctv_status(cctv_uuid: str, status: bool):
 
 def find_best_match_k5(live_embedding, current_known_embeddings):
   """
-  k=5 방식을 적용하여 가장 유사한 사용자를 찾습니다.
-  1순위가 임계값 이내이고, 2순위와 충분한 격차가 있을 때만 인정합니다.
+  가장 유사한 사용자와의 거리(유사도)를 함께 반환하도록 수정합니다.
   """
   if not current_known_embeddings:
-    return None
+    return None, float('inf')
 
-  # 1. 모든 등록된 얼굴과의 유사도 계산
   distances = []
+  # for 반복문에서 user_info 변수를 올바르게 사용하도록 수정
   for user_uuid, user_info in current_known_embeddings.items():
-    # --- 💡 핵심 변경점: L2 거리 -> 코사인 유사도 ---
-    # ArcFace는 코사인 유사도(내적)를 사용합니다. live_embedding과 db_embedding 모두
-    # generate_embedding 함수에서 L2 정규화되었으므로 내적(dot product)이 코사인 유사도와 같습니다.
-    # 유사도는 클수록 좋으므로, 1에서 빼서 '거리' 개념으로 변환합니다 (거리는 작을수록 좋음).
     similarity = np.dot(live_embedding, user_info["embedding"])
-    dist = 1 - similarity # 코사인 거리
-    distances.append({'uuid': user_uuid, 'dist': dist})
+    dist = 1 - similarity
+    # 로깅을 위해 이름(name)도 함께 저장
+    distances.append({'uuid': user_uuid, 'dist': dist, 'name': user_info.get("name", "Unknown")})
 
-  # 2. 거리가 가까운 순서대로 정렬 (이후 로직은 동일)
+  # 거리가 가까운 순서대로 정렬
   distances.sort(key=lambda x: x['dist'])
 
-  # 3. 상위 5명(또는 그 이하)의 후보 추출
+  # 상위 5명(또는 그 이하)의 후보 추출
   top_candidates = distances[:5]
 
-  # 후보가 한 명도 없는 경우
   if not top_candidates:
-    return None
+    return None, float('inf')
 
-  # 4. 최종 판단 로직
   best_match = top_candidates[0]
 
   # --- 조건 1: 1순위 후보가 임계값보다 가까운가? ---
@@ -121,33 +115,22 @@ def find_best_match_k5(live_embedding, current_known_embeddings):
     # --- 조건 2: 후보가 2명 이상이고, 1-2순위 간 격차가 충분한가? ---
     # 후보가 1명 뿐이면, 임계값만 통과하면 성공으로 간주
     if len(top_candidates) == 1:
-      return best_match['uuid']
+      return best_match['uuid'], best_match['dist']
 
-    # 2순위와의 거리 격차를 확인 (이 값은 settings에 추가하는 것을 권장)
+    # 2순위와의 거리 격차를 확인
     second_match = top_candidates[1]
     distance_gap = second_match['dist'] - best_match['dist']
 
-    # 예시: 격차가 0.2 이상 나야만 확실하다고 판단
-    if distance_gap > 0.2:
-      return best_match['uuid']
+    # 예시: 격차가 0.1 이상 나야만 확실하다고 판단
+    if distance_gap > 0.1:
+      return best_match['uuid'], best_match['dist']
 
-  # 위 모든 조건을 통과하지 못하면 인식 실패로 간주
-  return None
-
-def find_best_match(live_embedding, current_known_embeddings):
-  min_dist = float('inf')
-  found_user_uuid = None
-  if not current_known_embeddings: return None
-
-  for user_uuid, user_info in current_known_embeddings.items():
-    dist = np.sqrt(np.sum(np.square(live_embedding - user_info["embedding"])))
-    if dist < min_dist:
-      min_dist = dist
-      found_user_uuid = user_uuid
-
-  if min_dist < settings.RECOGNITION_THRESHOLD:
-    return found_user_uuid
-  return None
+  # 디버깅용 로그: 가장 가까웠지만 실패한 경우의 정보 출력
+  top_candidates_str = ", ".join([f"{c['name']}(거리: {c['dist']:.4f})" for c in top_candidates])
+  logger.info(
+      f"🔍 인식 실패. Top5: [{top_candidates_str}], 임계값: {settings.RECOGNITION_THRESHOLD}"
+  )
+  return None, best_match['dist']
 
 # --- 핵심 로직 (개별 카메라 처리) ---
 def process_camera_stream(camera_info, thread_shutdown_event):
@@ -194,16 +177,14 @@ def process_camera_stream(camera_info, thread_shutdown_event):
       if confidence > settings.DETECTION_CONFIDENCE:
         box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
         (startX, startY, endX, endY) = box.astype("int")
-        
-        # 바운딩박스 크기 필터링 (자동 인식을 위한 크기 조건 확인)
+
         face_width = endX - startX
         face_height = endY - startY
         face_area = face_width * face_height
-        
+
         if settings.ENABLE_BBOX_SIZE_FILTER:
-          # 크기 조건 확인 - 조건을 만족하지 않으면 인식하지 않음
-          if (face_width < settings.MIN_FACE_WIDTH or 
-              face_height < settings.MIN_FACE_HEIGHT or 
+          if (face_width < settings.MIN_FACE_WIDTH or
+              face_height < settings.MIN_FACE_HEIGHT or
               face_area < settings.MIN_FACE_AREA):
             logger.debug(f"[{cam_name}] 🚫 인식 스킵 - 얼굴 크기 부족: {face_width}x{face_height} (면적: {face_area}) < 최소: {settings.MIN_FACE_WIDTH}x{settings.MIN_FACE_HEIGHT} (면적: {settings.MIN_FACE_AREA})")
             continue
@@ -211,7 +192,7 @@ def process_camera_stream(camera_info, thread_shutdown_event):
             logger.info(f"[{cam_name}] ✅ 인식 진행 - 얼굴 크기 조건 만족: {face_width}x{face_height} (면적: {face_area})")
         else:
           logger.debug(f"[{cam_name}] 🔍 크기 필터링 비활성화 - 인식 진행: {face_width}x{face_height} (면적: {face_area})")
-        
+
         face_roi = frame[startY:endY, startX:endX]
         if face_roi.size == 0: continue
 
@@ -220,18 +201,22 @@ def process_camera_stream(camera_info, thread_shutdown_event):
           image_bytes = img_encoded.tobytes()
           live_embedding = face_embedding_service.generate_embedding(image_bytes)
         except ValueError as e:
-          logger.debug(f"[{cam_name}] 임베딩 생성 실패: {e}")
+          logger.info(f"[{cam_name}] 임베딩 생성 실패: {e}")
           continue
 
         with known_embeddings_lock:
           current_known_embeddings = known_embeddings.copy()
 
-        found_user_uuid = find_best_match_k5(live_embedding, current_known_embeddings)
+        found_user_uuid, best_dist = find_best_match_k5(live_embedding, current_known_embeddings)
 
         if found_user_uuid:
-          logger.info(f"[{cam_name}] 🎯 얼굴 인식 성공! 크기: {face_width}x{face_height} (면적: {face_area})")
+          user_name = current_known_embeddings.get(found_user_uuid, {}).get('name', 'Unknown')
+          similarity_score = 1 - best_dist
+          logger.info(
+              f"[{cam_name}] 🎯 얼굴 인식 성공! 이름: {user_name}, "
+              f"유사도: {similarity_score:.2%} (거리: {best_dist:.4f})"
+          )
           try:
-            user_name = current_known_embeddings.get(found_user_uuid, {}).get('name', 'Unknown')
             log_user_info = f"{user_name}({found_user_uuid[:8]})"
 
             redis_key = f"area:{area_uuid}"
@@ -251,23 +236,18 @@ def process_camera_stream(camera_info, thread_shutdown_event):
                   redis_conn.srem(redis_key, found_user_uuid)
                   logger.info(f"Redis SREM: User {log_user_info} from Area {area_uuid[:8]}")
 
-                # ### 핵심 변경 지점 ###
-                # Kafka로 전송할 이벤트 데이터를 생성합니다.
                 event_data = {
                   'userUuid': found_user_uuid,
                   'userName': user_name,
                   'areaUuid': area_uuid,
                   'eventType': event_type,
-                  'timestamp': now.isoformat() # ISO 8601 표준 형식으로 시간 전송
+                  'timestamp': now.isoformat()
                 }
-                # Kafka Producer를 호출하여 이벤트를 전송합니다.
                 send_event_to_kafka(settings.KAFKA_TOPIC_EVENTS, event_data)
                 logger.info(f"🚀 Kafka Event Sent: User {log_user_info} - Event: {event_type}")
 
           except Exception as e:
             logger.error(f"Redis 또는 Kafka 전송 중 오류 발생: {e}")
-        else:
-          logger.debug(f"[{cam_name}] ❌ 얼굴 인식 실패 - 등록된 사용자와 일치하지 않음 (크기: {face_width}x{face_height})")
 
   update_cctv_status(cam_uuid, False)
   cap.release()

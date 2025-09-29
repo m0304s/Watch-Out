@@ -9,6 +9,7 @@ import watch.out.common.util.SecurityUtil;
 import watch.out.common.exception.BusinessException;
 import watch.out.common.exception.ErrorCode;
 import watch.out.notification.dto.request.FcmTokenRequest;
+import watch.out.notification.dto.request.TestSafetyViolationRequest;
 import watch.out.notification.dto.response.FcmTokenResponse;
 import watch.out.notification.entity.FcmToken;
 import watch.out.notification.repository.FcmTokenRepository;
@@ -68,5 +69,8 @@ public class FcmTokenService {
             .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
         List<FcmToken> fcmTokens = fcmTokenRepository.findByUserUuid(userUuid);
         return FcmTokenResponse.from(fcmTokens);
+    }
+
+    public void sendTestSafetyViolation(TestSafetyViolationRequest testSafetyViolationRequest) {
     }
 }
